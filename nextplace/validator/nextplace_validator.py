@@ -36,6 +36,8 @@ class RealEstateValidator(BaseValidatorNeuron):
             database_manager=self.database_manager
         )
 
+        bt.logging.trace(f"Database Path: {self.database_manager.db_path}")
+
     def sync_metagraph(self):
         """Sync the metagraph with the latest state from the network"""
         bt.logging.info("Syncing metagraph")
