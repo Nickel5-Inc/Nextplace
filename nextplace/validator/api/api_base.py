@@ -25,11 +25,25 @@ class ApiBase(ABC):
         self.max_results_per_page = 350  # This is typically the maximum allowed by Redfin's API
 
     def get_hash(self, address: str, zip_code: str) -> str:
+        """
+        Build the nextplace_id using a 1-way cryptographic hash function
+        Args:
+            address: the home's street address
+            zip_code: the home's zip code
+
+        Returns:
+            the cryptographic hash of the address-zip
+        """
         message = f"{address}-{zip_code}"
         hashed = hmac.new(self.nextplace_hash_key, message.encode(), hashlib.sha256)
         return hashed.hexdigest()
 
     def _get_api_key_from_env(self) -> str:
+        """
+        Load the API key from the environment
+        Returns:
+            The redfin API key
+        """
         load_dotenv()
         return os.getenv("NEXT_PLACE_REDFIN_API_KEY")
 
