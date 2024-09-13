@@ -36,8 +36,6 @@ class RealEstateValidator(BaseValidatorNeuron):
             database_manager=self.database_manager
         )
 
-        bt.logging.trace(f"Database Path: {self.database_manager.db_path}")
-
     def sync_metagraph(self):
         """Sync the metagraph with the latest state from the network"""
         bt.logging.info("Syncing metagraph")
@@ -75,6 +73,7 @@ class RealEstateValidator(BaseValidatorNeuron):
             None
         """
         bt.logging.info("Running forward pass")
+        bt.logging.trace(f"Database Path: {self.database_manager.db_path}")
 
         if not self.database_manager.lock.acquire(blocking=False):
             # If the lock is held by another thread, sleep and return
