@@ -34,7 +34,7 @@ def main(validator):
                 thread.start()  # Start thread
 
             # Set weights (e.g., every 300 steps)
-            if step % 1 == 0:
+            if step % 300 == 0:
                 validator.set_weights()
                 step = 0
 

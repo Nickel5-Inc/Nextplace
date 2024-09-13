@@ -7,19 +7,6 @@
 [Discord](https://discord.gg/bittensor) • [Network](https://taostats.io/) • [Website](https://nextplace.ai/)
 </div>
 
----
-- [Quickstarter template](#quickstarter-template)
-- [Introduction](#introduction)
-  - [Example](#example)
-- [Installation](#installation)
-  - [Before you proceed](#before-you-proceed)
-  - [Install](#install)
-- [Writing your own incentive mechanism](#writing-your-own-incentive-mechanism)
-- [Writing your own subnet API](#writing-your-own-subnet-api)
-- [Subnet Links](#subnet-links)
-- [License](#license)
-
----
 # Nextplace AI 🏡
 
 Nextplace AI is decentralizing intelligence around housing markets. In a space controlled by monopolies and gatekeepers, Nexplace seeks to provide a democratized network to evaluate home prices for the general market and individuals.
@@ -32,38 +19,48 @@ Miners will develop their own models to predict home prices and sales dates. The
 
 Validators provide data to miners from <INSERT NUMBER OF MARKETS> markets. This number will expand over time. Validators evaluate miners based on their accuracy in prediction of home price and sales date.
 
-## Scoring *THIS NEEDS REVISION
+### Scoring Method for Home Price Prediction
 
-### Scoring Method for Home Price Prediction (Normalized)
+The scoring system calculates a miner's prediction score based on two key factors: the accuracy of the predicted home price and the accuracy of the predicted sale date. The final score combines these components with weighted contributions (86% for price accuracy, 14% for date accuracy). A perfect prediction would result in a score of 100.
 
-This function calculates a normalized score based on how close a predicted home price is to the actual home price, with the score ranging from 0 (worst) to 1 (perfect prediction). The score is divided into two components: the price difference (80%) and the date difference (20%).
+### Score Calculation:
 
-### Formula:
-1. **Price difference** (80% of the score): 
-   - Calculate the absolute price difference between the predicted price and the actual home price.
-   - Divide the price difference by the maximum possible price difference (or a set threshold), and then multiply by 0.8.
+1. **Price Accuracy (86% weight):**
+   - The difference between the actual and predicted prices is calculated as a percentage of the actual price.
+   - The price score is then calculated as:  
+     `Price Score = max(0, 100 - (price difference percentage * 100))`
 
-2. **Time difference** (20% of the score):
-   - Calculate the absolute difference in days between the prediction and the actual home price date, capped at a maximum of 20 days.
-   - Divide the day difference by 20 (since that's the max), and multiply by 0.2.
+2. **Date Accuracy (14% weight):**
+   - The difference between the actual and predicted sale dates is measured in days.
+   - Each day of difference reduces the score by a set amount, with the maximum score being 100 and decreasing linearly up to 14 days.
+   - The date score is calculated as:  
+     `Date Score = (max(0, 14 - date difference) / 14) * 100`
 
-3. **Final Score**: Subtract the sum of the normalized price and time differences from 1.
+3. **Final Score:**
+   - The final score is a weighted combination of the price and date scores:  
+     `Final Score = (Price Score * 0.86) + (Date Score * 0.14)`
 
-#### Example:
+### Example:
 - **Predicted Price**: \$400,000
 - **Actual Price**: \$420,000
-- **Max Price Difference**: \$100,000 (as an example threshold)
-- **Price Difference**: \$20,000
-- **Days Difference**: 10 days
+- **Predicted Sale Date**: 2023-09-01
+- **Actual Sale Date**: 2023-09-05
 
-##### Score Calculation:
-- Normalized Price Difference: `20,000 / 100,000 = 0.2`
-- Price Difference Score: `0.2 * 0.8 = 0.16`
-  
-- Normalized Time Difference: `10 / 20 = 0.5`
-- Time Difference Score: `0.5 * 0.2 = 0.1`
+**Steps:**
 
-**Total Normalized Score** = `1 - (0.16 + 0.1) = 0.74`
+1. **Price Score Calculation**:  
+   Price difference = \$20,000  
+   Price difference percentage = 20,000 / 420,000 = 0.0476  
+   Price Score = 100 - (0.0476 * 100) = 95.24
+
+2. **Date Score Calculation**:  
+   Date difference = 4 days  
+   Date Score = (14 - 4) / 14 * 100 = 71.43
+
+3. **Final Score Calculation**:  
+   Final Score = (95.24 * 0.86) + (71.43 * 0.14) = 92.16
+
+The average performance on all sold homes in the last 30 days will be used to calculate incentive.
 
 ## Installation 
 
