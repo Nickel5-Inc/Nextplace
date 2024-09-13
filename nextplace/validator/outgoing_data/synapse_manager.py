@@ -23,16 +23,16 @@ class SynapseManager:
         Returns:
             A RealEstateSynapse to send to Miners, or None
         """
-        # ToDo Change the limit to however many we're processing at once. Pull from constants file
-        # Query to get the next property
-        query = f'''
-            SELECT * FROM properties
-            ORDER BY days_on_market DESC
-            LIMIT {NUMBER_OF_PROPERTIES_PER_SYNAPSE} OFFSET {self.market_manager.property_index}
-        '''
 
         try:
-            property_data = self.database_manager.query(query)  # Execute query
+            # Query to get the next property
+            query = f'''
+                SELECT * FROM properties
+                ORDER BY days_on_market DESC
+                LIMIT {NUMBER_OF_PROPERTIES_PER_SYNAPSE} OFFSET {self.market_manager.property_index}
+            '''
+            with self.database_manager.lock:  # Acquire lock to get properties from database
+                property_data = self.database_manager.query(query)  # Execute query
             outgoing_data = []
 
             for property_datum in property_data:  # Iterate db responses

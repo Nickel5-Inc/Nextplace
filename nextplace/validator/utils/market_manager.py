@@ -62,7 +62,7 @@ class MarketManager:
 
     def manage_forward(self) -> None:
         """
-        Manage the market after a forward pass. self.lock and database_manager lock both already acquired here
+        Manage the market after a forward pass. self.lock is already acquired here
         Returns:
             None
         """
@@ -106,7 +106,8 @@ class MarketManager:
         """
         bt.logging.info("Resetting market and property indices")
         bt.logging.trace(f"Clearing properties table...")
-        self.database_manager.delete_all_properties()  # Clear out the properties table
+        with self.database_manager.lock:  # Acquire database lock to update `properties` table
+            self.database_manager.delete_all_properties()  # Clear out the properties table
         bt.logging.trace(f"Cleared out properties table")
 
         # Reset indices
