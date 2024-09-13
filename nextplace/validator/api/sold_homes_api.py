@@ -22,24 +22,16 @@ class SoldHomesAPI(ApiBase):
         Returns:
             None
         """
-        num_predictions = self.database_manager.get_size_of_table('predictions')
-        if num_predictions == 0:
-            bt.logging.trace("Thread to update scores found no predictions, returning...")
-            return
-        cursor, db_connection = self.database_manager.get_cursor()  # Get a cursor and connection object
-        # Iterate regions
         for market in self.markets:
-            self._process_region_sold_homes(market, cursor, db_connection)
+            self._process_region_sold_homes(market)
 
-        cursor.close()  # Close the cursor
-        db_connection.close()  # Close the connection to the database
-
-    def _process_region_sold_homes(self, market: dict, cursor: sqlite3.Cursor, db_connection: sqlite3.Connection) -> None:
+    def _process_region_sold_homes(self, market: dict) -> None:
         bt.logging.trace(f"Getting sold homes in {market['name']}")
         region_id = market['id']
         url_sold = "https://redfin-com-data.p.rapidapi.com/properties/search-sold"  # URL for sold houses
         page = 1  # Page number for api results
 
+        valid_results = []
         # Iteratively call the API until we have no more results to read
         while True:
 
@@ -73,14 +65,32 @@ class SoldHomesAPI(ApiBase):
                 home_data = home['homeData']
                 sale_date = self._get_nested(home_data, 'lastSaleData', 'lastSoldDate')
                 if sale_date:
-                    self._process_sold_home(home, cursor)
-
-            db_connection.commit()  # Commit to the database
+                    valid_results.append(home)
 
             if len(homes) < self.max_results_per_page:  # Last page
                 break
 
             page += 1  # Increment page
+
+        self._ingest_valid_homes(valid_results)
+
+
+    def _ingest_valid_homes(self, valid_results) -> None:
+        """
+        Ingest valid results into the database
+        Args:
+            valid_results: list of valid sold homes
+
+        Returns:
+            None
+        """
+        with self.database_manager.lock:  # Acquire lock
+            cursor, db_connection = self.database_manager.get_cursor()  # Get cursor & connection ref
+            for home in valid_results:  # Iterate valid homes
+                self._process_sold_home(home, cursor)  # Ingest each home
+            db_connection.commit()  # Commit db query
+            cursor.close()
+            db_connection.close()
 
     def _process_sold_home(self, home: any, cursor: sqlite3.Cursor) -> None:
         """

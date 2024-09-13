@@ -20,12 +20,13 @@ class Scorer:
         self.scoring_calculator = ScoringCalculator(database_manager, self.sold_homes_api)
 
     def run_score_predictions(self) -> None:
-        num_predictions = self.database_manager.get_size_of_table('predictions')
+        with self.database_manager.lock:
+            num_predictions = self.database_manager.get_size_of_table('predictions')
         if num_predictions == 0:
             bt.logging.trace(f"No predictions yet, nothing to score.")
             return
+        self.sold_homes_api.get_sold_properties()  # Update the `sales` table
         with self.database_manager.lock:
-            self.sold_homes_api.get_sold_properties()
             num_sales = self.database_manager.get_size_of_table('sales')
             bt.logging.info(f"Ingested {num_sales} sold homes since our oldest prediction. Checking for overlapping predictions.")
             scorable_predictions = self._get_scorable_predictions()
