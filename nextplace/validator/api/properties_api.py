@@ -84,14 +84,14 @@ class PropertiesAPI(ApiBase):
         # SQL query to store the data
         query = '''
             INSERT OR IGNORE INTO properties (
-                property_id, listing_id, address, city, state, zip, price, beds, baths,
+                nextplace_id, property_id, listing_id, address, city, state, zip_code, price, beds, baths,
                 sqft, lot_size, year_built, days_on_market, latitude, longitude,
                 property_type, last_sale_date, hoa_dues, query_date, market
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         '''
         values = (
-            home_object['property_id'], home_object['listing_id'], home_object['address'], home_object['city'],
-            home_object['state'], home_object['zip_code'], home_object['price'], home_object['beds'],
+            home_object['nextplace_id'], home_object['property_id'], home_object['listing_id'], home_object['address'],
+            home_object['city'], home_object['state'], home_object['zip_code'], home_object['price'], home_object['beds'],
             home_object['baths'], home_object['sqft'], home_object['lot_size'], home_object['year_built'],
             home_object['days_on_market'], home_object['latitude'], home_object['longitude'],
             home_object['property_type'], home_object['last_sale_date'], home_object['hoa_dues'], query_date,
@@ -108,13 +108,17 @@ class PropertiesAPI(ApiBase):
         Returns:
             A Home object
         """
+        address = self._get_nested(home_data, 'addressInfo', 'formattedStreetLine')
+        zip_code = self._get_nested(home_data, 'addressInfo', 'zip')
+        nextplace_id = self.get_hash(address, zip_code)
         return {
+            'nextplace_id': nextplace_id,
             'property_id': home_data.get('propertyId'),
             'listing_id': home_data.get('listingId'),
-            'address': self._get_nested(home_data, 'addressInfo', 'formattedStreetLine'),
+            'address': address,
             'city': self._get_nested(home_data, 'addressInfo', 'city'),
             'state': self._get_nested(home_data, 'addressInfo', 'state'),
-            'zip_code': self._get_nested(home_data, 'addressInfo', 'zip'),
+            'zip_code': zip_code,
             'price': self._get_nested(home_data, 'priceInfo', 'amount'),
             'beds': home_data.get('beds'),
             'baths': home_data.get('baths'),

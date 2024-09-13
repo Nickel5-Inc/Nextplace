@@ -97,14 +97,17 @@ class SoldHomesAPI(ApiBase):
         property_id = home_data.get('propertyId')  # Extract property id
         sale_price = self._get_nested(home_data, 'priceInfo', 'amount')  # Extract sale price
         sale_date = self._get_nested(home_data, 'lastSaleData', 'lastSoldDate')  # Extract sale date
+        address = self._get_nested(home_data, 'addressInfo', 'formattedStreetLine')
+        zip_code = self._get_nested(home_data, 'addressInfo', 'zip')
+        nextplace_id = self.get_hash(address, zip_code)
 
         # Store results in database
         if property_id and sale_price and sale_date:
             query = '''
-                        INSERT OR IGNORE INTO sales (property_id, sale_price, sale_date)
-                        VALUES (?, ?, ?)
+                        INSERT OR IGNORE INTO sales (nextplace_id, property_id, sale_price, sale_date)
+                        VALUES (?, ?, ?, ?)
                     '''
-            values = (property_id, sale_price, sale_date)
+            values = (nextplace_id, property_id, sale_price, sale_date)
             cursor.execute(query, values)
 
     def _get_oldest_prediction(self) -> str:

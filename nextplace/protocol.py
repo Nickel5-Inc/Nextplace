@@ -6,12 +6,13 @@ from pydantic import BaseModel, Field
 class RealEstatePrediction(BaseModel):
     """Real Estate Prediction data class"""
     id: Optional[str] = Field(None, description="UUID of the prediction")
+    nextplace_id: Optional[str] = Field(None, description="Internal ID for the property")
     property_id: Optional[str] = Field(None, description="ID of the property")
     listing_id: Optional[str] = Field(None, description="ID of the listing")
     address: Optional[str] = Field(None, description="Address of the property")
     city: Optional[str] = Field(None, description="City of the property")
     state: Optional[str] = Field(None, description="State of the property")
-    zip: Optional[str] = Field(None, description="ZIP code of the property")
+    zip_code: Optional[str] = Field(None, description="ZIP code of the property")
     price: Optional[float] = Field(None, description="Current price of the property")
     beds: Optional[int] = Field(None, description="Number of bedrooms")
     baths: Optional[float] = Field(None, description="Number of bathrooms")

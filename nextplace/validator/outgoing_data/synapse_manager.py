@@ -71,7 +71,7 @@ class SynapseManager:
             address=property_data[2],
             city=property_data[3],
             state=property_data[4],
-            zip=property_data[5],
+            zip_code=property_data[5],
             price=property_data[6],
             beds=property_data[7],
             baths=property_data[8],

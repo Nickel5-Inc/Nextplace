@@ -1,5 +1,5 @@
 from typing import Union
-from nextplace.protocol import RealEstateSynapse, RealEstatePrediction
+from nextplace.protocol import RealEstatePrediction
 
 
 def prepare_input(prediction: RealEstatePrediction) -> dict[str, Union[str, int, float]]:
@@ -14,12 +14,13 @@ def prepare_input(prediction: RealEstatePrediction) -> dict[str, Union[str, int,
     """
     return {
         "id": prediction.id,
+        "nextplace_id": prediction.nextplace_id,
         "property_id": prediction.property_id,
         "listing_id": prediction.listing_id,
         "address": prediction.address,
         "city": prediction.city,
         "state": prediction.state,
-        "zip": prediction.zip,
+        "zip_code": prediction.zip_code,
         "price": prediction.price,
         "beds": prediction.beds,
         "baths": prediction.baths,

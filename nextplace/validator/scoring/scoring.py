@@ -66,8 +66,9 @@ class Scorer:
         query = """
             SELECT predictions.property_id, predictions.miner_hotkey, predictions.predicted_sale_price, predictions.predicted_sale_date, sales.sale_price, sales.sale_date
             FROM predictions
-            JOIN sales ON predictions.property_id = sales.property_id
-            WHERE predictions.scored = 0 OR predictions.scored = FALSE OR predictions.scored IS NULL
+            JOIN sales ON predictions.nextplace_id = sales.nextplace_id
+            WHERE predictions.prediction_timestamp < sales.sale_date
+            AND ( predictions.scored = 0 OR predictions.scored = FALSE OR predictions.scored IS NULL )
         """
         return self.database_manager.query(query)  # Get the unscored predictions that we can score
                 

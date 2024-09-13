@@ -1,6 +1,8 @@
 from abc import ABC
 import os
 from dotenv import load_dotenv
+import hmac
+import hashlib
 
 from nextplace.validator.database.database_manager import DatabaseManager
 
@@ -12,6 +14,7 @@ Abstract base class contains data global to all API calls
 class ApiBase(ABC):
 
     def __init__(self, database_manager: DatabaseManager, markets: list[dict[str, str]]):
+        self.nextplace_hash_key = b'next_place_hash_key_3b1f2aebc9d8e456'  # For creating the nextplace_id
         self.database_manager = database_manager
         self.markets = markets
         api_key = self._get_api_key_from_env()
@@ -20,6 +23,11 @@ class ApiBase(ABC):
             "X-RapidAPI-Host": "redfin-com-data.p.rapidapi.com"
         }
         self.max_results_per_page = 350  # This is typically the maximum allowed by Redfin's API
+
+    def get_hash(self, address: str, zip_code: str) -> str:
+        message = f"{address}-{zip_code}"
+        hashed = hmac.new(self.nextplace_hash_key, message.encode(), hashlib.sha256)
+        return hashed.hexdigest()
 
     def _get_api_key_from_env(self) -> str:
         load_dotenv()

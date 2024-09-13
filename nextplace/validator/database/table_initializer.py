@@ -35,9 +35,10 @@ class TableInitializer:
         """
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS sales (
-                property_id TEXT PRIMARY KEY,
+                nextplace_id TEXT PRIMARY KEY,
+                property_id TEXT,
                 sale_price REAL,
-                sale_date DATE
+                sale_date DATETIME
             )
         ''')
         cursor.execute('''
@@ -55,6 +56,7 @@ class TableInitializer:
         """
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS predictions (
+                nextplace_id TEXT,
                 property_id TEXT,
                 market TEXT,
                 miner_hotkey TEXT,
@@ -64,7 +66,7 @@ class TableInitializer:
                 scored BOOLEAN,
                 score_timestamp DATETIME,
                 sent_to_site BOOLEAN,
-                PRIMARY KEY (property_id, miner_hotkey)
+                PRIMARY KEY (nextplace_id, miner_hotkey)
                 )
         ''')
         cursor.execute('''
@@ -92,12 +94,13 @@ class TableInitializer:
         """
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS properties (
-                property_id TEXT PRIMARY KEY,
+                nextplace_id TEXT PRIMARY KEY,
+                property_id TEXT,
                 listing_id TEXT,
                 address TEXT,
                 city TEXT,
                 state TEXT,
-                zip TEXT,
+                zip_code TEXT,
                 price INTEGER,
                 beds INTEGER,
                 baths REAL,
