@@ -28,44 +28,60 @@ class PropertiesAPI(ApiBase):
         Returns:
             None
         """
+        url_for_sale = "https://redfin-com-data.p.rapidapi.com/properties/search-sale"  # Redfin URL
+        page = 1  # Page number for api results
+
+        valid_results = []
+        while True:
+
+            # Build query string
+            querystring = {
+                "regionId": market['id'],
+                "limit": self.max_results_per_page,
+                "page": page
+            }
+            response = requests.get(url_for_sale, headers=self.headers, params=querystring)  # Hit the API
+
+            # Only proceed with status code is 200
+            if response.status_code != 200:
+                bt.logging.error(f"Error querying properties on the market: {response.status_code}")
+                bt.logging.error(response.text)
+                break
+
+            data = json.loads(response.text)  # Load the result
+            homes = data.get('data', [])  # Extract data
+
+            if not homes:
+                break
+
+            for home in homes:  # Iterate the homes in the api result
+                valid_results.append(home)
+                # self._process_listed_home(home, cursor, market['name'])
+
+            if len(homes) < self.max_results_per_page:  # Last page
+                break
+
+            page += 1
+
+        self._ingest_properties(valid_results, market['name'])
+
+    def _ingest_properties(self, valid_results: list, market: str) -> None:
+        """
+        Ingest all valid results into the `properties` table
+        Args:
+            valid_results: list of valid properties on market
+            market: the current market
+
+        Returns:
+            None
+        """
         with self.database_manager.lock:
-            cursor, db_connection = self.database_manager.get_cursor()  # Get a cursor and connection object
-            url_for_sale = "https://redfin-com-data.p.rapidapi.com/properties/search-sale"  # Redfin URL
-            page = 1  # Page number for api results
-
-            while True:
-
-                # Build query string
-                querystring = {
-                    "regionId": market['id'],
-                    "limit": self.max_results_per_page,
-                    "page": page
-                }
-                response = requests.get(url_for_sale, headers=self.headers, params=querystring)  # Hit the API
-
-                # Only proceed with status code is 200
-                if response.status_code != 200:
-                    bt.logging.error(f"Error querying properties on the market: {response.status_code}")
-                    bt.logging.error(response.text)
-                    break
-
-                data = json.loads(response.text)  # Load the result
-                homes = data.get('data', [])  # Extract data
-
-                if not homes:
-                    break
-
-                for home in homes:  # Iterate the homes in the api result
-                    self._process_listed_home(home, cursor, market['name'])
-
-                if len(homes) < self.max_results_per_page:  # Last page
-                    break
-
-                page += 1
-
-            db_connection.commit()  # Commit the query
-            cursor.close()  # Close the cursor
-            db_connection.close()  # Close the connection to the database
+            cursor, db_connection = self.database_manager.get_cursor()
+            for home in valid_results:
+                self._process_listed_home(home, cursor, market)
+            db_connection.commit()
+            cursor.close()
+            db_connection.close()
 
     def _process_listed_home(self, home: any, cursor: sqlite3.Cursor, market_name: str) -> None:
         """

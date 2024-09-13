@@ -62,7 +62,7 @@ class MarketManager:
 
     def manage_forward(self) -> None:
         """
-        Manage the market after a forward pass
+        Manage the market after a forward pass. self.lock and database_manager lock both already acquired here
         Returns:
             None
         """
@@ -91,7 +91,8 @@ class MarketManager:
         bt.logging.info(f"No properties were found, getting the next market and updating properties")
         current_market = self.markets[self.market_index]  # Extract market object
         self.properties_api.process_region_market(current_market)  # Populate database with this market
-        rows_in_properties = self.database_manager.get_size_of_table('properties')  # Properties in table
+        with self.database_manager.lock:
+            rows_in_properties = self.database_manager.get_size_of_table('properties')  # Properties in table
         with self.lock:  # Acquire lock
             self.number_of_properties_in_market = rows_in_properties
             bt.logging.info(f"{current_market['name']} real estate market has {self.number_of_properties_in_market} properties ")
