@@ -73,7 +73,6 @@ class RealEstateValidator(BaseValidatorNeuron):
             None
         """
         bt.logging.info("Running forward pass")
-        bt.logging.trace(f"Database Path: {self.database_manager.db_path}")
 
         if not self.database_manager.lock.acquire(blocking=False):
             # If the lock is held by another thread, sleep and return
