@@ -1,0 +1,11 @@
+bittensor>=7
+starlette>=0.30.0
+pydantic>=2
+rich>=13
+pytest>=8
+torch>=2
+numpy>=1
+setuptools>=68
+requests~=2.32.3
+prompting~=0.1.0
+python-dotenv~=1.0.1
