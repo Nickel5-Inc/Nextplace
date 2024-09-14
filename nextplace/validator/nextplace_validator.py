@@ -110,7 +110,7 @@ class RealEstateValidator(BaseValidatorNeuron):
                 try:  # Build synapse, send to miners, parse and store predictions
 
                     synapse = self.synapse_manager.get_synapse()  # Prepare data for miners
-                    bt.logging.info(f"Sending a synapse in for properties in {self.market_manager.get_current_market()}")
+                    bt.logging.info(f"Sending a synapse for properties in {self.market_manager.get_current_market()}")
 
                     if synapse:  # Ensure synapse object was created, query the network
                         responses = self.dendrite.query(
