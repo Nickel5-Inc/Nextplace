@@ -23,13 +23,16 @@ class SoldHomesAPI(ApiBase):
             None
         """
         num_markets = len(self.markets)
+        with self.database_manager.lock:
+            oldest_prediction = self._get_oldest_prediction()
+            bt.logging.trace(f"Looking for homes sold since oldest unscored prediction: '{oldest_prediction}'")
         for idx, market in enumerate(self.markets):
             bt.logging.trace(f"Getting sold homes in {market['name']}")
-            self._process_region_sold_homes(market)
+            self._process_region_sold_homes(market, oldest_prediction)
             percent_done = round((idx / num_markets) * 100, 2)
             bt.logging.trace(f"{percent_done}% of markets processed by scoring thread")
 
-    def _process_region_sold_homes(self, market: dict) -> None:
+    def _process_region_sold_homes(self, market: dict, oldest_prediction: str) -> None:
         region_id = market['id']
         url_sold = "https://redfin-com-data.p.rapidapi.com/properties/search-sold"  # URL for sold houses
         page = 1  # Page number for api results
@@ -65,7 +68,7 @@ class SoldHomesAPI(ApiBase):
                 # Extract home sale date as datetime object
                 home_data = home['homeData']
                 sale_date = self._get_nested(home_data, 'lastSaleData', 'lastSoldDate')
-                if sale_date:
+                if sale_date and sale_date < oldest_prediction:
                     valid_results.append(home)
 
             if len(homes) < self.max_results_per_page:  # Last page
