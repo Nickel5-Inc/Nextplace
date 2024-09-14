@@ -92,15 +92,13 @@ class WeightSetter:
                 wait_for_finalization=True,
             )
 
-            bt.logging.info(f"| {current_thread.name} | Set weights result: {result}")
-
             success = result[0] if isinstance(result, tuple) and len(result) >= 1 else False
 
             if success:
-                bt.logging.info("Successfully set weights.")
+                bt.logging.info(f"| {current_thread.name} | Successfully set weights.")
             else:
-                bt.logging.error(f"Failed to set weights. Result: {result}")
+                bt.logging.error(f"| {current_thread.name} | Failed to set weights. Result: {result}")
 
         except Exception as e:
-            bt.logging.error(f"Error setting weights: {str(e)}")
+            bt.logging.error(f"| {current_thread.name} | Error setting weights: {str(e)}")
             bt.logging.error(traceback.format_exc())
