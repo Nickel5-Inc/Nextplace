@@ -29,12 +29,15 @@ class DatabaseManager:
         Returns:
             All rows matching the query
         """
+        rows = []
         cursor, db_connection = self.get_cursor()
-        cursor.execute(query)
-        rows = cursor.fetchall()
-        cursor.close()
-        db_connection.close()
-        return rows
+        try:
+            cursor.execute(query)
+            rows = cursor.fetchall()
+        finally:
+            cursor.close()
+            db_connection.close()
+            return rows
 
     def query_and_commit(self, query: str) -> None:
         """
@@ -46,10 +49,12 @@ class DatabaseManager:
             None
         """
         cursor, db_connection = self.get_cursor()
-        cursor.execute(query)
-        db_connection.commit()
-        cursor.close()
-        db_connection.close()
+        try:
+            cursor.execute(query)
+            db_connection.commit()
+        finally:
+            cursor.close()
+            db_connection.close()
 
     def get_cursor(self) -> Tuple[sqlite3.Cursor, sqlite3.Connection]:
         """
