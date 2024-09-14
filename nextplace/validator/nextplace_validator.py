@@ -67,20 +67,8 @@ class RealEstateValidator(BaseValidatorNeuron):
         thread.start()  # Start thread
         thread.join()  # Wait for it to finish
         bt.logging.trace(f"| {current_thread.name} | Setting weights")
-        self.set_weights()  # Set weights once scoring is done
+        self.weight_setter.set_weights()  # Set weights once scoring is done
         bt.logging.trace(f"| {current_thread.name} | Weights set")
-
-    def set_weights(self):
-        """Set the weights on the network"""
-        bt.logging.info("Setting weights")
-
-        # Use the WeightSetter to set weights
-        success = self.weight_setter.set_weights()
-
-        if success:
-            bt.logging.info("Weights set successfully")
-        else:
-            bt.logging.error("Failed to set weights")
 
     # OVERRIDE | Required
     def forward(self, step: int) -> None:

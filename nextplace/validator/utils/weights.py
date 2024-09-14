@@ -98,12 +98,9 @@ class WeightSetter:
 
             if success:
                 bt.logging.info("Successfully set weights.")
-                return True
             else:
                 bt.logging.error(f"Failed to set weights. Result: {result}")
-                return False
 
         except Exception as e:
             bt.logging.error(f"Error setting weights: {str(e)}")
             bt.logging.error(traceback.format_exc())
-            return False
