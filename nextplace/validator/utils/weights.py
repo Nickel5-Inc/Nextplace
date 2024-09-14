@@ -37,8 +37,6 @@ class WeightSetter:
             cursor.close()
             conn.close()
 
-
-
     def calculate_weights(self, scores):
         # Sort miners by score in descending order
         sorted_indices = torch.argsort(scores, descending=True)
