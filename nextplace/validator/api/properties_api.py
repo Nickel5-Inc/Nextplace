@@ -54,8 +54,7 @@ class PropertiesAPI(ApiBase):
             if not homes:
                 break
 
-            for home in homes:  # Iterate the homes in the api result
-                valid_results.append(home)
+            valid_results.extend(homes)
 
             if len(homes) < self.max_results_per_page:  # Last page
                 break
