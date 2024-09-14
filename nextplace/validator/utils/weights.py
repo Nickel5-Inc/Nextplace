@@ -12,8 +12,6 @@ class WeightSetter:
         self.database_manager = database_manager
 
     def calculate_miner_scores(self):
-        # Use the database_manager to get cursor and connection
-
         try:
             results = self.database_manager.query("SELECT miner_hotkey, lifetime_score FROM miner_scores")
             scores = torch.zeros(len(self.metagraph.hotkeys))
