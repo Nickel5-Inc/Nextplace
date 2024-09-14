@@ -63,13 +63,17 @@ class RealEstateValidator(BaseValidatorNeuron):
         """
         current_thread = threading.current_thread()
         bt.logging.trace(f"| {current_thread.name} | Starting scoring thread")
-        thread = threading.Thread(target=self.scorer.run_score_predictions, name="Scoring Thread")  # Create thread
+        thread = threading.Thread(target=self.scorer.run_score_predictions, name="Score Calculator Thread")  # Create thread
         thread.start()  # Start thread
-        bt.logging.trace(f"| {current_thread.name} | Waiting for scoring thread to finish")
         thread.join()  # Wait for it to finish
         bt.logging.trace(f"| {current_thread.name} | Setting weights")
-        self.set_weights()  # Set weights once scoring is done
-        bt.logging.trace(f"| {current_thread.name} | Weights set, terminating")
+        with self.database_manager.lock:
+            num_scores = self.database_manager.get_size_of_table('miner_scores')
+        if num_scores > 0:
+            self.set_weights()  # Set weights once scoring is done
+            bt.logging.trace(f"| {current_thread.name} | Weights set")
+        else:
+            bt.logging.trace(f"| {current_thread.name} | No scores yet")
 
     def set_weights(self):
         """Set the weights on the network"""

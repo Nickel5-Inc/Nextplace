@@ -72,12 +72,18 @@ class SoldHomesAPI(ApiBase):
             if not homes:  # No more results
                 break
 
+            # FIXME For testing only! Delete before merge!
+            ex_home = homes[0]
+            ex_home_data = ex_home['homeData']
+            ex_sale_date = self._get_nested(ex_home_data, 'lastSaleData', 'lastSoldDate')
+            bt.logging.trace(f"EXAMPLE SOLD HOME TO OLDEST PREDICTION COMPARISON: {ex_sale_date} > {oldest_prediction} ? {ex_sale_date > oldest_prediction}")
+
             # Iterate all homes
             for home in homes:
                 # Extract home sale date as datetime object
                 home_data = home['homeData']
                 sale_date = self._get_nested(home_data, 'lastSaleData', 'lastSoldDate')
-                if sale_date and sale_date < oldest_prediction:
+                if sale_date and sale_date > oldest_prediction:
                     valid_results.append(home)
 
             if len(homes) < self.max_results_per_page:  # Last page
