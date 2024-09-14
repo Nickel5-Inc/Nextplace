@@ -1,8 +1,7 @@
-from datetime import datetime
+import threading
 import sqlite3
 import bittensor as bt
 import requests
-
 from nextplace.validator.api.api_base import ApiBase
 from nextplace.validator.database.database_manager import DatabaseManager
 
@@ -22,17 +21,27 @@ class SoldHomesAPI(ApiBase):
         Returns:
             None
         """
+        current_thread = threading.current_thread()
         num_markets = len(self.markets)
         with self.database_manager.lock:
             oldest_prediction = self._get_oldest_prediction()
-            bt.logging.trace(f"Looking for homes sold since oldest unscored prediction: '{oldest_prediction}'")
+            bt.logging.trace(f"| {current_thread.name} | Looking for homes sold since oldest unscored prediction: '{oldest_prediction}'")
         for idx, market in enumerate(self.markets):
-            bt.logging.trace(f"Getting sold homes in {market['name']}")
+            bt.logging.trace(f"| {current_thread.name} | Getting sold homes in {market['name']}")
             self._process_region_sold_homes(market, oldest_prediction)
             percent_done = round(((idx + 1) / num_markets) * 100, 2)
-            bt.logging.trace(f"{percent_done}% of markets processed by scoring thread")
+            bt.logging.trace(f"| {current_thread.name} | {percent_done}% of markets processed by scoring thread")
 
     def _process_region_sold_homes(self, market: dict, oldest_prediction: str) -> None:
+        """
+        Iteratively hit API for sold homes in market, store valid homes in memory, ingest
+        Args:
+            market: current market
+            oldest_prediction: timestamp of our oldest unscored prediction
+
+        Returns:
+            None
+        """
         region_id = market['id']
         url_sold = "https://redfin-com-data.p.rapidapi.com/properties/search-sold"  # URL for sold houses
         page = 1  # Page number for api results

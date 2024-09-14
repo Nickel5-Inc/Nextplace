@@ -85,7 +85,7 @@ class RealEstateValidator(BaseValidatorNeuron):
             # If we don't have any properties AND we aren't getting them yet, start thread to get properties
             if self.market_manager.number_of_properties_in_market == 0 and not self.market_manager.updating_properties:
                 self.market_manager.updating_properties = True  # Set flag
-                thread = threading.Thread(target=self.market_manager.get_properties_for_market)  # Create thread
+                thread = threading.Thread(target=self.market_manager.get_properties_for_market, name="Properties Thread")  # Create thread
                 thread.start()  # Start thread
 
             # No properties for Miners yet, another thread is updating the properties table

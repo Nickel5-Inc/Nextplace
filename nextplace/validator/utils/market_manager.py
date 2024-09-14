@@ -1,7 +1,7 @@
 import bittensor as bt
 from nextplace.validator.api.properties_api import PropertiesAPI
 from nextplace.validator.database.database_manager import DatabaseManager
-from threading import RLock
+import threading
 
 from nextplace.validator.utils.contants import NUMBER_OF_PROPERTIES_PER_SYNAPSE
 
@@ -15,7 +15,7 @@ class MarketManager:
         self.database_manager = database_manager
         self.markets = markets
         self.properties_api = PropertiesAPI(database_manager, markets)
-        self.lock = RLock()  # Reentrant lock for thread safety
+        self.lock = threading.RLock()  # Reentrant lock for thread safety
         self.updating_properties = False
         initial_market_index = self._find_initial_market_index()
         bt.logging.info(f"Initial market index: {initial_market_index}")
@@ -88,14 +88,15 @@ class MarketManager:
         Returns:
             None
         """
-        bt.logging.info(f"No properties were found, getting the next market and updating properties")
+        current_thread = threading.current_thread()
+        bt.logging.info(f"| {current_thread.name} | No properties were found, getting the next market and updating properties")
         current_market = self.markets[self.market_index]  # Extract market object
         self.properties_api.process_region_market(current_market)  # Populate database with this market
         with self.database_manager.lock:
             rows_in_properties = self.database_manager.get_size_of_table('properties')  # Properties in table
         with self.lock:  # Acquire lock
             self.number_of_properties_in_market = rows_in_properties
-            bt.logging.info(f"{current_market['name']} real estate market has {self.number_of_properties_in_market} properties ")
+            bt.logging.info(f"| {current_thread.name} | {current_market['name']} real estate market has {self.number_of_properties_in_market} properties ")
             self.updating_properties = False  # Update flag
 
     def _handle_market_increment(self) -> None:
