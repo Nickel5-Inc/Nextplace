@@ -31,8 +31,7 @@ class SynapseManager:
                 ORDER BY days_on_market DESC
                 LIMIT {NUMBER_OF_PROPERTIES_PER_SYNAPSE} OFFSET {self.market_manager.property_index}
             '''
-            with self.database_manager.lock:  # Acquire lock to get properties from database
-                property_data = self.database_manager.query(query)  # Execute query
+            property_data = self.database_manager.query(query)  # Execute query
             outgoing_data = []
 
             for property_datum in property_data:  # Iterate db responses

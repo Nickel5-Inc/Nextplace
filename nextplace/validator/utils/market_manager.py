@@ -1,7 +1,7 @@
 import bittensor as bt
 from nextplace.validator.api.properties_api import PropertiesAPI
 from nextplace.validator.database.database_manager import DatabaseManager
-import threading
+from threading import RLock
 
 from nextplace.validator.utils.contants import NUMBER_OF_PROPERTIES_PER_SYNAPSE
 
@@ -15,7 +15,7 @@ class MarketManager:
         self.database_manager = database_manager
         self.markets = markets
         self.properties_api = PropertiesAPI(database_manager, markets)
-        self.lock = threading.Lock()  # Lock for separate thread execution
+        self.lock = RLock()  # Reentrant lock for thread safety
         self.updating_properties = False
         initial_market_index = self._find_initial_market_index()
         bt.logging.info(f"Initial market index: {initial_market_index}")
