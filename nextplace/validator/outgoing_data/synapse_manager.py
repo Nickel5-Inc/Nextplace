@@ -37,8 +37,8 @@ class SynapseManager:
             for property_datum in property_data:  # Iterate db responses
                 if property_datum:
                     try:
-                        prediction = self._prediction_from_property_data(property_datum)
-                        outgoing_data.append(prediction)
+                        next_property = self._property_from_database_row(property_datum)
+                        outgoing_data.append(next_property)
                     except IndexError as ie:
                         bt.logging.error(f"IndexError: {ie} - The data from the database failed to convert to a Synapse")
                         return None
@@ -55,7 +55,7 @@ class SynapseManager:
             bt.logging.info(f"No property data available")
             return None
 
-    def _prediction_from_property_data(self, property_data: any) -> RealEstatePrediction:
+    def _property_from_database_row(self, property_data: any) -> RealEstatePrediction:
         """
         Convert API response to a RealEstatePrediction object
         Args:
@@ -65,24 +65,25 @@ class SynapseManager:
             RealEstatePrediction object
         """
         return RealEstatePrediction(
-            property_id=property_data[0],
-            listing_id=property_data[1],
-            address=property_data[2],
-            city=property_data[3],
-            state=property_data[4],
-            zip_code=property_data[5],
-            price=property_data[6],
-            beds=property_data[7],
-            baths=property_data[8],
-            sqft=property_data[9],
-            lot_size=property_data[10],
-            year_built=property_data[11],
-            days_on_market=property_data[12],
-            latitude=property_data[13],
-            longitude=property_data[14],
-            property_type=property_data[15],
-            last_sale_date=property_data[16],
-            hoa_dues=property_data[17],
-            query_date=property_data[18],
-            market=property_data[19],
+            nextplace_id=property_data[0],
+            property_id=property_data[1],
+            listing_id=property_data[2],
+            address=property_data[3],
+            city=property_data[4],
+            state=property_data[5],
+            zip_code=property_data[6],
+            price=property_data[7],
+            beds=property_data[8],
+            baths=property_data[9],
+            sqft=property_data[10],
+            lot_size=property_data[11],
+            year_built=property_data[12],
+            days_on_market=property_data[13],
+            latitude=property_data[14],
+            longitude=property_data[15],
+            property_type=property_data[16],
+            last_sale_date=property_data[17],
+            hoa_dues=property_data[18],
+            query_date=property_data[19],
+            market=property_data[20],
         )

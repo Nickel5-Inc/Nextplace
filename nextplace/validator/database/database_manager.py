@@ -11,8 +11,10 @@ Helper class manager connections to the SQLite database
 class DatabaseManager:
 
     def __init__(self):
-        os.makedirs('data', exist_ok=True)  # Ensure data directory exists
-        self.db_path = 'data/validator_v2.db'  # Set db path
+        data_dir = "data"
+        db_version = 1
+        os.makedirs(data_dir, exist_ok=True)  # Ensure data directory exists
+        self.db_path = f'{data_dir}/validator_v{db_version}.db'  # Set db path
         db_dir = os.path.dirname(self.db_path)
         self.lock = RLock()  # Reentrant lock for thread safety
         if not os.path.exists(db_dir):
