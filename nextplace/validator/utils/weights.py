@@ -1,6 +1,5 @@
 import torch
 import bittensor as bt
-from bettensor import __spec_version__
 import traceback
 
 class WeightSetter:
