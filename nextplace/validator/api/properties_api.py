@@ -54,18 +54,15 @@ class PropertiesAPI(ApiBase):
             if not homes:
                 break
 
-            self._ingest_properties(homes, market['name'])
-
-            # for home in homes:  # Iterate the homes in the api result
-                # valid_results.append(home)
-                # self._process_listed_home(home, cursor, market['name'])
+            for home in homes:  # Iterate the homes in the api result
+                valid_results.append(home)
 
             if len(homes) < self.max_results_per_page:  # Last page
                 break
 
             page += 1
 
-        # self._ingest_properties(valid_results, market['name'])
+        self._ingest_properties(valid_results, market['name'])
 
     def _ingest_properties(self, valid_results: list, market: str) -> None:
         """
