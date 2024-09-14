@@ -22,11 +22,14 @@ class SoldHomesAPI(ApiBase):
         Returns:
             None
         """
-        for market in self.markets:
+        num_markets = len(self.markets)
+        for idx, market in enumerate(self.markets):
+            bt.logging.trace(f"Getting sold homes in {market['name']}")
             self._process_region_sold_homes(market)
+            percent_done = round((idx / num_markets) * 100, 2)
+            bt.logging.trace(f"{percent_done}% of markets processed by scoring thread")
 
     def _process_region_sold_homes(self, market: dict) -> None:
-        bt.logging.trace(f"Getting sold homes in {market['name']}")
         region_id = market['id']
         url_sold = "https://redfin-com-data.p.rapidapi.com/properties/search-sold"  # URL for sold houses
         page = 1  # Page number for api results
@@ -53,8 +56,6 @@ class SoldHomesAPI(ApiBase):
 
             data = response.json()  # Get response body
             homes = data.get('data', [])  # Extract data
-
-            bt.logging.trace(f"Found {len(homes)} sold homes on API page #{page} in {market['name']}")
 
             if not homes:  # No more results
                 break
