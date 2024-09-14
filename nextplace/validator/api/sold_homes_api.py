@@ -30,7 +30,7 @@ class SoldHomesAPI(ApiBase):
             bt.logging.trace(f"| {current_thread.name} | Getting sold homes in {market['name']}")
             self._process_region_sold_homes(market, oldest_prediction)
             percent_done = round(((idx + 1) / num_markets) * 100, 2)
-            bt.logging.trace(f"| {current_thread.name} | {percent_done}% of markets processed by scoring thread")
+            bt.logging.trace(f"| {current_thread.name} | {percent_done}% of markets processed")
 
     def _process_region_sold_homes(self, market: dict, oldest_prediction: str) -> None:
         """
