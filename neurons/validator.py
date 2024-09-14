@@ -29,12 +29,10 @@ def main(validator):
 
             validator.forward(step)  # Get predictions from the Miners
 
-            if step % 999 == 0:  # Time to update scores and set weights
+            if step % 1000 == 0:  # Time to update scores and set weights
                 thread = threading.Thread(target=validator.score, name="Scoring + Weight Setting Thread")  # Create thread
                 thread.start()  # Start thread
-
-            if step % 1000 == 0:  # Time to reset step
-                step = 0
+                step = 0  # Reset the step
 
             validator.save_state()  # Save state
             step += 1  # Increment step
