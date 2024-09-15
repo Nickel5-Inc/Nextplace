@@ -52,7 +52,7 @@ class RealEstateValidator(BaseValidatorNeuron):
             self.subtensor = None
         return self.subtensor
 
-    def score(self) -> None:
+    def score_predictions_and_set_weights(self) -> None:
         """
         RUN IN THREAD
 
@@ -67,7 +67,7 @@ class RealEstateValidator(BaseValidatorNeuron):
         bt.logging.trace(f"| {current_thread.name} | Starting scoring thread")
         self.scorer.run_score_predictions() # Score predictions
         bt.logging.trace(f"| {current_thread.name} | Setting weights")
-        self.weight_setter.set_weights()  # Set weights once scoring is done
+        self.weight_setter.set_weights()  # Set weights
         bt.logging.trace(f"| {current_thread.name} | Weights set")
 
     # OVERRIDE | Required
@@ -90,7 +90,7 @@ class RealEstateValidator(BaseValidatorNeuron):
             # If we don't have any properties AND we aren't getting them yet, start thread to get properties
             if self.market_manager.number_of_properties_in_market == 0 and not self.market_manager.updating_properties:
                 self.market_manager.updating_properties = True  # Set flag
-                thread = threading.Thread(target=self.market_manager.get_properties_for_market, name="Properties Thread")  # Create thread
+                thread = threading.Thread(target=self.market_manager.get_properties_for_market, name="PropertiesThread")  # Create thread
                 thread.start()  # Start thread
 
             # No properties for Miners yet, another thread is updating the properties table
