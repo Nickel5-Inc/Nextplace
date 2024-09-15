@@ -65,9 +65,7 @@ class RealEstateValidator(BaseValidatorNeuron):
         """
         current_thread = threading.current_thread()
         bt.logging.trace(f"| {current_thread.name} | Starting scoring thread")
-        thread = threading.Thread(target=self.scorer.run_score_predictions, name="Score Calculator Thread")  # Create thread
-        thread.start()  # Start thread
-        thread.join()  # Wait for it to finish
+        self.scorer.run_score_predictions() # Score predictions
         bt.logging.trace(f"| {current_thread.name} | Setting weights")
         self.weight_setter.set_weights()  # Set weights once scoring is done
         bt.logging.trace(f"| {current_thread.name} | Weights set")

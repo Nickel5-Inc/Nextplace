@@ -21,7 +21,6 @@ class Scorer:
 
     def run_score_predictions(self) -> None:
         """
-        RUN IN THREAD
         Ingest sold homes since oldest unscored prediction, JOIN `sales` and `predictions` table, score predictions
         Returns:
             None

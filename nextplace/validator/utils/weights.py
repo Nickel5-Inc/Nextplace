@@ -12,13 +12,9 @@ class WeightSetter:
         self.database_manager = database_manager
 
     def calculate_miner_scores(self):
-        # Use the database_manager to get cursor and connection
-        # cursor, conn = self.database_manager.get_cursor()
-
         try:
             with self.database_manager.lock:
                 results = self.database_manager.query("SELECT miner_hotkey, lifetime_score FROM miner_scores")
-            # results = cursor.fetchall()
 
             scores = torch.zeros(len(self.metagraph.hotkeys))
             hotkey_to_uid = {hk: uid for uid, hk in enumerate(self.metagraph.hotkeys)}
@@ -33,10 +29,6 @@ class WeightSetter:
         except Exception as e:
             bt.logging.error(f"Error fetching miner scores: {str(e)}")
             return torch.zeros(len(self.metagraph.hotkeys))
-
-        # finally:
-        #     cursor.close()
-        #     conn.close()
 
     def calculate_weights(self, scores):
         # Sort miners by score in descending order
@@ -67,7 +59,6 @@ class WeightSetter:
         # Sync the metagraph to get the latest data
         self.metagraph.sync(subtensor=self.subtensor, lite=True)
 
-        # with self.database_manager.lock:
         scores = self.calculate_miner_scores()
         weights = self.calculate_weights(scores)
 
