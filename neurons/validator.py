@@ -8,7 +8,7 @@ from nextplace.validator.nextplace_validator import RealEstateValidator
 
 
 def main(validator):
-    step = 1  # Initialize step
+    step = 297  # Initialize step
 
     # Initialize last_recalculation to the current time
     last_recalculation = datetime.utcnow()
