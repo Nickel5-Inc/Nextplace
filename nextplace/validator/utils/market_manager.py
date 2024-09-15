@@ -60,27 +60,6 @@ class MarketManager:
         market = self.markets[self.market_index]
         return market['name']
 
-    def manage_forward(self) -> None:
-        """
-        Manage the market after a forward pass. self.lock is already acquired here
-        Returns:
-            None
-        """
-
-        self.property_index += NUMBER_OF_PROPERTIES_PER_SYNAPSE  # Maintain properties index
-
-        # We still have properties we can send
-        if self.property_index < self.number_of_properties_in_market - 1:
-            return
-
-        # We're updating the properties, so do nothing
-        if self.updating_properties:  # Called from forward(), so main thread already has this object lock
-            bt.logging.trace(f"Updating properties in another thread")
-            return
-
-        # We've gotten to the end of the properties table, and we're not updating properties
-        self._handle_market_increment()
-
     def get_properties_for_market(self) -> None:
         """
         RUN IN THREAD
@@ -99,6 +78,26 @@ class MarketManager:
             bt.logging.info(f"| {current_thread.name} | {current_market['name']} real estate market has {self.number_of_properties_in_market} properties ")
             self.updating_properties = False  # Update flag
 
+    def manage_forward(self) -> None:
+        """
+        Manage the market after a forward pass. self.lock and database_manager.lock are already acquired here
+        Returns:
+            None
+        """
+        self.property_index += NUMBER_OF_PROPERTIES_PER_SYNAPSE  # Maintain properties index
+
+        # We still have properties we can send
+        if self.property_index < self.number_of_properties_in_market - 1:
+            return
+
+        # We're updating the properties, so do nothing
+        if self.updating_properties:  # Called from forward(), so main thread already has this object lock
+            bt.logging.trace(f"Updating properties in another thread")
+            return
+
+        # We've gotten to the end of the properties table, and we're not updating properties
+        self._handle_market_increment()
+
     def _handle_market_increment(self) -> None:
         """
         Reset properties index, increment (or wrap around) market index, clear out properties table
@@ -107,8 +106,7 @@ class MarketManager:
         """
         bt.logging.info("Resetting market and property indices")
         bt.logging.trace(f"Clearing properties table...")
-        with self.database_manager.lock:  # Acquire database lock to update `properties` table
-            self.database_manager.delete_all_properties()  # Clear out the properties table
+        self.database_manager.delete_all_properties()  # Clear out the properties table
         bt.logging.trace(f"Cleared out properties table")
 
         # Reset indices

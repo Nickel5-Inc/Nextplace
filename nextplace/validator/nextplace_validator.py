@@ -85,7 +85,6 @@ class RealEstateValidator(BaseValidatorNeuron):
             bt.logging.trace("Another thread is holding the market_manager lock.")
             return
 
-        # try/finally to avoid deadlock
         try:
             # If we don't have any properties AND we aren't getting them yet, start thread to get properties
             if self.market_manager.number_of_properties_in_market == 0 and not self.market_manager.updating_properties:
@@ -106,7 +105,6 @@ class RealEstateValidator(BaseValidatorNeuron):
                     bt.logging.trace("Another thread is holding the database_manager lock.")
                     return
 
-                # try/finally to avoid deadlock
                 try:  # Build synapse, send to miners, parse and store predictions
 
                     synapse = self.synapse_manager.get_synapse()  # Prepare data for miners
@@ -126,10 +124,12 @@ class RealEstateValidator(BaseValidatorNeuron):
                         # Synapse was empty, this suggests an issue with the database state
                         bt.logging.error("No data available to send to miners")
 
-                    self.market_manager.manage_forward()  # Maintain market manager state
+                    # Maintain market manager state. Need this here so main thread doesn't block w/o a timeout
+                    self.market_manager.manage_forward()
 
                 finally:
                     self.database_manager.lock.release()  # Always release the lock
+
 
         finally:
             self.market_manager.lock.release()  # Always release the lock
