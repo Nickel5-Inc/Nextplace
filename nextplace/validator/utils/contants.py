@@ -1,9 +1,5 @@
 """
 Current real estate markets we're supporting
-ID's are coming from `https://redfin-com-data.p.rapidapi.com/properties/auto-complete?query=<city_name>`
-    -> in <city_name>, replace spaces (' ') with %20
-    -> EX: San%20Diego
-    -> Using 1st ID found in result string
 """
 
 real_estate_markets = [
