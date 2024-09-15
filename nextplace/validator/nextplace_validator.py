@@ -55,6 +55,8 @@ class RealEstateValidator(BaseValidatorNeuron):
     def score(self) -> None:
         """
         RUN IN THREAD
+
+        * This method optimizes scoring+weight setting, but may be causing a deadlock.
         - Start another thread for calculating Miner scores
         - Wait for it to finish
         - Set weights
