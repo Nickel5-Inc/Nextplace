@@ -32,7 +32,7 @@ def main(validator):
             if step % 1000 == 0:  # Time to update scores and set weights
                 thread = threading.Thread(target=validator.score, name="Score Calculator Thread")  # Create thread
                 thread.start()  # Start thread
-                validator.weight_setter.set_weights()  # Set weights
+                # validator.weight_setter.set_weights()  # Set weights
                 step = 0  # Reset the step
 
             validator.save_state()  # Save state
