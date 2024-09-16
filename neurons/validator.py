@@ -8,7 +8,7 @@ from nextplace.validator.nextplace_validator import RealEstateValidator
 
 
 def main(validator):
-    step = 1  # Initialize step
+    step = 145  # Initialize step
 
     # Initialize last_recalculation to the current time
     last_recalculation = datetime.utcnow()
@@ -29,12 +29,11 @@ def main(validator):
 
             validator.forward(step)  # Get predictions from the Miners
 
-            if step % 1000 == 0:  # Time to update scores and set weights
+            if step >= 1000:  # Time to update scores and set weights
                 thread = threading.Thread(target=validator.score_predictions_and_set_weights, name="ScoreAndSetWeightsThread")  # Create thread
                 thread.start()  # Start thread
                 step = 0  # Reset the step
 
-            validator.save_state()  # Save state
             step += 1  # Increment step
             time.sleep(5)  # Sleep for a bit
 
