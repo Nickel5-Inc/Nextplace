@@ -76,12 +76,13 @@ class BaseModel:
 
 class ProcessedSynapse(TypedDict):
     id: Optional[str]
+    nextplace_id: Optional[str]
     property_id: Optional[str]
     listing_id: Optional[str]
     address: Optional[str]
     city: Optional[str]
     state: Optional[str]
-    zip: Optional[str]
+    zip_code: Optional[str]
     price: Optional[float]
     beds: Optional[int]
     baths: Optional[float]

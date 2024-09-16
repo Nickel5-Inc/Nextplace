@@ -34,14 +34,15 @@ class PredictionManager:
             bt.logging.error('No responses received')
             return
 
-        cursor, db_connection = self.database_manager.get_cursor()  # Get cursor & db connection
 
         current_utc_datetime = datetime.now(timezone.utc)
         timestamp = current_utc_datetime.strftime(ISO8601)
 
-        for idx, real_estate_predictions in enumerate(responses):
+        cursor, db_connection = self.database_manager.get_cursor()  # Get cursor & db connection
 
-            for prediction in real_estate_predictions.predictions:
+        for idx, real_estate_predictions in enumerate(responses):  # Iterate responses
+
+            for prediction in real_estate_predictions.predictions:  # Iterate predictions in each response
                 # Only process valid predictions
                 if prediction is None or prediction.property_id is None or prediction.predicted_sale_date is None or prediction.predicted_sale_price is None:
                     continue
@@ -56,15 +57,14 @@ class PredictionManager:
                         else:
                             insert_conflict_policy = "IGNORE"
 
-                        # bt.logging.trace(f"Processing Prediction | Conflict Policy {insert_conflict_policy} | HotKey: {miner_hotkey} | Prediction: {prediction}")
-
                         # Store predictions in the database
                         query = f"""
                             INSERT OR {insert_conflict_policy} INTO predictions 
-                            (property_id, miner_hotkey, predicted_sale_price, predicted_sale_date, prediction_timestamp, market, scored)
-                            VALUES (?, ?, ?, ?, ?, ?, ?)
+                            (nextplace_id, property_id, miner_hotkey, predicted_sale_price, predicted_sale_date, prediction_timestamp, market, scored)
+                            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                         """
                         values = (
+                            prediction.nextplace_id,
                             prediction.property_id,
                             miner_hotkey,
                             prediction.predicted_sale_price,
@@ -78,6 +78,7 @@ class PredictionManager:
                     bt.logging.error(f"Failed to process prediction: {e}")
 
         db_connection.commit()  # Commit to database
+        cursor.close()  # Close the cursor
         db_connection.close()  # Close db connection
 
         table_size = self.database_manager.get_size_of_table('predictions')

@@ -2,6 +2,7 @@ from typing import TypedDict, Optional
 
 
 class Home(TypedDict):
+    nextplace_id: Optional[str]
     property_id: Optional[str]
     listing_id: Optional[str]
     address: Optional[str]

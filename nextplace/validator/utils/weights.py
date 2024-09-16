@@ -1,7 +1,7 @@
 import torch
 import bittensor as bt
-from bettensor import __spec_version__
 import traceback
+import threading
 
 class WeightSetter:
     def __init__(self, metagraph, wallet, subtensor, config, database_manager):
@@ -12,12 +12,9 @@ class WeightSetter:
         self.database_manager = database_manager
 
     def calculate_miner_scores(self):
-        # Use the database_manager to get cursor and connection
-        cursor, conn = self.database_manager.get_cursor()
-
         try:
-            cursor.execute("SELECT miner_hotkey, lifetime_score FROM miner_scores")
-            results = cursor.fetchall()
+            with self.database_manager.lock:
+                results = self.database_manager.query("SELECT miner_hotkey, lifetime_score FROM miner_scores")
 
             scores = torch.zeros(len(self.metagraph.hotkeys))
             hotkey_to_uid = {hk: uid for uid, hk in enumerate(self.metagraph.hotkeys)}
@@ -32,10 +29,6 @@ class WeightSetter:
         except Exception as e:
             bt.logging.error(f"Error fetching miner scores: {str(e)}")
             return torch.zeros(len(self.metagraph.hotkeys))
-
-        finally:
-            cursor.close()
-            conn.close()
 
     def calculate_weights(self, scores):
         # Sort miners by score in descending order
@@ -62,22 +55,21 @@ class WeightSetter:
         return weights
 
     def set_weights(self):
-        bt.logging.info("Starting weight setting process...")
+        current_thread = threading.current_thread()
         # Sync the metagraph to get the latest data
         self.metagraph.sync(subtensor=self.subtensor, lite=True)
 
         scores = self.calculate_miner_scores()
         weights = self.calculate_weights(scores)
 
-        bt.logging.info(f"Calculated weights: {weights}")
+        bt.logging.info(f"| {current_thread.name} | Calculated weights: {weights}")
 
         try:
             uid = self.metagraph.hotkeys.index(self.wallet.hotkey.ss58_address)
             stake = float(self.metagraph.S[uid])
-            netuid=self.config.netuid
 
             if stake < 0.0:
-                bt.logging.error("Insufficient stake. Failed in setting weights.")
+                bt.logging.error(f"| {current_thread.name} | Insufficient stake. Failed in setting weights.")
                 return False
 
             result = self.subtensor.set_weights(
@@ -90,18 +82,13 @@ class WeightSetter:
                 wait_for_finalization=True,
             )
 
-            bt.logging.info(f"Set weights result: {result}")
-
             success = result[0] if isinstance(result, tuple) and len(result) >= 1 else False
 
             if success:
-                bt.logging.info("Successfully set weights.")
-                return True
+                bt.logging.info(f"| {current_thread.name} | Successfully set weights.")
             else:
-                bt.logging.error(f"Failed to set weights. Result: {result}")
-                return False
+                bt.logging.error(f"| {current_thread.name} | Failed to set weights. Result: {result}")
 
         except Exception as e:
-            bt.logging.error(f"Error setting weights: {str(e)}")
+            bt.logging.error(f"| {current_thread.name} | Error setting weights: {str(e)}")
             bt.logging.error(traceback.format_exc())
-            return False

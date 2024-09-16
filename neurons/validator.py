@@ -29,16 +29,11 @@ def main(validator):
 
             validator.forward(step)  # Get predictions from the Miners
 
-            if step % 299 == 0:  # Time to update scores
-                thread = threading.Thread(target=validator.scorer.run_score_predictions)  # Create thread
+            if step >= 1000:  # Time to update scores and set weights
+                thread = threading.Thread(target=validator.score_predictions_and_set_weights, name="ScoreAndSetWeightsThread")  # Create thread
                 thread.start()  # Start thread
+                step = 0  # Reset the step
 
-            # Set weights (e.g., every 300 steps)
-            if step % 300 == 0:
-                validator.set_weights()
-                step = 0
-
-            validator.save_state()  # Save state
             step += 1  # Increment step
             time.sleep(5)  # Sleep for a bit
 

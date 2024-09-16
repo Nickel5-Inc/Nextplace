@@ -28,44 +28,58 @@ class PropertiesAPI(ApiBase):
         Returns:
             None
         """
+        url_for_sale = "https://redfin-com-data.p.rapidapi.com/properties/search-sale"  # Redfin URL
+        page = 1  # Page number for api results
+
+        valid_results = []
+        while True:
+
+            # Build query string
+            querystring = {
+                "regionId": market['id'],
+                "limit": self.max_results_per_page,
+                "page": page
+            }
+            response = requests.get(url_for_sale, headers=self.headers, params=querystring)  # Hit the API
+
+            # Only proceed with status code is 200
+            if response.status_code != 200:
+                bt.logging.error(f"Error querying properties on the market: {response.status_code}")
+                bt.logging.error(response.text)
+                break
+
+            data = json.loads(response.text)  # Load the result
+            homes = data.get('data', [])  # Extract data
+
+            if not homes:
+                break
+
+            valid_results.extend(homes)
+
+            if len(homes) < self.max_results_per_page:  # Last page
+                break
+
+            page += 1
+
+        self._ingest_properties(valid_results, market['name'])
+
+    def _ingest_properties(self, valid_results: list, market: str) -> None:
+        """
+        Ingest all valid results into the `properties` table
+        Args:
+            valid_results: list of valid properties on market
+            market: the current market
+
+        Returns:
+            None
+        """
         with self.database_manager.lock:
-            cursor, db_connection = self.database_manager.get_cursor()  # Get a cursor and connection object
-            url_for_sale = "https://redfin-com-data.p.rapidapi.com/properties/search-sale"  # Redfin URL
-            page = 1  # Page number for api results
-
-            while True:
-
-                # Build query string
-                querystring = {
-                    "regionId": market['id'],
-                    "limit": self.max_results_per_page,
-                    "page": page
-                }
-                response = requests.get(url_for_sale, headers=self.headers, params=querystring)  # Hit the API
-
-                # Only proceed with status code is 200
-                if response.status_code != 200:
-                    bt.logging.error(f"Error querying properties on the market: {response.status_code}")
-                    bt.logging.error(response.text)
-                    break
-
-                data = json.loads(response.text)  # Load the result
-                homes = data.get('data', [])  # Extract data
-
-                if not homes:
-                    break
-
-                for home in homes:  # Iterate the homes in the api result
-                    self._process_listed_home(home, cursor, market['name'])
-
-                if len(homes) < self.max_results_per_page:  # Last page
-                    break
-
-                page += 1
-
-            db_connection.commit()  # Commit the query
-            cursor.close()  # Close the cursor
-            db_connection.close()  # Close the connection to the database
+            cursor, db_connection = self.database_manager.get_cursor()
+            for home in valid_results:
+                self._process_listed_home(home, cursor, market)
+            db_connection.commit()
+            cursor.close()
+            db_connection.close()
 
     def _process_listed_home(self, home: any, cursor: sqlite3.Cursor, market_name: str) -> None:
         """
@@ -84,14 +98,14 @@ class PropertiesAPI(ApiBase):
         # SQL query to store the data
         query = '''
             INSERT OR IGNORE INTO properties (
-                property_id, listing_id, address, city, state, zip, price, beds, baths,
+                nextplace_id, property_id, listing_id, address, city, state, zip_code, price, beds, baths,
                 sqft, lot_size, year_built, days_on_market, latitude, longitude,
                 property_type, last_sale_date, hoa_dues, query_date, market
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         '''
         values = (
-            home_object['property_id'], home_object['listing_id'], home_object['address'], home_object['city'],
-            home_object['state'], home_object['zip_code'], home_object['price'], home_object['beds'],
+            home_object['nextplace_id'], home_object['property_id'], home_object['listing_id'], home_object['address'],
+            home_object['city'], home_object['state'], home_object['zip_code'], home_object['price'], home_object['beds'],
             home_object['baths'], home_object['sqft'], home_object['lot_size'], home_object['year_built'],
             home_object['days_on_market'], home_object['latitude'], home_object['longitude'],
             home_object['property_type'], home_object['last_sale_date'], home_object['hoa_dues'], query_date,
@@ -108,13 +122,17 @@ class PropertiesAPI(ApiBase):
         Returns:
             A Home object
         """
+        address = self._get_nested(home_data, 'addressInfo', 'formattedStreetLine')
+        zip_code = self._get_nested(home_data, 'addressInfo', 'zip')
+        nextplace_id = self.get_hash(address, zip_code)
         return {
+            'nextplace_id': nextplace_id,
             'property_id': home_data.get('propertyId'),
             'listing_id': home_data.get('listingId'),
-            'address': self._get_nested(home_data, 'addressInfo', 'formattedStreetLine'),
+            'address': address,
             'city': self._get_nested(home_data, 'addressInfo', 'city'),
             'state': self._get_nested(home_data, 'addressInfo', 'state'),
-            'zip_code': self._get_nested(home_data, 'addressInfo', 'zip'),
+            'zip_code': zip_code,
             'price': self._get_nested(home_data, 'priceInfo', 'amount'),
             'beds': home_data.get('beds'),
             'baths': home_data.get('baths'),

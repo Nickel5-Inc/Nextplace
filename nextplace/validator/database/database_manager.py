@@ -1,7 +1,7 @@
 import sqlite3
 from typing import Tuple
 import os
-from threading import Lock
+from threading import RLock
 
 """
 Helper class manager connections to the SQLite database
@@ -11,10 +11,12 @@ Helper class manager connections to the SQLite database
 class DatabaseManager:
 
     def __init__(self):
-        os.makedirs('data', exist_ok=True)  # Ensure data directory exists
-        self.db_path = 'data/validator_v1.db'  # Set db path
+        data_dir = "data"
+        db_version = 1
+        os.makedirs(data_dir, exist_ok=True)  # Ensure data directory exists
+        self.db_path = f'{data_dir}/validator_v{db_version}.db'  # Set db path
         db_dir = os.path.dirname(self.db_path)
-        self.lock = Lock()
+        self.lock = RLock()  # Reentrant lock for thread safety
         if not os.path.exists(db_dir):
             os.makedirs(db_dir)  # Create db dir
 
@@ -27,12 +29,15 @@ class DatabaseManager:
         Returns:
             All rows matching the query
         """
+        rows = []
         cursor, db_connection = self.get_cursor()
-        cursor.execute(query)
-        rows = cursor.fetchall()
-        cursor.close()
-        db_connection.close()
-        return rows
+        try:
+            cursor.execute(query)
+            rows = cursor.fetchall()
+        finally:
+            cursor.close()
+            db_connection.close()
+            return rows
 
     def query_and_commit(self, query: str) -> None:
         """
@@ -44,10 +49,12 @@ class DatabaseManager:
             None
         """
         cursor, db_connection = self.get_cursor()
-        cursor.execute(query)
-        db_connection.commit()
-        cursor.close()
-        db_connection.close()
+        try:
+            cursor.execute(query)
+            db_connection.commit()
+        finally:
+            cursor.close()
+            db_connection.close()
 
     def get_cursor(self) -> Tuple[sqlite3.Cursor, sqlite3.Connection]:
         """

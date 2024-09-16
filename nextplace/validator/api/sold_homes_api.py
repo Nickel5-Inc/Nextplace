@@ -1,8 +1,7 @@
-from datetime import datetime
+import threading
 import sqlite3
 import bittensor as bt
 import requests
-
 from nextplace.validator.api.api_base import ApiBase
 from nextplace.validator.database.database_manager import DatabaseManager
 
@@ -22,24 +21,32 @@ class SoldHomesAPI(ApiBase):
         Returns:
             None
         """
-        num_predictions = self.database_manager.get_size_of_table('predictions')
-        if num_predictions == 0:
-            bt.logging.trace("Thread to update scores found no predictions, returning...")
-            return
-        cursor, db_connection = self.database_manager.get_cursor()  # Get a cursor and connection object
-        # Iterate regions
-        for market in self.markets:
-            self._process_region_sold_homes(market, cursor, db_connection)
+        current_thread = threading.current_thread()
+        num_markets = len(self.markets)
+        with self.database_manager.lock:
+            oldest_prediction = self._get_oldest_prediction()
+        bt.logging.trace(f"| {current_thread.name} | Looking for homes sold since oldest unscored prediction: '{oldest_prediction}'")
+        for idx, market in enumerate(self.markets):
+            bt.logging.trace(f"| {current_thread.name} | Getting sold homes in {market['name']}")
+            self._process_region_sold_homes(market, oldest_prediction)
+            percent_done = round(((idx + 1) / num_markets) * 100, 2)
+            bt.logging.trace(f"| {current_thread.name} | {percent_done}% of markets processed")
 
-        cursor.close()  # Close the cursor
-        db_connection.close()  # Close the connection to the database
+    def _process_region_sold_homes(self, market: dict, oldest_prediction: str) -> None:
+        """
+        Iteratively hit API for sold homes in market, store valid homes in memory, ingest
+        Args:
+            market: current market
+            oldest_prediction: timestamp of our oldest unscored prediction
 
-    def _process_region_sold_homes(self, market: dict, cursor: sqlite3.Cursor, db_connection: sqlite3.Connection) -> None:
-        bt.logging.trace(f"Getting sold homes in {market['name']}")
+        Returns:
+            None
+        """
         region_id = market['id']
         url_sold = "https://redfin-com-data.p.rapidapi.com/properties/search-sold"  # URL for sold houses
         page = 1  # Page number for api results
 
+        valid_results = []
         # Iteratively call the API until we have no more results to read
         while True:
 
@@ -62,8 +69,6 @@ class SoldHomesAPI(ApiBase):
             data = response.json()  # Get response body
             homes = data.get('data', [])  # Extract data
 
-            bt.logging.trace(f"Found {len(homes)} sold homes on API page #{page} in {market['name']}")
-
             if not homes:  # No more results
                 break
 
@@ -72,15 +77,33 @@ class SoldHomesAPI(ApiBase):
                 # Extract home sale date as datetime object
                 home_data = home['homeData']
                 sale_date = self._get_nested(home_data, 'lastSaleData', 'lastSoldDate')
-                if sale_date:
-                    self._process_sold_home(home, cursor)
-
-            db_connection.commit()  # Commit to the database
+                if sale_date and sale_date > oldest_prediction:
+                    valid_results.append(home)
 
             if len(homes) < self.max_results_per_page:  # Last page
                 break
 
             page += 1  # Increment page
+
+        self._ingest_valid_homes(valid_results)
+
+
+    def _ingest_valid_homes(self, valid_results) -> None:
+        """
+        Ingest valid results into the database
+        Args:
+            valid_results: list of valid sold homes
+
+        Returns:
+            None
+        """
+        with self.database_manager.lock:  # Acquire lock
+            cursor, db_connection = self.database_manager.get_cursor()  # Get cursor & connection ref
+            for home in valid_results:  # Iterate valid homes
+                self._process_sold_home(home, cursor)  # Ingest each home
+            db_connection.commit()  # Commit db query
+            cursor.close()
+            db_connection.close()
 
     def _process_sold_home(self, home: any, cursor: sqlite3.Cursor) -> None:
         """
@@ -97,14 +120,17 @@ class SoldHomesAPI(ApiBase):
         property_id = home_data.get('propertyId')  # Extract property id
         sale_price = self._get_nested(home_data, 'priceInfo', 'amount')  # Extract sale price
         sale_date = self._get_nested(home_data, 'lastSaleData', 'lastSoldDate')  # Extract sale date
+        address = self._get_nested(home_data, 'addressInfo', 'formattedStreetLine')
+        zip_code = self._get_nested(home_data, 'addressInfo', 'zip')
+        nextplace_id = self.get_hash(address, zip_code)
 
         # Store results in database
         if property_id and sale_price and sale_date:
             query = '''
-                        INSERT OR IGNORE INTO sales (property_id, sale_price, sale_date)
-                        VALUES (?, ?, ?)
+                        INSERT OR IGNORE INTO sales (nextplace_id, property_id, sale_price, sale_date)
+                        VALUES (?, ?, ?, ?)
                     '''
-            values = (property_id, sale_price, sale_date)
+            values = (nextplace_id, property_id, sale_price, sale_date)
             cursor.execute(query, values)
 
     def _get_oldest_prediction(self) -> str:

@@ -55,16 +55,6 @@ class RealEstateMiner(BaseMinerNeuron):
         bt.logging.debug(f"Prioritized: {synapse.dendrite.hotkey} (UID: {uid} - Stake: {stake})")
         return stake
 
-    # OVERRIDE | Optional
-    def load_state(self):
-        pass
-        # TODO: Implement state loading logic
-
-    # OVERRIDE | Optional
-    def save_state(self):
-        pass
-        # TODO: Implement state saving logic
-
     # HELPER
     def get_validator_stake_and_uid(self, hotkey):
         uid = self.metagraph.hotkeys.index(hotkey)  # get uid
