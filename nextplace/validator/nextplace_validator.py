@@ -65,9 +65,9 @@ class RealEstateValidator(BaseValidatorNeuron):
         """
         current_thread = threading.current_thread()
         bt.logging.trace(f"| {current_thread.name} | Starting scoring thread")
-        self.scorer.run_score_predictions() # Score predictions
+        self.scorer.run_score_predictions()  # Score predictions
         bt.logging.trace(f"| {current_thread.name} | Setting weights")
-        # self.weight_setter.set_weights()  # Set weights
+        self.weight_setter.set_weights()  # Set weights
         bt.logging.trace(f"| {current_thread.name} | Weights set")
 
     # OVERRIDE | Required
