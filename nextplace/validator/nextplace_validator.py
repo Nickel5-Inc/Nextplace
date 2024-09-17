@@ -39,21 +39,6 @@ class RealEstateValidator(BaseValidatorNeuron):
         self.metagraph.sync(subtensor=self.subtensor)  # TODO: verify that deregistered keys are handled
         bt.logging.trace(f"metagraph: {self.metagraph.hotkeys}")
 
-    def score_predictions_and_set_weights(self) -> None:
-        """
-        RUN IN THREAD
-
-        * This method optimizes scoring+weight setting, but may be causing a deadlock.
-        - Start another thread for calculating Miner scores
-        - Wait for it to finish
-        - Set weights
-        Returns:
-            None
-        """
-        current_thread = threading.current_thread()
-        bt.logging.trace(f"| {current_thread.name} | Starting scoring thread")
-        self.scorer.run_score_predictions()  # Score predictions
-
     # OVERRIDE | Required
     def forward(self, step: int) -> None:
         """
