@@ -4,7 +4,6 @@ import bittensor as bt
 from nextplace.protocol import RealEstateSynapse, RealEstatePrediction, RealEstatePredictions
 from nextplace.validator.database.database_manager import DatabaseManager
 from nextplace.validator.utils.contants import NUMBER_OF_PROPERTIES_PER_SYNAPSE
-from nextplace.validator.utils.market_manager import MarketManager
 
 """
 Helper class manages creating Synapse objects
@@ -13,9 +12,8 @@ Helper class manages creating Synapse objects
 
 class SynapseManager:
 
-    def __init__(self, database_manager: DatabaseManager, market_manager: MarketManager):
+    def __init__(self, database_manager: DatabaseManager):
         self.database_manager = database_manager
-        self.market_manager = market_manager
 
     def get_synapse(self) -> RealEstateSynapse or None:
         """
@@ -25,13 +23,25 @@ class SynapseManager:
         """
 
         try:
-            # Query to get the next property
-            query = f'''
+            # Query to get the next round of properties
+            retrieve_query = f'''
                 SELECT * FROM properties
                 ORDER BY days_on_market DESC
-                LIMIT {NUMBER_OF_PROPERTIES_PER_SYNAPSE} OFFSET {self.market_manager.property_index}
+                LIMIT {NUMBER_OF_PROPERTIES_PER_SYNAPSE}
             '''
-            property_data = self.database_manager.query(query)  # Execute query
+            property_data = self.database_manager.query(retrieve_query)  # Execute query
+
+            if len(property_data) == 0:
+                bt.logging.trace("Found no properties for synapse in properties table, returning None")
+                return None
+
+            row_ids = [row['nextplace_id'] for row in property_data]  # Extract unique ID's
+            delete_query = f'''
+                    DELETE FROM properties
+                    WHERE nextplace_id IN ({','.join(map(str, row_ids))})
+                '''
+            self.database_manager.query_and_commit(delete_query)  # Remove the retrieved rows from the database
+
             outgoing_data = []
 
             for property_datum in property_data:  # Iterate db responses

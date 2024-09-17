@@ -21,7 +21,7 @@ class PropertiesAPI(ApiBase):
 
     def process_region_market(self, market: dict[str, str]) -> None:
         """
-        Process a specific region's housing market data
+        Process a specific region's housing market data. Ingest 1 page at a time.
         Args:
             market: the current market
 
@@ -31,7 +31,6 @@ class PropertiesAPI(ApiBase):
         url_for_sale = "https://redfin-com-data.p.rapidapi.com/properties/search-sale"  # Redfin URL
         page = 1  # Page number for api results
 
-        valid_results = []
         while True:
 
             # Build query string
@@ -54,16 +53,14 @@ class PropertiesAPI(ApiBase):
             if not homes:
                 break
 
-            valid_results.extend(homes)
+            self._ingest_properties(homes, market['name'])
 
             if len(homes) < self.max_results_per_page:  # Last page
                 break
 
             page += 1
 
-        self._ingest_properties(valid_results, market['name'])
-
-    def _ingest_properties(self, valid_results: list, market: str) -> None:
+    def _ingest_properties(self, homes: list, market: str) -> None:
         """
         Ingest all valid results into the `properties` table
         Args:
@@ -74,44 +71,39 @@ class PropertiesAPI(ApiBase):
             None
         """
         with self.database_manager.lock:
-            cursor, db_connection = self.database_manager.get_cursor()
-            for home in valid_results:
-                self._process_listed_home(home, cursor, market)
-            db_connection.commit()
-            cursor.close()
-            db_connection.close()
+            query_str = """
+                INSERT OR IGNORE INTO properties (
+                    nextplace_id, property_id, listing_id, address, city, state, zip_code, price, beds, baths,
+                    sqft, lot_size, year_built, days_on_market, latitude, longitude,
+                    property_type, last_sale_date, hoa_dues, query_date, market
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """
+            values = [self._process_home_for_ingestion(home, market) for home in homes]
+            self.database_manager.query_and_commit_many(query_str, values)
 
-    def _process_listed_home(self, home: any, cursor: sqlite3.Cursor, market_name: str) -> None:
+    def _process_home_for_ingestion(self, home: any, market_name: str) -> tuple:
         """
-        Process and store a single listed home
+        Build ingestable tuple from home object
         Args:
-            home: a single home object from the redfin api
-            cursor: a sqlite3 cursor object
+            home: home object
+            market_name: current market
 
         Returns:
-            None
+            tuple for ingestion
         """
         home_data = home['homeData']  # Extract the homeData field
         home_object = self._build_property_object(home_data)  # Build the Home object
         query_date = datetime.now(timezone.utc).strftime(ISO8601)  # Get current datetime
 
-        # SQL query to store the data
-        query = '''
-            INSERT OR IGNORE INTO properties (
-                nextplace_id, property_id, listing_id, address, city, state, zip_code, price, beds, baths,
-                sqft, lot_size, year_built, days_on_market, latitude, longitude,
-                property_type, last_sale_date, hoa_dues, query_date, market
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        '''
-        values = (
+        return (
             home_object['nextplace_id'], home_object['property_id'], home_object['listing_id'], home_object['address'],
-            home_object['city'], home_object['state'], home_object['zip_code'], home_object['price'], home_object['beds'],
+            home_object['city'], home_object['state'], home_object['zip_code'], home_object['price'],
+            home_object['beds'],
             home_object['baths'], home_object['sqft'], home_object['lot_size'], home_object['year_built'],
             home_object['days_on_market'], home_object['latitude'], home_object['longitude'],
             home_object['property_type'], home_object['last_sale_date'], home_object['hoa_dues'], query_date,
             market_name
         )
-        cursor.execute(query, values)
 
     def _build_property_object(self, home_data: any) -> Home:
         """

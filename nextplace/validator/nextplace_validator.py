@@ -1,4 +1,6 @@
 import bittensor as bt
+
+from nextplace.protocol import RealEstateSynapse
 from nextplace.validator.database.database_manager import DatabaseManager
 from nextplace.validator.database.table_initializer import TableInitializer
 from nextplace.validator.utils.market_manager import MarketManager
@@ -21,7 +23,7 @@ class RealEstateValidator(BaseValidatorNeuron):
         self.table_initializer.create_tables()  # Create database tables
         self.market_manager = MarketManager(self.database_manager, self.markets)
         self.scorer = Scorer(self.database_manager, self.markets)
-        self.synapse_manager = SynapseManager(self.database_manager, self.market_manager)
+        self.synapse_manager = SynapseManager(self.database_manager)
         self.prediction_manager = PredictionManager(self.database_manager, self.metagraph)
         self.netuid = self.config.netuid
         
@@ -64,56 +66,51 @@ class RealEstateValidator(BaseValidatorNeuron):
         """
         bt.logging.info("Running forward pass")
 
-        # Need market lock to maintain market manager state safely
-        if not self.market_manager.lock.acquire(blocking=True, timeout=10):
+        # Need database lock to handle synapse creation and prediction management
+        if not self.database_manager.lock.acquire(blocking=True, timeout=10):
             # If the lock is held by another thread, wait for 10 seconds, if still not available, return
-            bt.logging.trace("Another thread is holding the market_manager lock.")
+            bt.logging.trace("Another thread is holding the database_manager lock.")
             return
 
         try:
-            # If we don't have any properties AND we aren't getting them yet, start thread to get properties
-            if self.market_manager.number_of_properties_in_market == 0 and not self.market_manager.updating_properties:
-                self.market_manager.updating_properties = True  # Set flag
-                thread = threading.Thread(target=self.market_manager.get_properties_for_market, name="PropertiesThread")  # Create thread
-                thread.start()  # Start thread
 
-            # No properties for Miners yet, another thread is updating the properties table
-            if self.market_manager.number_of_properties_in_market == 0:
-                bt.logging.trace(f"Waiting for other thread to finish updating properties table")
+            # Need market lock to maintain market manager state safely
+            if not self.market_manager.lock.acquire(blocking=True, timeout=10):
+                # If the lock is held by another thread, wait for 10 seconds, if still not available, return
+                bt.logging.trace("Another thread is holding the market_manager lock.")
                 return
 
-            else:  # We have properties to send to Miners
+            try:
+                # If we don't have any properties AND we aren't getting them yet, start thread to get properties
+                number_of_properties = self.database_manager.get_size_of_table('properties')
+                if number_of_properties == 0 and not self.market_manager.updating_properties:
+                    self.market_manager.updating_properties = True  # Set flag
+                    thread = threading.Thread(target=self.market_manager.get_properties_for_market, name="PropertiesThread")  # Create thread
+                    thread.start()  # Start thread
 
-                # Need database lock to handle synapse creation and prediction management
-                if not self.database_manager.lock.acquire(blocking=True, timeout=10):
-                    # If the lock is held by another thread, wait for 10 seconds, if still not available, return
-                    bt.logging.trace("Another thread is holding the database_manager lock.")
+                elif number_of_properties == 0:
+                    bt.logging.info("Waiting for properties thread to populate properties table")
                     return
 
-                try:  # Build synapse, send to miners, parse and store predictions
+            finally:
+                self.market_manager.lock.release()  # Always release the lock
 
-                    synapse = self.synapse_manager.get_synapse()  # Prepare data for miners
-                    bt.logging.info(f"Sending a synapse for properties in {self.market_manager.get_current_market()}")
+            synapse: RealEstateSynapse = self.synapse_manager.get_synapse()  # Prepare data for miners
+            if synapse is None or len(synapse.real_estate_predictions.predictions) == 0:
+                bt.logging.trace("No data for Synapse, returning.")
+                return
 
-                    if synapse:  # Ensure synapse object was created, query the network
-                        responses = self.dendrite.query(
-                            axons=self.metagraph.axons,
-                            synapse=synapse,
-                            deserialize=True,
-                            timeout=30
-                        )
+            current_market = synapse.real_estate_predictions.predictions[0].market
+            bt.logging.info(f"Sending a synapse for properties in {current_market}")
 
-                        self.prediction_manager.process_predictions(responses)  # Process Miner predictions
+            responses = self.dendrite.query(
+                axons=self.metagraph.axons,
+                synapse=synapse,
+                deserialize=True,
+                timeout=30
+            )
 
-                    else:
-                        # Synapse was empty, this suggests an issue with the database state
-                        bt.logging.error("No data available to send to miners")
-
-                    # Maintain market manager state. Need this here so main thread doesn't block w/o a timeout
-                    self.market_manager.manage_forward()
-
-                finally:
-                    self.database_manager.lock.release()  # Always release the lock
+            self.prediction_manager.process_predictions(responses)  # Process Miner predictions
 
         finally:
-            self.market_manager.lock.release()  # Always release the lock
+            self.database_manager.lock.release()  # Always release the lock

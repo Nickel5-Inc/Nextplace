@@ -12,7 +12,7 @@ class DatabaseManager:
 
     def __init__(self):
         data_dir = "data"
-        db_version = 1
+        db_version = 2
         os.makedirs(data_dir, exist_ok=True)  # Ensure data directory exists
         self.db_path = f'{data_dir}/validator_v{db_version}.db'  # Set db path
         db_dir = os.path.dirname(self.db_path)
@@ -51,6 +51,23 @@ class DatabaseManager:
         cursor, db_connection = self.get_cursor()
         try:
             cursor.execute(query)
+            db_connection.commit()
+        finally:
+            cursor.close()
+            db_connection.close()
+
+    def query_and_commit_many(self, query: str, values: list[tuple]) -> None:
+        """
+        Use for updating the database with many rows at once
+        Args:
+            query: query string
+
+        Returns:
+            None
+        """
+        cursor, db_connection = self.get_cursor()
+        try:
+            cursor.executemany(query, values)
             db_connection.commit()
         finally:
             cursor.close()
