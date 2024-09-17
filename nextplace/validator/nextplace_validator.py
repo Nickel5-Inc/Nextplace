@@ -15,7 +15,6 @@ class RealEstateValidator(BaseValidatorNeuron):
     def __init__(self, config=None):
         super(RealEstateValidator, self).__init__(config=config)
         self.subtensor = bt.subtensor(config=self.config)
-        self.chain_lock = threading.RLock()
         self.markets = real_estate_markets
         self.database_manager = DatabaseManager()
         self.table_initializer = TableInitializer(self.database_manager)
@@ -37,8 +36,7 @@ class RealEstateValidator(BaseValidatorNeuron):
     def sync_metagraph(self):
         """Sync the metagraph with the latest state from the network"""
         bt.logging.info("Syncing metagraph")
-        with self.chain_lock:
-            self.metagraph.sync(subtensor=self.subtensor)  # TODO: verify that deregistered keys are handled
+        self.metagraph.sync(subtensor=self.subtensor)  # TODO: verify that deregistered keys are handled
         bt.logging.trace(f"metagraph: {self.metagraph.hotkeys}")
 
     def score_predictions_and_set_weights(self) -> None:
@@ -55,10 +53,6 @@ class RealEstateValidator(BaseValidatorNeuron):
         current_thread = threading.current_thread()
         bt.logging.trace(f"| {current_thread.name} | Starting scoring thread")
         self.scorer.run_score_predictions()  # Score predictions
-        bt.logging.trace(f"| {current_thread.name} | Setting weights")
-        with self.chain_lock:
-            self.weight_setter.set_weights()  # Set weights
-        bt.logging.trace(f"| {current_thread.name} | Weights set")
 
     # OVERRIDE | Required
     def forward(self, step: int) -> None:
@@ -69,58 +63,56 @@ class RealEstateValidator(BaseValidatorNeuron):
         """
         bt.logging.info("Running forward pass")
 
-        with self.chain_lock:
+        # Need market lock to maintain market manager state safely
+        if not self.market_manager.lock.acquire(blocking=True, timeout=10):
+            # If the lock is held by another thread, wait for 10 seconds, if still not available, return
+            bt.logging.trace("Another thread is holding the market_manager lock.")
+            return
 
-            # Need market lock to maintain market manager state safely
-            if not self.market_manager.lock.acquire(blocking=True, timeout=10):
-                # If the lock is held by another thread, wait for 10 seconds, if still not available, return
-                bt.logging.trace("Another thread is holding the market_manager lock.")
+        try:
+            # If we don't have any properties AND we aren't getting them yet, start thread to get properties
+            if self.market_manager.number_of_properties_in_market == 0 and not self.market_manager.updating_properties:
+                self.market_manager.updating_properties = True  # Set flag
+                thread = threading.Thread(target=self.market_manager.get_properties_for_market, name="PropertiesThread")  # Create thread
+                thread.start()  # Start thread
+
+            # No properties for Miners yet, another thread is updating the properties table
+            if self.market_manager.number_of_properties_in_market == 0:
+                bt.logging.trace(f"Waiting for other thread to finish updating properties table")
                 return
 
-            try:
-                # If we don't have any properties AND we aren't getting them yet, start thread to get properties
-                if self.market_manager.number_of_properties_in_market == 0 and not self.market_manager.updating_properties:
-                    self.market_manager.updating_properties = True  # Set flag
-                    thread = threading.Thread(target=self.market_manager.get_properties_for_market, name="PropertiesThread")  # Create thread
-                    thread.start()  # Start thread
+            else:  # We have properties to send to Miners
 
-                # No properties for Miners yet, another thread is updating the properties table
-                if self.market_manager.number_of_properties_in_market == 0:
-                    bt.logging.trace(f"Waiting for other thread to finish updating properties table")
+                # Need database lock to handle synapse creation and prediction management
+                if not self.database_manager.lock.acquire(blocking=True, timeout=10):
+                    # If the lock is held by another thread, wait for 10 seconds, if still not available, return
+                    bt.logging.trace("Another thread is holding the database_manager lock.")
                     return
 
-                else:  # We have properties to send to Miners
+                try:  # Build synapse, send to miners, parse and store predictions
 
-                    # Need database lock to handle synapse creation and prediction management
-                    if not self.database_manager.lock.acquire(blocking=True, timeout=10):
-                        # If the lock is held by another thread, wait for 10 seconds, if still not available, return
-                        bt.logging.trace("Another thread is holding the database_manager lock.")
-                        return
+                    synapse = self.synapse_manager.get_synapse()  # Prepare data for miners
+                    bt.logging.info(f"Sending a synapse for properties in {self.market_manager.get_current_market()}")
 
-                    try:  # Build synapse, send to miners, parse and store predictions
+                    if synapse:  # Ensure synapse object was created, query the network
+                        responses = self.dendrite.query(
+                            axons=self.metagraph.axons,
+                            synapse=synapse,
+                            deserialize=True,
+                            timeout=30
+                        )
 
-                        synapse = self.synapse_manager.get_synapse()  # Prepare data for miners
-                        bt.logging.info(f"Sending a synapse for properties in {self.market_manager.get_current_market()}")
+                        self.prediction_manager.process_predictions(responses)  # Process Miner predictions
 
-                        if synapse:  # Ensure synapse object was created, query the network
-                            responses = self.dendrite.query(
-                                axons=self.metagraph.axons,
-                                synapse=synapse,
-                                deserialize=True,
-                                timeout=30
-                            )
+                    else:
+                        # Synapse was empty, this suggests an issue with the database state
+                        bt.logging.error("No data available to send to miners")
 
-                            self.prediction_manager.process_predictions(responses)  # Process Miner predictions
+                    # Maintain market manager state. Need this here so main thread doesn't block w/o a timeout
+                    self.market_manager.manage_forward()
 
-                        else:
-                            # Synapse was empty, this suggests an issue with the database state
-                            bt.logging.error("No data available to send to miners")
+                finally:
+                    self.database_manager.lock.release()  # Always release the lock
 
-                        # Maintain market manager state. Need this here so main thread doesn't block w/o a timeout
-                        self.market_manager.manage_forward()
-
-                    finally:
-                        self.database_manager.lock.release()  # Always release the lock
-
-            finally:
-                self.market_manager.lock.release()  # Always release the lock
+        finally:
+            self.market_manager.lock.release()  # Always release the lock

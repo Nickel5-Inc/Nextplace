@@ -2,6 +2,7 @@ import torch
 import bittensor as bt
 import traceback
 import threading
+from datetime import datetime, timezone, timedelta
 
 class WeightSetter:
     def __init__(self, metagraph, wallet, subtensor, config, database_manager):
@@ -10,6 +11,30 @@ class WeightSetter:
         self.subtensor = subtensor
         self.config = config
         self.database_manager = database_manager
+        self.timer = datetime.now(timezone.utc)
+
+    def _is_time_to_set_weights(self) -> bool:
+        """
+        Check if it has been 2.5 hours since the timer was last reset
+        Returns:
+            True if it has been 2.5 hours, else False
+        """
+        now = datetime.now(timezone.utc)
+        time_diff = now - self.timer
+        if time_diff >= timedelta(hours=2, minutes=30):
+            return True
+        return False
+
+    def check_timer_set_weights(self) -> None:
+        """
+        Set weights every 2.5 hours
+        Returns:
+            None
+        """
+        if self._is_time_to_set_weights():
+            bt.logging.trace("Time to set weights, resetting timer and setting weights.")
+            self.timer = datetime.now(timezone.utc)  # Reset the timer
+            self.set_weights()  # Set weights
 
     def calculate_miner_scores(self):
         try:

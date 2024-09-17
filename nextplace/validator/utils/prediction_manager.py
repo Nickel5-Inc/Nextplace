@@ -3,7 +3,7 @@ from typing import List
 import bittensor as bt
 from datetime import datetime, timezone
 
-from nextplace.protocol import RealEstateSynapse, RealEstatePredictions
+from nextplace.protocol import RealEstatePredictions
 from nextplace.validator.utils.contants import ISO8601
 from nextplace.validator.database.database_manager import DatabaseManager
 
