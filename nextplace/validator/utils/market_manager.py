@@ -3,6 +3,8 @@ from nextplace.validator.api.properties_api import PropertiesAPI
 from nextplace.validator.database.database_manager import DatabaseManager
 import threading
 
+from nextplace.validator.utils.contants import NUMBER_OF_PROPERTIES_PER_SYNAPSE
+
 """
 Helper class manages the real estate market
 """
@@ -21,12 +23,13 @@ class MarketManager:
 
     def _find_initial_market_index(self):
         market = self._find_initial_market_name()
+        bt.logging.trace(f"Initial market: {market}")
         if market is None:
             return 0
         idx = next((i for i, obj in enumerate(self.markets) if obj["name"] == market), None)
         if idx is None:
             return 0
-        return 0 if idx == len(self.markets) - 1 else idx + 1
+        return idx
 
     def _find_initial_market_name(self) -> str or None:
         number_of_properties = self.database_manager.get_size_of_table('properties')
