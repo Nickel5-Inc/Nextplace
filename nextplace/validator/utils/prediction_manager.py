@@ -44,12 +44,25 @@ class PredictionManager:
 
             for prediction in real_estate_predictions.predictions:  # Iterate predictions in each response
                 # Only process valid predictions
-                if prediction is None or prediction.property_id is None or prediction.predicted_sale_date is None or prediction.predicted_sale_price is None:
+                if prediction is None or prediction.property_id is None:
                     continue
 
                 try:
                     miner_hotkey = self.metagraph.hotkeys[idx]
                     if miner_hotkey is not None:
+
+                        # Check if predicted_sale_price is None, if so, calculate it using 70% of listing price
+                        if prediction.predicted_sale_price is None:
+                            listing_price = prediction.price
+                            if listing_price:
+                                prediction.predicted_sale_price = listing_price * 0.7
+                            else:
+                                bt.logging.warning(f"Listing price not found for property_id: {prediction.property_id}")
+                                continue  # Skip this prediction if listing price is unavailable
+                        
+                        # Check if predicted_sale_date is None, if so, use the current date
+                        if prediction.predicted_sale_date is None:
+                            prediction.predicted_sale_date = current_utc_datetime.strftime('%Y-%m-%d')
 
                         # Parse force update flag
                         if prediction.force_update_past_predictions:
