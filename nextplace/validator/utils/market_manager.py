@@ -22,16 +22,10 @@ class MarketManager:
         self.market_index = initial_market_index  # Index into self.markets. The current market
 
     def _find_initial_market_index(self):
-        market = self._find_initial_market_name()
-        bt.logging.trace(f"Initial market: {market}")
-        if market is None:
-            return 0
-        idx = next((i for i, obj in enumerate(self.markets) if obj["name"] == market), None)
-        if idx is None:
-            return 0
-        return idx
+        market_idx = self._find_initial_market_from_database()
+        return market_idx if market_idx is not None else 0
 
-    def _find_initial_market_name(self) -> str or None:
+    def _find_initial_market_from_database(self) -> str or None:
         number_of_properties = self.database_manager.get_size_of_table('properties')
         if number_of_properties > 0:
             some_property = self.database_manager.query("""
@@ -40,7 +34,9 @@ class MarketManager:
                         LIMIT 1
                     """)
             if some_property:
-                return some_property[0][0]
+                market = some_property[0][0]
+                idx = next((i for i, obj in enumerate(self.markets) if obj["name"] == market), None)
+                return idx + 1 if idx < len(self.markets) - 1 else 0
         most_recent_prediction = self.database_manager.query(
             """
                 SELECT market 
@@ -51,7 +47,9 @@ class MarketManager:
         )
         if not most_recent_prediction:
             return None
-        return most_recent_prediction[0][0]
+        market = most_recent_prediction[0][0]
+        idx = next((i for i, obj in enumerate(self.markets) if obj["name"] == market), None)
+        return idx + 1 if idx < len(self.markets) - 1 else 0
 
     def get_properties_for_market(self) -> None:
         """
