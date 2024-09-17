@@ -78,7 +78,6 @@ class RealEstateValidator(BaseValidatorNeuron):
             if not self.market_manager.lock.acquire(blocking=True, timeout=10):
                 # If the lock is held by another thread, wait for 10 seconds, if still not available, return
                 bt.logging.trace("Another thread is holding the market_manager lock.")
-                self.database_manager.lock.release()
                 return
 
             try:
@@ -88,14 +87,10 @@ class RealEstateValidator(BaseValidatorNeuron):
                     self.market_manager.updating_properties = True  # Set flag
                     thread = threading.Thread(target=self.market_manager.get_properties_for_market, name="PropertiesThread")  # Create thread
                     thread.start()  # Start thread
-                    self.database_manager.lock.release()
-                    self.market_manager.lock.release()
                     return
 
                 elif number_of_properties == 0:
                     bt.logging.info("Waiting for properties thread to populate properties table")
-                    self.database_manager.lock.release()
-                    self.market_manager.lock.release()
                     return
 
             finally:
@@ -104,7 +99,6 @@ class RealEstateValidator(BaseValidatorNeuron):
             synapse: RealEstateSynapse = self.synapse_manager.get_synapse()  # Prepare data for miners
             if synapse is None or len(synapse.real_estate_predictions.predictions) == 0:
                 bt.logging.trace("No data for Synapse, returning.")
-                self.database_manager.lock.release()
                 return
 
             responses = self.dendrite.query(
