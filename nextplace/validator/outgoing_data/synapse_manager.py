@@ -26,7 +26,6 @@ class SynapseManager:
             # Query to get the next round of properties
             retrieve_query = f'''
                 SELECT * FROM properties
-                ORDER BY days_on_market DESC
                 LIMIT {NUMBER_OF_PROPERTIES_PER_SYNAPSE}
             '''
             property_data = self.database_manager.query(retrieve_query)  # Execute query
@@ -35,7 +34,8 @@ class SynapseManager:
                 bt.logging.trace("Found no properties for synapse in properties table, returning None")
                 return None
 
-            row_ids = [row['nextplace_id'] for row in property_data]  # Extract unique ID's
+            nextplace_id_index = 0
+            row_ids = [row[nextplace_id_index] for row in property_data]  # Extract unique ID's
             delete_query = f'''
                     DELETE FROM properties
                     WHERE nextplace_id IN ({','.join(map(str, row_ids))})
