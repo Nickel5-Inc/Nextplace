@@ -39,6 +39,22 @@ class RealEstateValidator(BaseValidatorNeuron):
         self.metagraph.sync(subtensor=self.subtensor)  # TODO: verify that deregistered keys are handled
         bt.logging.trace(f"metagraph: {self.metagraph.hotkeys}")
 
+    def check_timer_set_weights(self) -> None:
+        """
+        Check weight setting timer. If time to set weights, try to acquire lock and set weights
+        Returns:
+            None
+        """
+        if self.weight_setter.is_time_to_set_weights():
+            if not self.database_manager.lock.acquire(blocking=True, timeout=10):
+                # If the lock is held by another thread, wait for 10 seconds, if still not available, return
+                bt.logging.trace("Another thread is holding the database_manager lock. Will check timer and set weights later.")
+                return
+            try:
+                self.weight_setter.check_timer_set_weights()
+            finally:
+                self.database_manager.lock.release()
+
     # OVERRIDE | Required
     def forward(self, step: int) -> None:
         """

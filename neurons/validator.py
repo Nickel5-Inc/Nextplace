@@ -17,8 +17,8 @@ def main(validator):
         try:
             bt.logging.info(f"Validator step: {step}")
 
-            if step % 10 == 0:  # Every 10 steps, see if it's time to set weights. If so, set weights.
-                validator.weight_setter.check_timer_set_weights()
+            if step % 5 == 0:  # See if it's time to set weights. If so, set weights.
+                validator.check_timer_set_weights()
 
             validator.sync_metagraph()  # Sync metagraph
 

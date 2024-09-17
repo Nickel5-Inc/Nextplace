@@ -13,7 +13,7 @@ class WeightSetter:
         self.database_manager = database_manager
         self.timer = datetime.now(timezone.utc)
 
-    def _is_time_to_set_weights(self) -> bool:
+    def is_time_to_set_weights(self) -> bool:
         """
         Check if it has been 2.5 hours since the timer was last reset
         Returns:
@@ -31,15 +31,13 @@ class WeightSetter:
         Returns:
             None
         """
-        if self._is_time_to_set_weights():
-            bt.logging.trace("Time to set weights, resetting timer and setting weights.")
-            self.timer = datetime.now(timezone.utc)  # Reset the timer
-            self.set_weights()  # Set weights
+        bt.logging.trace("Time to set weights, resetting timer and setting weights.")
+        self.timer = datetime.now(timezone.utc)  # Reset the timer
+        self.set_weights()  # Set weights
 
     def calculate_miner_scores(self):
-        try:
-            with self.database_manager.lock:
-                results = self.database_manager.query("SELECT miner_hotkey, lifetime_score FROM miner_scores")
+        try:  # database_manager lock is already acquire at this point
+            results = self.database_manager.query("SELECT miner_hotkey, lifetime_score FROM miner_scores")
 
             scores = torch.zeros(len(self.metagraph.hotkeys))
             hotkey_to_uid = {hk: uid for uid, hk in enumerate(self.metagraph.hotkeys)}
