@@ -36,9 +36,10 @@ class SynapseManager:
 
             nextplace_id_index = 0
             row_ids = [row[nextplace_id_index] for row in property_data]  # Extract unique ID's
+            formatted_ids = ','.join(f"'{str(nextplace_id)}'" for nextplace_id in row_ids)
             delete_query = f'''
                     DELETE FROM properties
-                    WHERE nextplace_id IN ({','.join(map(str, row_ids))})
+                    WHERE nextplace_id IN ({formatted_ids})
                 '''
             self.database_manager.query_and_commit(delete_query)  # Remove the retrieved rows from the database
 
