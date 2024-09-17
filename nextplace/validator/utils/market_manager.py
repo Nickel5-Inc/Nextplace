@@ -66,6 +66,6 @@ class MarketManager:
         self.properties_api.process_region_market(current_market)  # Populate database with this market
         with self.lock:  # Acquire lock
             bt.logging.info(f"| {current_thread.name} | Finished ingesting properties in {current_market['name']}")
-            self.updating_properties = False  # Update flag
             self.market_index = self.market_index + 1 if self.market_index < len(self.markets) - 1 else 0 # Wrap index around
+            self.updating_properties = False  # Update flag
 

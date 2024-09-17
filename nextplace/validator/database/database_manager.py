@@ -108,11 +108,6 @@ class DatabaseManager:
         self.query_and_commit('DELETE FROM properties')
 
     def get_size_of_table(self, table_name: str):
-        cursor, db_connection = self.get_cursor()
-        query = f"SELECT COUNT(*) FROM {table_name}"
-        cursor.execute(query)
-        row_count = cursor.fetchone()[0]
-        cursor.close()
-        db_connection.close()
-        return row_count
-
+        query_str = f"SELECT COUNT(*) FROM {table_name}"
+        result = self.query(query_str)
+        return result[0][0]

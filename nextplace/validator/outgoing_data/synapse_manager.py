@@ -31,7 +31,6 @@ class SynapseManager:
             property_data = self.database_manager.query(retrieve_query)  # Execute query
 
             if len(property_data) == 0:
-                bt.logging.trace("Found no properties for synapse in properties table, returning None")
                 return None
 
             nextplace_id_index = 0
@@ -59,7 +58,9 @@ class SynapseManager:
 
             real_estate_predictions = RealEstatePredictions(predictions=outgoing_data)
             synapse = RealEstateSynapse.create(real_estate_predictions=real_estate_predictions)
-            bt.logging.trace(f"Created Synapse with {len(outgoing_data)} properties")
+            market_index = 20
+            market = property_data[0][market_index]
+            bt.logging.trace(f"Created Synapse with {len(outgoing_data)} properties in {market}")
             return synapse
 
         except IndexError:
