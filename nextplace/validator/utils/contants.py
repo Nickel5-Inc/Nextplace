@@ -10,7 +10,6 @@ real_estate_markets = [
     {'name': 'St. Petersburg', 'id': '6_16164'},
     {'name': 'Jacksonville', 'id': '6_8907'},
     {'name': 'New Orleans', 'id': '6_14233'},
-    {'name': 'Phoenix', 'id': '6_14240'},
     {'name': 'Detroit', 'id': '6_5665'},
     {'name': 'Mesa', 'id': '6_11736'},
     {'name': 'Miami', 'id': '6_11458'},
@@ -52,7 +51,8 @@ real_estate_markets = [
     {'name': 'Omaha', 'id': '6_9417'},
     {'name': 'Tucson', 'id': '6_19459'},
     {'name': 'Fort Worth', 'id': '6_30827'},
-    {'name': 'Lancaster', 'id': '6_10233'}
+    {'name': 'Lancaster', 'id': '6_10233'},
+    {'name': 'Phoenix', 'id': '6_14240'},
 ]
 
 ISO8601 = "%Y-%m-%dT%H:%M:%SZ"
