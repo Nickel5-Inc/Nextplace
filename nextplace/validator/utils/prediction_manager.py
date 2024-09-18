@@ -54,11 +54,23 @@ class PredictionManager:
                         # Check if predicted_sale_price is None, if so, calculate it using 70% of listing price
                         if prediction.predicted_sale_price is None:
                             listing_price = prediction.price
+                            # Get price from Synapse
                             if listing_price:
                                 prediction.predicted_sale_price = listing_price * 0.7
                             else:
-                                bt.logging.warning(f"Listing price not found for property_id: {prediction.property_id}")
-                                continue  # Skip this prediction if listing price is unavailable
+                                # If price in synapse is empty, use properties table
+                                try:
+                                    cursor.execute("SELECT price FROM properties WHERE nextplace_id = ?", (prediction.nextplace_id,))
+                                    result = cursor.fetchone()
+                                    if result and result[0]:
+                                        listing_price = result[0]
+                                        prediction.predicted_sale_price = listing_price * 0.7
+                                    else:
+                                        bt.logging.warning(f"Listing price not found in properties table for nextplace_id: {prediction.nextplace_id}")
+                                        continue
+                                except Exception as e:
+                                    bt.logging.error(f"Error retrieving listing price from properties table: {e}")
+                                    continue
                         
                         # Check if predicted_sale_date is None, if so, use the current date
                         if prediction.predicted_sale_date is None:
