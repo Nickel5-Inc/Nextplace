@@ -39,6 +39,26 @@ class DatabaseManager:
             db_connection.close()
             return rows
 
+    def query_with_values(self, query: str, values: tuple) -> list:
+        """
+        Get all results of a query from the database
+        Args:
+            query: a query string
+            values: a tuple of values
+
+        Returns:
+            All rows matching the query
+        """
+        rows = []
+        cursor, db_connection = self.get_cursor()
+        try:
+            cursor.execute(query, values)
+            rows = cursor.fetchall()
+        finally:
+            cursor.close()
+            db_connection.close()
+            return rows
+
     def query_and_commit(self, query: str) -> None:
         """
         Use for updating the database
@@ -61,6 +81,7 @@ class DatabaseManager:
         Use for updating the database with many rows at once
         Args:
             query: query string
+            values: a list of tuples
 
         Returns:
             None
