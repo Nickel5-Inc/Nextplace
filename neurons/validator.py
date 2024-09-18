@@ -10,9 +10,6 @@ from nextplace.validator.nextplace_validator import RealEstateValidator
 def main(validator):
     step = 1  # Initialize step
 
-    # Initialize last_recalculation to the current time
-    last_recalculation = datetime.utcnow()
-
     while True:
         try:
             bt.logging.info(f"Validator step: {step}")
@@ -24,16 +21,10 @@ def main(validator):
 
             current_time = datetime.utcnow()
 
-            # Check if it's a new day compared to the last recalculation
-            if current_time.date() > last_recalculation.date():
-                # thread = threading.Thread(target=validator.scorer.scoring_calculator.recalculate_all_scores)
-                # thread.start()
-                last_recalculation = current_time
-
             validator.forward(step)  # Get predictions from the Miners
 
             if step >= 1000:  # Time to update scores and set weights
-                thread = threading.Thread(target=validator.scorer.run_score_predictions, name="ScoreThread")  # Create thread
+                thread = threading.Thread(target=validator.score_predictions_and_set_weights, name="🏋🏻ScoreThread")  # Create thread
                 thread.start()  # Start thread
                 step = 0  # Reset the step
 
