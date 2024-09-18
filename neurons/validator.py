@@ -3,7 +3,6 @@ import argparse
 import bittensor as bt
 import threading
 import traceback
-from datetime import datetime
 from nextplace.validator.nextplace_validator import RealEstateValidator
 
 
