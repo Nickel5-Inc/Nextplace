@@ -37,9 +37,9 @@ class RealEstateValidator(BaseValidatorNeuron):
 
     def sync_metagraph(self):
         """Sync the metagraph with the latest state from the network"""
-        bt.logging.info("Syncing metagraph")
+        bt.logging.info("🔗 Syncing metagraph")
         self.metagraph.sync(subtensor=self.subtensor)  # TODO: verify that deregistered keys are handled
-        bt.logging.trace(f"metagraph: {self.metagraph.hotkeys}")
+        bt.logging.trace(f"📈 Metagraph: {self.metagraph.hotkeys}")
 
     def check_timer_set_weights(self) -> None:
         """
@@ -50,7 +50,7 @@ class RealEstateValidator(BaseValidatorNeuron):
         if self.weight_setter.is_time_to_set_weights():
             if not self.database_manager.lock.acquire(blocking=True, timeout=10):
                 # If the lock is held by another thread, wait for 10 seconds, if still not available, return
-                bt.logging.trace("Another thread is holding the database_manager lock. Will check timer and set weights later.")
+                bt.logging.trace("🚧 Another thread is holding the database_manager lock. Will check timer and set weights later.")
                 return
             try:
                 self.weight_setter.check_timer_set_weights()
@@ -64,12 +64,12 @@ class RealEstateValidator(BaseValidatorNeuron):
         Returns:
             None
         """
-        bt.logging.info("Running forward pass")
+        bt.logging.info("⏩ Running forward pass")
 
         # Need database lock to handle synapse creation and prediction management
         if not self.database_manager.lock.acquire(blocking=True, timeout=10):
             # If the lock is held by another thread, wait for 10 seconds, if still not available, return
-            bt.logging.trace("Another thread is holding the database_manager lock.")
+            bt.logging.trace("🚧 Another thread is holding the database_manager lock.")
             return
 
         try:
@@ -77,7 +77,7 @@ class RealEstateValidator(BaseValidatorNeuron):
             # Need market lock to maintain market manager state safely
             if not self.market_manager.lock.acquire(blocking=True, timeout=10):
                 # If the lock is held by another thread, wait for 10 seconds, if still not available, return
-                bt.logging.trace("Another thread is holding the market_manager lock.")
+                bt.logging.trace("🚧 Another thread is holding the market_manager lock.")
                 return
 
             try:
@@ -90,7 +90,7 @@ class RealEstateValidator(BaseValidatorNeuron):
                     return
 
                 elif number_of_properties == 0:
-                    bt.logging.info("Waiting for properties thread to populate properties table")
+                    bt.logging.info("🚧 Waiting for properties thread to populate properties table")
                     return
 
             finally:
@@ -98,7 +98,7 @@ class RealEstateValidator(BaseValidatorNeuron):
 
             synapse: RealEstateSynapse = self.synapse_manager.get_synapse()  # Prepare data for miners
             if synapse is None or len(synapse.real_estate_predictions.predictions) == 0:
-                bt.logging.trace("No data for Synapse, returning.")
+                bt.logging.trace("↻ No data for Synapse, returning.")
                 return
 
             responses = self.dendrite.query(

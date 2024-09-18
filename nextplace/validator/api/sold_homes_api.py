@@ -25,9 +25,9 @@ class SoldHomesAPI(ApiBase):
         num_markets = len(self.markets)
         with self.database_manager.lock:
             oldest_prediction = self._get_oldest_prediction()
-        bt.logging.trace(f"| {current_thread.name} | Looking for homes sold since oldest unscored prediction: '{oldest_prediction}'")
+        bt.logging.trace(f"| {current_thread.name} | 🕵🏻 Looking for homes sold since oldest unscored prediction: '{oldest_prediction}'")
         for idx, market in enumerate(self.markets):
-            bt.logging.trace(f"| {current_thread.name} | Getting sold homes in {market['name']}")
+            bt.logging.trace(f"| {current_thread.name} | 🔍 Getting sold homes in {market['name']}")
             self._process_region_sold_homes(market, oldest_prediction)
             percent_done = round(((idx + 1) / num_markets) * 100, 2)
             bt.logging.trace(f"| {current_thread.name} | {percent_done}% of markets processed")
@@ -62,7 +62,7 @@ class SoldHomesAPI(ApiBase):
 
             # Only proceed with status code is 200
             if response.status_code != 200:
-                bt.logging.error(f"Error querying sold properties: {response.status_code}")
+                bt.logging.error(f"❗Error querying sold properties: {response.status_code}")
                 bt.logging.error(response.text)
                 break
 

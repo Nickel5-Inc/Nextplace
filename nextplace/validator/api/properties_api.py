@@ -1,9 +1,7 @@
 import json
 import requests
 import bittensor as bt
-import sqlite3
 from datetime import datetime, timezone
-
 from nextplace.validator.api.api_base import ApiBase
 from nextplace.validator.data_containers.home import Home
 from nextplace.validator.database.database_manager import DatabaseManager
@@ -43,7 +41,7 @@ class PropertiesAPI(ApiBase):
 
             # Only proceed with status code is 200
             if response.status_code != 200:
-                bt.logging.error(f"Error querying properties on the market: {response.status_code}")
+                bt.logging.error(f"❗Error querying properties on the market: {response.status_code}")
                 bt.logging.error(response.text)
                 break
 

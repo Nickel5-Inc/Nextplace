@@ -7,11 +7,11 @@ from nextplace.validator.nextplace_validator import RealEstateValidator
 
 
 def main(validator):
-    step = 999  # Initialize step
+    step = 1  # Initialize step
 
     while True:
         try:
-            bt.logging.info(f"Validator step: {step}")
+            bt.logging.info(f"🦶 Validator step: {step}")
 
             if step % 5 == 0:  # See if it's time to set weights. If so, set weights.
                 validator.check_timer_set_weights()

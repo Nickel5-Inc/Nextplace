@@ -27,10 +27,10 @@ class PredictionManager:
         Returns:
             None
         """
-        bt.logging.info(f'Processing Responses')
+        bt.logging.info(f'📡 Processing Responses')
 
         if responses is None or len(responses) == 0:
-            bt.logging.error('No responses received')
+            bt.logging.error('❗No responses received')
             return
 
         current_utc_datetime = datetime.now(timezone.utc)
@@ -76,14 +76,14 @@ class PredictionManager:
                             ignore_policy_data_for_ingestion.append(values)
 
                 except Exception as e:
-                    bt.logging.error(f"Failed to process prediction: {e}")
+                    bt.logging.error(f"❗Failed to process prediction: {e}")
 
         # Store predictions in the database
         self._handle_ingestion('IGNORE', ignore_policy_data_for_ingestion)
         self._handle_ingestion('REPLACE', replace_policy_data_for_ingestion)
 
         table_size = self.database_manager.get_size_of_table('predictions')
-        bt.logging.trace(f"There are now {table_size} predictions in the database")
+        bt.logging.trace(f"📢 There are now {table_size} predictions in the database")
 
     def _handle_empty_prediction_price(self, prediction: RealEstatePrediction) -> bool:
         """
@@ -109,10 +109,10 @@ class PredictionManager:
                     listing_price = result[0]
                     prediction.predicted_sale_price = listing_price * 0.7
                 else:
-                    bt.logging.warning(f"Listing price not found in properties table for nextplace_id: {prediction.nextplace_id}")
+                    bt.logging.warning(f"❗Listing price not found in properties table for nextplace_id: {prediction.nextplace_id}")
                     return False  # Skip this prediction
             except Exception as e:
-                bt.logging.error(f"Error retrieving listing price from properties table: {e}")
+                bt.logging.error(f"❗Error retrieving listing price from properties table: {e}")
                 return False  # Skip this prediction
 
         return True  # Prediction handled

@@ -1,6 +1,4 @@
-import json
 import bittensor as bt
-
 from nextplace.protocol import RealEstateSynapse, RealEstatePrediction, RealEstatePredictions
 from nextplace.validator.database.database_manager import DatabaseManager
 from nextplace.validator.utils.contants import NUMBER_OF_PROPERTIES_PER_SYNAPSE
@@ -50,21 +48,21 @@ class SynapseManager:
                         next_property = self._property_from_database_row(property_datum)
                         outgoing_data.append(next_property)
                     except IndexError as ie:
-                        bt.logging.error(f"IndexError: {ie} - The data from the database failed to convert to a Synapse")
+                        bt.logging.error(f"❗IndexError: {ie} - The data from the database failed to convert to a Synapse")
                         return None
                 else:
-                    bt.logging.warning("No property data found in the database")
+                    bt.logging.warning("❗No property data found in the database")
                     return None
 
             real_estate_predictions = RealEstatePredictions(predictions=outgoing_data)
             synapse = RealEstateSynapse.create(real_estate_predictions=real_estate_predictions)
             market_index = 20
             market = property_data[0][market_index]
-            bt.logging.trace(f"Created Synapse with {len(outgoing_data)} properties in {market}")
+            bt.logging.trace(f"✉️ Created Synapse with {len(outgoing_data)} properties in {market}")
             return synapse
 
         except IndexError:
-            bt.logging.info(f"No property data available")
+            bt.logging.info(f"❗No property data available")
             return None
 
     def _property_from_database_row(self, property_data: any) -> RealEstatePrediction:
