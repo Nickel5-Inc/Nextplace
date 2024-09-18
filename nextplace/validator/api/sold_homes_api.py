@@ -74,11 +74,7 @@ class SoldHomesAPI(ApiBase):
 
             # Iterate all homes
             for home in homes:
-                # Extract home sale date as datetime object
-                home_data = home['homeData']
-                sale_date = self._get_nested(home_data, 'lastSaleData', 'lastSoldDate')
-                if sale_date and sale_date > oldest_prediction:
-                    valid_results.append(home)
+                self._process_home(home, oldest_prediction, valid_results)
 
             if len(homes) < self.max_results_per_page:  # Last page
                 break
@@ -87,8 +83,18 @@ class SoldHomesAPI(ApiBase):
 
         self._ingest_valid_homes(valid_results)
 
+    def _process_home(self, home: any, oldest_prediction: str, result_tuples: list[tuple]) -> None:
+        home_data = home['homeData']
+        property_id = home_data.get('propertyId')  # Extract property id
+        sale_price = self._get_nested(home_data, 'priceInfo', 'amount')  # Extract sale price
+        sale_date = self._get_nested(home_data, 'lastSaleData', 'lastSoldDate')  # Extract the sale date
+        address = self._get_nested(home_data, 'addressInfo', 'formattedStreetLine')
+        zip_code = self._get_nested(home_data, 'addressInfo', 'zip')
+        nextplace_id = self.get_hash(address, zip_code)
+        if address and zip_code and property_id and sale_price and sale_date and sale_date > oldest_prediction:
+            result_tuples.append((nextplace_id, property_id, sale_price, sale_date))
 
-    def _ingest_valid_homes(self, valid_results) -> None:
+    def _ingest_valid_homes(self, result_tuples: list[tuple]) -> None:
         """
         Ingest valid results into the database
         Args:
@@ -98,40 +104,11 @@ class SoldHomesAPI(ApiBase):
             None
         """
         with self.database_manager.lock:  # Acquire lock
-            cursor, db_connection = self.database_manager.get_cursor()  # Get cursor & connection ref
-            for home in valid_results:  # Iterate valid homes
-                self._process_sold_home(home, cursor)  # Ingest each home
-            db_connection.commit()  # Commit db query
-            cursor.close()
-            db_connection.close()
-
-    def _process_sold_home(self, home: any, cursor: sqlite3.Cursor) -> None:
-        """
-        Process a single home, store in database
-        Args:
-            home: a single home object from the redfin api
-            cursor: a sqlite3 cursor object
-
-        Returns:
-            None
-
-        """
-        home_data = home['homeData']  # Extract home data
-        property_id = home_data.get('propertyId')  # Extract property id
-        sale_price = self._get_nested(home_data, 'priceInfo', 'amount')  # Extract sale price
-        sale_date = self._get_nested(home_data, 'lastSaleData', 'lastSoldDate')  # Extract sale date
-        address = self._get_nested(home_data, 'addressInfo', 'formattedStreetLine')
-        zip_code = self._get_nested(home_data, 'addressInfo', 'zip')
-        nextplace_id = self.get_hash(address, zip_code)
-
-        # Store results in database
-        if property_id and sale_price and sale_date:
-            query = '''
-                        INSERT OR IGNORE INTO sales (nextplace_id, property_id, sale_price, sale_date)
-                        VALUES (?, ?, ?, ?)
-                    '''
-            values = (nextplace_id, property_id, sale_price, sale_date)
-            cursor.execute(query, values)
+            query_str = """
+                INSERT OR IGNORE INTO sales (nextplace_id, property_id, sale_price, sale_date)
+                VALUES (?, ?, ?, ?)
+            """
+            self.database_manager.query_and_commit_many(query_str, result_tuples)
 
     def _get_oldest_prediction(self) -> str:
         """
