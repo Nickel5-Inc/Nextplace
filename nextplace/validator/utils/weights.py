@@ -2,6 +2,7 @@ import torch
 import bittensor as bt
 import traceback
 import threading
+from scipy.optimize import minimize_scalar
 
 class WeightSetter:
     def __init__(self, metagraph, wallet, subtensor, config, database_manager):
@@ -35,24 +36,46 @@ class WeightSetter:
         sorted_indices = torch.argsort(scores, descending=True)
         n_miners = len(scores)
 
-        # Calculate the number of miners in each tier
-        top_25_percent = max(1, n_miners // 4)
-        next_25_percent = max(1, n_miners // 4)
-        remaining = n_miners - top_25_percent - next_25_percent
+        # Computes the optimal constant for the rewards distribution
+        def compute_error(lambda_):
+            # Compute weights using exponential decay
+            ranks = torch.arange(n_miners, dtype=torch.float32)
+            weights = torch.exp(-lambda_ * ranks)
+            weights = weights / weights.sum()
 
-        # Create a weights tensor
-        weights = torch.zeros_like(scores)
+            # Compute cumulative sums at desired percentiles
+            cum_weights = torch.cumsum(weights, dim=0)
 
-        # Assign weights based on tiers
-        weights[sorted_indices[:top_25_percent]] = 0.5 / top_25_percent
-        weights[sorted_indices[top_25_percent:top_25_percent+next_25_percent]] = 0.2 / next_25_percent
-        if remaining > 0:
-            weights[sorted_indices[top_25_percent+next_25_percent:]] = 0.3 / remaining
+            idx_10 = max(1, int(0.1 * n_miners) - 1)
+            idx_50 = max(1, int(0.5 * n_miners) - 1)
 
-        # Ensure weights sum to 1
-        weights = weights / weights.sum()
+            C10 = cum_weights[idx_10].item()
+            C50 = cum_weights[idx_50].item()
 
-        return weights
+            # Error based on the difference from desired cumulative percentages
+            error = (C10 - 0.4)**2 + (C50 - 0.8)**2
+            return error
+
+        # Optimize lambda to minimize the error
+        try:
+            res = minimize_scalar(compute_error, bounds=(0.001, 10), method='bounded')
+            lambda_opt = res.x
+
+            # Compute final weights with the optimized lambda
+            ranks = torch.arange(n_miners, dtype=torch.float32)
+            weights = torch.exp(-lambda_opt * ranks)
+            weights = weights / weights.sum()
+
+            # Map weights back to the original miner indices
+            final_weights = torch.zeros_like(weights)
+            final_weights[sorted_indices] = weights
+
+            return final_weights
+
+        except Exception as e:
+            bt.logging.error(f"Error calculating weights: {str(e)}")
+            bt.logging.error(traceback.format_exc())
+            return torch.zeros(n_miners)
 
     def set_weights(self):
         current_thread = threading.current_thread()
@@ -68,7 +91,7 @@ class WeightSetter:
             uid = self.metagraph.hotkeys.index(self.wallet.hotkey.ss58_address)
             stake = float(self.metagraph.S[uid])
 
-            if stake < 0.0:
+            if stake <= 0.0:
                 bt.logging.error(f"| {current_thread.name} | Insufficient stake. Failed in setting weights.")
                 return False
 
@@ -77,7 +100,6 @@ class WeightSetter:
                 wallet=self.wallet,
                 uids=self.metagraph.uids,
                 weights=weights,
-                #version_key=__spec_version__,
                 wait_for_inclusion=True,
                 wait_for_finalization=True,
             )

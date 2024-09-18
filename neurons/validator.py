@@ -8,7 +8,7 @@ from nextplace.validator.nextplace_validator import RealEstateValidator
 
 
 def main(validator):
-    step = 1  # Initialize step
+    step = 999  # Initialize step
 
     while True:
         try:
@@ -21,7 +21,7 @@ def main(validator):
             validator.forward(step)  # Get predictions from the Miners
 
             if step >= 1000:  # Time to update scores and set weights
-                thread = threading.Thread(target=validator.score_predictions_and_set_weights, name="🏋🏻ScoreAndSetWeightsThread")  # Create thread
+                thread = threading.Thread(target=validator.score_predictions_and_set_weights, name="🏋🏻 ScoreAndSetWeightsThread 🏋🏻")  # Create thread
                 thread.start()  # Start thread
                 step = 0  # Reset the step
 
