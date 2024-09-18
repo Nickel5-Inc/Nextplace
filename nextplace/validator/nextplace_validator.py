@@ -85,7 +85,7 @@ class RealEstateValidator(BaseValidatorNeuron):
                 number_of_properties = self.database_manager.get_size_of_table('properties')
                 if number_of_properties == 0 and not self.market_manager.updating_properties:
                     self.market_manager.updating_properties = True  # Set flag
-                    thread = threading.Thread(target=self.market_manager.get_properties_for_market, name="PropertiesThread")  # Create thread
+                    thread = threading.Thread(target=self.market_manager.get_properties_for_market, name="🏠PropertiesThread")  # Create thread
                     thread.start()  # Start thread
                     return
 
