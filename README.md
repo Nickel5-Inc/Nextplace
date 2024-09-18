@@ -9,15 +9,15 @@
 
 # Nextplace AI 🏡
 
-Nextplace AI is decentralizing intelligence around housing markets. In a space controlled by monopolies and gatekeepers, Nexplace seeks to provide a democratized network to evaluate home prices for the general market and individuals.
+Nextplace AI is decentralizing intelligence around housing markets. In a space controlled by monopolies and gatekeepers, Nexplace seeks to provide a democratized network to evaluate home prices for everybody.
 
 ## Miners
 
-Miners will develop their own models to predict home prices and sales dates. They can use data provided by the validators or call out to API's to gather more data for their models inference. Mienrs will provide the expected sales date and the predicted home price.
+Miners will develop their own models to predict home prices and sales dates. They can use data provided by the validators or call out to API's to gather more data for their models inference. Miners will provide the expected sales date and the predicted home price.
 
 ## Validators
 
-Validators provide data to miners from <INSERT NUMBER OF MARKETS> markets. This number will expand over time. Validators evaluate miners based on their accuracy in prediction of home price and sales date.
+Validators provide data to miners from 50 markets. This number will expand over time. Validators evaluate miners based on their accuracy in prediction of home price and sales date.
 
 ### Scoring Method for Home Price Prediction
 
