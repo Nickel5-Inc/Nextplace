@@ -18,9 +18,6 @@ def main(validator):
                 validator.check_timer_set_weights()
 
             validator.sync_metagraph()  # Sync metagraph
-
-            current_time = datetime.utcnow()
-
             validator.forward(step)  # Get predictions from the Miners
 
             if step >= 1000:  # Time to update scores and set weights
