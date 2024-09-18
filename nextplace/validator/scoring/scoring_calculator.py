@@ -16,8 +16,6 @@ class ScoringCalculator:
         """
         Score miner predictions in bulk
         """
-        bt.logging.trace(f"Found {len(scorable_predictions)} scorable predictions")
-
         cursor, db_connection = self.database_manager.get_cursor()
         try:
             miner_scores = self._fetch_current_miner_scores(cursor)
@@ -25,7 +23,7 @@ class ScoringCalculator:
             self._update_miner_scores(cursor, miner_scores, new_scores)
             self._mark_predictions_as_scored(cursor, predictions_to_mark)
             db_connection.commit()
-            bt.logging.info(f"Scored {len(scorable_predictions)} predictions")
+            bt.logging.info(f"🎯 Scored {len(scorable_predictions)} predictions")
         finally:
             cursor.close()
             db_connection.close()
@@ -36,7 +34,7 @@ class ScoringCalculator:
 
     def _get_num_sold_homes(self) -> int:
         num_sold_homes = self.database_manager.get_size_of_table('sales')
-        bt.logging.info(f"Received {num_sold_homes} sold homes")
+        bt.logging.info(f"🥳 Received {num_sold_homes} sold homes")
         return num_sold_homes
 
     def _calculate_new_scores(self, scorable_predictions: List[Tuple]) -> Tuple[Dict[str, Dict[str, float]], List[Tuple]]:

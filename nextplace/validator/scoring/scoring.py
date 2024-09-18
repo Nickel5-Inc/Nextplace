@@ -21,6 +21,7 @@ class Scorer:
 
     def run_score_predictions(self) -> None:
         """
+        RUN IN THREAD
         Ingest sold homes since oldest unscored prediction, JOIN `sales` and `predictions` table, score predictions
         Returns:
             None
@@ -34,7 +35,7 @@ class Scorer:
         self.sold_homes_api.get_sold_properties()  # Update the `sales` table
         with self.database_manager.lock:
             num_sales = self.database_manager.get_size_of_table('sales')
-            bt.logging.info(f"| {current_thread.name} | Ingested {num_sales} sold homes since our oldest prediction. Checking for overlapping predictions.")
+            bt.logging.info(f"| {current_thread.name} | 🛒 Ingested {num_sales} sold homes since our oldest prediction. Checking for overlapping predictions.")
             scorable_predictions = self._get_scorable_predictions()
             self.scoring_calculator.process_scorable_predictions(scorable_predictions)
             self._cleanup()
@@ -47,7 +48,7 @@ class Scorer:
         current_thread = threading.current_thread()
         self.database_manager.delete_all_sales()
         self._clear_out_old_scored_predictions()
-        bt.logging.info(f"| {current_thread.name} | Finished updating scores")
+        bt.logging.info(f"| {current_thread.name} | ✅ Finished updating scores")
 
     def _clear_out_old_scored_predictions(self) -> None:
         """
@@ -59,7 +60,7 @@ class Scorer:
         max_days = 5
         today = datetime.now(timezone.utc)
         min_date = (today - timedelta(days=max_days)).strftime(ISO8601)
-        bt.logging.trace(f"| {current_thread.name} | Attempting to delete scored predictions older than {min_date}")
+        bt.logging.trace(f"| {current_thread.name} | ✘ Attempting to delete scored predictions older than {min_date}")
         query_str = f"""
                         DELETE FROM predictions
                         WHERE score_timestamp < '{min_date}'

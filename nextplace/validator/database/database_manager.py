@@ -39,6 +39,26 @@ class DatabaseManager:
             db_connection.close()
             return rows
 
+    def query_with_values(self, query: str, values: tuple) -> list:
+        """
+        Get all results of a query from the database
+        Args:
+            query: a query string
+            values: a tuple of values
+
+        Returns:
+            All rows matching the query
+        """
+        rows = []
+        cursor, db_connection = self.get_cursor()
+        try:
+            cursor.execute(query, values)
+            rows = cursor.fetchall()
+        finally:
+            cursor.close()
+            db_connection.close()
+            return rows
+
     def query_and_commit(self, query: str) -> None:
         """
         Use for updating the database
@@ -51,6 +71,24 @@ class DatabaseManager:
         cursor, db_connection = self.get_cursor()
         try:
             cursor.execute(query)
+            db_connection.commit()
+        finally:
+            cursor.close()
+            db_connection.close()
+
+    def query_and_commit_many(self, query: str, values: list[tuple]) -> None:
+        """
+        Use for updating the database with many rows at once
+        Args:
+            query: query string
+            values: a list of tuples
+
+        Returns:
+            None
+        """
+        cursor, db_connection = self.get_cursor()
+        try:
+            cursor.executemany(query, values)
             db_connection.commit()
         finally:
             cursor.close()
@@ -91,11 +129,6 @@ class DatabaseManager:
         self.query_and_commit('DELETE FROM properties')
 
     def get_size_of_table(self, table_name: str):
-        cursor, db_connection = self.get_cursor()
-        query = f"SELECT COUNT(*) FROM {table_name}"
-        cursor.execute(query)
-        row_count = cursor.fetchone()[0]
-        cursor.close()
-        db_connection.close()
-        return row_count
-
+        query_str = f"SELECT COUNT(*) FROM {table_name}"
+        result = self.query(query_str)
+        return result[0][0]
