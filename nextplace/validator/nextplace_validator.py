@@ -1,4 +1,6 @@
 import bittensor as bt
+
+from nextplace.protocol import RealEstateSynapse
 from nextplace.validator.database.database_manager import DatabaseManager
 from nextplace.validator.database.table_initializer import TableInitializer
 from nextplace.validator.utils.market_manager import MarketManager
@@ -15,14 +17,13 @@ class RealEstateValidator(BaseValidatorNeuron):
     def __init__(self, config=None):
         super(RealEstateValidator, self).__init__(config=config)
         self.subtensor = bt.subtensor(config=self.config)
-        self.chain_lock = threading.RLock()
         self.markets = real_estate_markets
         self.database_manager = DatabaseManager()
         self.table_initializer = TableInitializer(self.database_manager)
         self.table_initializer.create_tables()  # Create database tables
         self.market_manager = MarketManager(self.database_manager, self.markets)
         self.scorer = Scorer(self.database_manager, self.markets)
-        self.synapse_manager = SynapseManager(self.database_manager, self.market_manager)
+        self.synapse_manager = SynapseManager(self.database_manager)
         self.prediction_manager = PredictionManager(self.database_manager, self.metagraph)
         self.netuid = self.config.netuid
         
@@ -36,29 +37,25 @@ class RealEstateValidator(BaseValidatorNeuron):
 
     def sync_metagraph(self):
         """Sync the metagraph with the latest state from the network"""
-        bt.logging.info("Syncing metagraph")
-        with self.chain_lock:
-            self.metagraph.sync(subtensor=self.subtensor)  # TODO: verify that deregistered keys are handled
-        bt.logging.trace(f"metagraph: {self.metagraph.hotkeys}")
+        bt.logging.info("🔗 Syncing metagraph")
+        self.metagraph.sync(subtensor=self.subtensor)  # TODO: verify that deregistered keys are handled
+        bt.logging.trace(f"📈 Metagraph: {self.metagraph.hotkeys}")
 
-    def score_predictions_and_set_weights(self) -> None:
+    def check_timer_set_weights(self) -> None:
         """
-        RUN IN THREAD
-
-        * This method optimizes scoring+weight setting, but may be causing a deadlock.
-        - Start another thread for calculating Miner scores
-        - Wait for it to finish
-        - Set weights
+        Check weight setting timer. If time to set weights, try to acquire lock and set weights
         Returns:
             None
         """
-        current_thread = threading.current_thread()
-        bt.logging.trace(f"| {current_thread.name} | Starting scoring thread")
-        self.scorer.run_score_predictions()  # Score predictions
-        bt.logging.trace(f"| {current_thread.name} | Setting weights")
-        with self.chain_lock:
-            self.weight_setter.set_weights()  # Set weights
-        bt.logging.trace(f"| {current_thread.name} | Weights set")
+        if self.weight_setter.is_time_to_set_weights():
+            if not self.database_manager.lock.acquire(blocking=True, timeout=10):
+                # If the lock is held by another thread, wait for 10 seconds, if still not available, return
+                bt.logging.trace("🚧 Another thread is holding the database_manager lock. Will check timer and set weights later.")
+                return
+            try:
+                self.weight_setter.check_timer_set_weights()
+            finally:
+                self.database_manager.lock.release()
 
     # OVERRIDE | Required
     def forward(self, step: int) -> None:
@@ -67,60 +64,51 @@ class RealEstateValidator(BaseValidatorNeuron):
         Returns:
             None
         """
-        bt.logging.info("Running forward pass")
+        bt.logging.info("⏩ Running forward pass")
 
-        with self.chain_lock:
+        # Need database lock to handle synapse creation and prediction management
+        if not self.database_manager.lock.acquire(blocking=True, timeout=10):
+            # If the lock is held by another thread, wait for 10 seconds, if still not available, return
+            bt.logging.trace("🚧 Another thread is holding the database_manager lock.")
+            return
+
+        try:
 
             # Need market lock to maintain market manager state safely
             if not self.market_manager.lock.acquire(blocking=True, timeout=10):
                 # If the lock is held by another thread, wait for 10 seconds, if still not available, return
-                bt.logging.trace("Another thread is holding the market_manager lock.")
+                bt.logging.trace("🚧 Another thread is holding the market_manager lock.")
                 return
 
             try:
                 # If we don't have any properties AND we aren't getting them yet, start thread to get properties
-                if self.market_manager.number_of_properties_in_market == 0 and not self.market_manager.updating_properties:
+                number_of_properties = self.database_manager.get_size_of_table('properties')
+                if number_of_properties == 0 and not self.market_manager.updating_properties:
                     self.market_manager.updating_properties = True  # Set flag
-                    thread = threading.Thread(target=self.market_manager.get_properties_for_market, name="PropertiesThread")  # Create thread
+                    thread = threading.Thread(target=self.market_manager.get_properties_for_market, name="🏠PropertiesThread")  # Create thread
                     thread.start()  # Start thread
-
-                # No properties for Miners yet, another thread is updating the properties table
-                if self.market_manager.number_of_properties_in_market == 0:
-                    bt.logging.trace(f"Waiting for other thread to finish updating properties table")
                     return
 
-                else:  # We have properties to send to Miners
-
-                    # Need database lock to handle synapse creation and prediction management
-                    if not self.database_manager.lock.acquire(blocking=True, timeout=10):
-                        # If the lock is held by another thread, wait for 10 seconds, if still not available, return
-                        bt.logging.trace("Another thread is holding the database_manager lock.")
-                        return
-
-                    try:  # Build synapse, send to miners, parse and store predictions
-
-                        synapse = self.synapse_manager.get_synapse()  # Prepare data for miners
-                        bt.logging.info(f"Sending a synapse for properties in {self.market_manager.get_current_market()}")
-
-                        if synapse:  # Ensure synapse object was created, query the network
-                            responses = self.dendrite.query(
-                                axons=self.metagraph.axons,
-                                synapse=synapse,
-                                deserialize=True,
-                                timeout=30
-                            )
-
-                            self.prediction_manager.process_predictions(responses)  # Process Miner predictions
-
-                        else:
-                            # Synapse was empty, this suggests an issue with the database state
-                            bt.logging.error("No data available to send to miners")
-
-                        # Maintain market manager state. Need this here so main thread doesn't block w/o a timeout
-                        self.market_manager.manage_forward()
-
-                    finally:
-                        self.database_manager.lock.release()  # Always release the lock
+                elif number_of_properties == 0:
+                    bt.logging.info("🚧 Waiting for properties thread to populate properties table")
+                    return
 
             finally:
                 self.market_manager.lock.release()  # Always release the lock
+
+            synapse: RealEstateSynapse = self.synapse_manager.get_synapse()  # Prepare data for miners
+            if synapse is None or len(synapse.real_estate_predictions.predictions) == 0:
+                bt.logging.trace("↻ No data for Synapse, returning.")
+                return
+
+            responses = self.dendrite.query(
+                axons=self.metagraph.axons,
+                synapse=synapse,
+                deserialize=True,
+                timeout=30
+            )
+
+            self.prediction_manager.process_predictions(responses)  # Process Miner predictions
+
+        finally:
+            self.database_manager.lock.release()  # Always release the lock

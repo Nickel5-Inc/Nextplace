@@ -3,6 +3,7 @@ import bittensor as bt
 import traceback
 import threading
 from scipy.optimize import minimize_scalar
+from datetime import datetime, timezone, timedelta
 
 class WeightSetter:
     def __init__(self, metagraph, wallet, subtensor, config, database_manager):
@@ -11,11 +12,33 @@ class WeightSetter:
         self.subtensor = subtensor
         self.config = config
         self.database_manager = database_manager
+        self.timer = datetime.now(timezone.utc)
+
+    def is_time_to_set_weights(self) -> bool:
+        """
+        Check if it has been 2.5 hours since the timer was last reset
+        Returns:
+            True if it has been 2.5 hours, else False
+        """
+        now = datetime.now(timezone.utc)
+        time_diff = now - self.timer
+        if time_diff >= timedelta(hours=2, minutes=30):
+            return True
+        return False
+
+    def check_timer_set_weights(self) -> None:
+        """
+        Set weights every 2.5 hours
+        Returns:
+            None
+        """
+        bt.logging.trace("📸 Time to set weights, resetting timer and setting weights.")
+        self.timer = datetime.now(timezone.utc)  # Reset the timer
+        self.set_weights()  # Set weights
 
     def calculate_miner_scores(self):
-        try:
-            with self.database_manager.lock:
-                results = self.database_manager.query("SELECT miner_hotkey, lifetime_score FROM miner_scores")
+        try:  # database_manager lock is already acquire at this point
+            results = self.database_manager.query("SELECT miner_hotkey, lifetime_score FROM miner_scores")
 
             scores = torch.zeros(len(self.metagraph.hotkeys))
             hotkey_to_uid = {hk: uid for uid, hk in enumerate(self.metagraph.hotkeys)}
@@ -28,7 +51,7 @@ class WeightSetter:
             return scores
 
         except Exception as e:
-            bt.logging.error(f"Error fetching miner scores: {str(e)}")
+            bt.logging.error(f"❗Error fetching miner scores: {str(e)}")
             return torch.zeros(len(self.metagraph.hotkeys))
 
     def calculate_weights(self, scores):
@@ -85,13 +108,13 @@ class WeightSetter:
         scores = self.calculate_miner_scores()
         weights = self.calculate_weights(scores)
 
-        bt.logging.info(f"| {current_thread.name} | Calculated weights: {weights}")
+        bt.logging.info(f"| {current_thread.name} | ⚖️ Calculated weights: {weights}")
 
         try:
             uid = self.metagraph.hotkeys.index(self.wallet.hotkey.ss58_address)
             stake = float(self.metagraph.S[uid])
 
-            if stake <= 0.0:
+            if stake < 1000.0:
                 bt.logging.error(f"| {current_thread.name} | Insufficient stake. Failed in setting weights.")
                 return False
 
@@ -107,10 +130,10 @@ class WeightSetter:
             success = result[0] if isinstance(result, tuple) and len(result) >= 1 else False
 
             if success:
-                bt.logging.info(f"| {current_thread.name} | Successfully set weights.")
+                bt.logging.info(f"| {current_thread.name} | ✅ Successfully set weights.")
             else:
-                bt.logging.error(f"| {current_thread.name} | Failed to set weights. Result: {result}")
+                bt.logging.error(f"| {current_thread.name} | ❗Failed to set weights. Result: {result}")
 
         except Exception as e:
-            bt.logging.error(f"| {current_thread.name} | Error setting weights: {str(e)}")
+            bt.logging.error(f"| {current_thread.name} | ❗Error setting weights: {str(e)}")
             bt.logging.error(traceback.format_exc())

@@ -3,7 +3,6 @@ import argparse
 import bittensor as bt
 import threading
 import traceback
-from datetime import datetime
 from nextplace.validator.nextplace_validator import RealEstateValidator
 
 
@@ -12,16 +11,16 @@ def main(validator):
 
     while True:
         try:
-            bt.logging.info(f"Validator step: {step}")
+            bt.logging.info(f"🦶 Validator step: {step}")
+
+            if step % 5 == 0:  # See if it's time to set weights. If so, set weights.
+                validator.check_timer_set_weights()
 
             validator.sync_metagraph()  # Sync metagraph
-
-            current_time = datetime.utcnow()
-
             validator.forward(step)  # Get predictions from the Miners
 
             if step >= 1000:  # Time to update scores and set weights
-                thread = threading.Thread(target=validator.score_predictions_and_set_weights, name="🏋🏻 ScoreAndSetWeightsThread 🏋🏻")  # Create thread
+                thread = threading.Thread(target=validator.scorer.run_score_predictions, name="🏋🏻 ScoreThread 🏋🏻")  # Create thread
                 thread.start()  # Start thread
                 step = 0  # Reset the step
 
