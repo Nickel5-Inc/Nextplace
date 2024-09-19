@@ -9,15 +9,15 @@
 
 # Nextplace AI 🏡
 
-Nextplace AI is decentralizing intelligence around housing markets. In a space controlled by monopolies and gatekeepers, Nexplace seeks to provide a democratized network to evaluate home prices for the general market and individuals.
+Nextplace AI is decentralizing intelligence around housing markets. In a space controlled by monopolies and gatekeepers, Nexplace seeks to provide a democratized network to evaluate home prices for everybody.
 
 ## Miners
 
-Miners will develop their own models to predict home prices and sales dates. They can use data provided by the validators or call out to API's to gather more data for their models inference. Mienrs will provide the expected sales date and the predicted home price.
+Miners will develop their own models to predict home prices and sales dates. They can use data provided by the validators or call out to API's to gather more data for their models inference. Miners will provide the expected sales date and the predicted home price.
 
 ## Validators
 
-Validators provide data to miners from <INSERT NUMBER OF MARKETS> markets. This number will expand over time. Validators evaluate miners based on their accuracy in prediction of home price and sales date.
+Validators provide data to miners from 50 markets. This number will expand over time. Validators evaluate miners based on their accuracy in prediction of home price and sales date.
 
 ### Scoring Method for Home Price Prediction
 
@@ -61,6 +61,19 @@ The scoring system calculates a miner's prediction score based on two key factor
    Final Score = (95.24 * 0.86) + (71.43 * 0.14) = 92.16
 
 The average performance on all sold homes in the last 30 days will be used to calculate incentive.
+
+#### Weight Calculation using Exponential Decay:
+
+Validators calculate the weights assigned to miners using an exponential decay method to reward the best miners disproportionally. The weights decay exponentially, and the optimal lambda (decay constant) is determined by minimizing the error in cumulative weight distribution for the top 10% and 50% of miners.
+
+The cumulative weight target for the top 10% of miners 40% of rewards, and the next 40% of miners get 40% of rewards. The bottom 50% of miners receive just 10% of rewards since they are not providing differentiated value.
+
+#### Example of weight calculation:
+
+For n_miners miners, the ranks are computed, and the exponential decay function is applied:
+
+- `weights = exp(-lambda * ranks)`
+- The `lambda` value is optimized to give the desired distribution, and the weights are normalized to ensure they sum to 1.
 
 ## Installation 
 
