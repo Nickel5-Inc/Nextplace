@@ -159,7 +159,7 @@ pm2 start --name "private-miner" python -- ./neurons/miner.py --wallet.name <wal
 
 #### Run a model from your filesystem
 ```
-pm2 start --name "local-miner" python -- ./neurons/miner.py --wallet.name <wallet> --wallet.hotkey <hotkey> --logging.trace --subtensor.chain_endpoint <chain_endpoint> --subtensor.network <network>--axon.port <port_number> --model_source local --model_path ../../ --model_filename BaseModel.py
+pm2 start --name "local-miner" python -- ./neurons/miner.py --wallet.name <wallet> --wallet.hotkey <hotkey> --logging.trace --subtensor.chain_endpoint <chain_endpoint> --subtensor.network <network> --axon.port <port_number> --model_source local --model_path ../../ --model_filename BaseModel.py
 ```
 This loads a file called `BaseModel.py` from the local filesystem. In this example, the file structure looks like this
 ```
