@@ -1,14 +1,13 @@
 import bittensor as bt
-
 from nextplace.protocol import RealEstateSynapse
 from nextplace.validator.database.database_manager import DatabaseManager
 from nextplace.validator.database.table_initializer import TableInitializer
-from nextplace.validator.utils.market_manager import MarketManager
-from nextplace.validator.utils.prediction_manager import PredictionManager
+from nextplace.validator.market.market_manager import MarketManager
+from nextplace.validator.market.markets import real_estate_markets
+from nextplace.validator.predictions.prediction_manager import PredictionManager
 from nextplace.validator.scoring.scoring import Scorer
-from nextplace.validator.outgoing_data.synapse_manager import SynapseManager
-from nextplace.validator.utils.contants import real_estate_markets
-from nextplace.validator.utils.weights import WeightSetter
+from nextplace.validator.synapse.synapse_manager import SynapseManager
+from nextplace.validator.setting_weights.weights import WeightSetter
 from template.base.validator import BaseValidatorNeuron
 import threading
 

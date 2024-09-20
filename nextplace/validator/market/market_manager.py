@@ -3,8 +3,6 @@ from nextplace.validator.api.properties_api import PropertiesAPI
 from nextplace.validator.database.database_manager import DatabaseManager
 import threading
 
-from nextplace.validator.utils.contants import NUMBER_OF_PROPERTIES_PER_SYNAPSE
-
 """
 Helper class manages the real estate market
 """
