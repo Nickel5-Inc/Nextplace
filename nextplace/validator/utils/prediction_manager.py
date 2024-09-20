@@ -51,7 +51,10 @@ class PredictionManager:
 
                         # Check if predicted_sale_price is None, if so, calculate it using 70% of listing price
                         if prediction.predicted_sale_price is None:
-                            if not self._handle_empty_prediction_price(prediction):
+                            listing_price = prediction.price
+                            if listing_price:
+                                prediction.predicted_sale_price = listing_price * 0.7
+                            else:
                                 continue
 
                         # Check if predicted_sale_date is None, if so, use the current date
@@ -84,38 +87,6 @@ class PredictionManager:
 
         table_size = self.database_manager.get_size_of_table('predictions')
         bt.logging.trace(f"📢 There are now {table_size} predictions in the database")
-
-    def _handle_empty_prediction_price(self, prediction: RealEstatePrediction) -> bool:
-        """
-        Handle a Miner that didn't submit a prediction on a home
-        Args:
-            prediction: the prediction object
-
-        Returns:
-            True if prediction was updated successfully, False otherwise
-        """
-        listing_price = prediction.price
-        # Get price from Synapse
-        if listing_price:
-            prediction.predicted_sale_price = listing_price * 0.7
-        else:
-            # If price in synapse is empty, use properties table
-            try:
-                query_str = "SELECT price FROM properties WHERE nextplace_id = ?"
-                values = (prediction.nextplace_id,)
-                results = self.database_manager.query_with_values(query_str, values)
-                if results and len(results) > 0 and results[0] and results[0][0]:
-                    result = results[0]
-                    listing_price = result[0]
-                    prediction.predicted_sale_price = listing_price * 0.7
-                else:
-                    bt.logging.warning(f"❗Listing price not found in properties table for nextplace_id: {prediction.nextplace_id}")
-                    return False  # Skip this prediction
-            except Exception as e:
-                bt.logging.error(f"❗Error retrieving listing price from properties table: {e}")
-                return False  # Skip this prediction
-
-        return True  # Prediction handled
 
     def _handle_ingestion(self, conflict_policy: str, values: list[tuple]) -> None:
         query_str = f"""

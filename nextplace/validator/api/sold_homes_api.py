@@ -1,5 +1,4 @@
 import threading
-import sqlite3
 import bittensor as bt
 import requests
 from nextplace.validator.api.api_base import ApiBase

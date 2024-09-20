@@ -22,9 +22,7 @@ class WeightSetter:
         """
         now = datetime.now(timezone.utc)
         time_diff = now - self.timer
-        if time_diff >= timedelta(hours=2, minutes=30):
-            return True
-        return False
+        return time_diff >= timedelta(hours=3)
 
     def check_timer_set_weights(self) -> None:
         """
