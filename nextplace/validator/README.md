@@ -11,7 +11,7 @@ Note: Runpod and Vast are not recommended. Validating this subnet does not requi
 
 ## Clone the Repo
 ```
-git clone https://github.com/INSERTOWNER/nextplace.git
+git clone https://github.com/Nickel5-Inc/Nextplace.git
 cd nextplace
 ```
 
