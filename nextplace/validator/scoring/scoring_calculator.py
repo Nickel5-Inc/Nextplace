@@ -1,8 +1,7 @@
 from typing import Dict, List, Tuple
 from collections import defaultdict
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 import bittensor as bt
-
 from nextplace.validator.utils.contants import ISO8601
 
 

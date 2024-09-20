@@ -3,7 +3,6 @@ import os
 from dotenv import load_dotenv
 import hmac
 import hashlib
-
 from nextplace.validator.database.database_manager import DatabaseManager
 
 """
