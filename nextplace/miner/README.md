@@ -41,6 +41,10 @@ pm2 start --name "ml-miner" python -- ./neurons/miner.py --wallet.name <your_wal
 In order to use a custom model you need to create a Python class for that model. You can store the file either on your 
 local machine or on [Hugging Face](https://huggingface.co/). We recommend uploading your model to a private Hugging Face repository.
 
+## Markets in NextPlace
+Have a look at our [Markets](../../nextplace/validator/market/markets.py). This will help inform which markets you should
+expect to make predictions for.
+
 ### Custom Model Class Structure
 Your custom model must be defined in a Python class. This Python class must reside within a file whose name matches the
 Python class. For example, if your class is defined like this `class CustomNextPlaceModel` it must reside within a
