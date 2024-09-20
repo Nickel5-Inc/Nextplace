@@ -9,3 +9,4 @@ setuptools>=68
 requests~=2.32.3
 prompting~=0.1.0
 python-dotenv~=1.0.1
+huggingface-hub~=0.24.5

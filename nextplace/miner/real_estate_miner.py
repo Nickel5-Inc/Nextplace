@@ -1,7 +1,6 @@
 import bittensor as bt
 from template.base.miner import BaseMinerNeuron
 from typing import Tuple
-
 from nextplace.protocol import RealEstateSynapse
 from nextplace.miner.ml.model import Model
 from nextplace.miner.ml.model_loader import ModelArgs
