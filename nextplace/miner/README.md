@@ -25,6 +25,12 @@ Install dependencies
 pip install -r requirements.txt
 ```
 
+## Clone the Repo
+```
+git clone https://github.com/Nickel5-Inc/Nextplace.git
+cd nextplace
+```
+
 ## Using the Base Statistical Model
 You can run this command to use the base statistical model
 ```
