@@ -24,6 +24,10 @@ Install dependencies
 ```
 pip install -r requirements.txt
 ```
+Install package
+```
+pip install -e .
+```
 
 ## Register hotkey
 ```
