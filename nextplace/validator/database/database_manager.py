@@ -12,7 +12,7 @@ class DatabaseManager:
 
     def __init__(self):
         data_dir = "data"
-        db_version = 1
+        db_version = 7
         os.makedirs(data_dir, exist_ok=True)  # Ensure data directory exists
         self.db_path = f'{data_dir}/validator_v{db_version}.db'  # Set db path
         db_dir = os.path.dirname(self.db_path)
