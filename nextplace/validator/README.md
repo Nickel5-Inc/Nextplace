@@ -31,13 +31,13 @@ pip install -r requirements.txt
 
 ## Register hotkey
 ```
-btcli subnets register --netuid <UID> --wallet.name <YOUR_COLDKEY> --wallet.hotkey <YOUR_HOTKEY>
+btcli subnets register --netuid 48 --wallet.name <YOUR_COLDKEY> --wallet.hotkey <YOUR_HOTKEY>
 ```
 
 ## Start validator
 NOTE: trace logging is recommended
 ```
-pm2 start "python neurons/validator.py --wallet.name  <YOUR_COLDKEY> --wallet.hotkey <YOUR_HOTKEY> --netuid <UID> --logging.trace"
+pm2 start "python neurons/validator.py --wallet.name  <YOUR_COLDKEY> --wallet.hotkey <YOUR_HOTKEY> --netuid 48 --logging.trace"
 ```
 
 

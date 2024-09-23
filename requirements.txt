@@ -5,6 +5,7 @@ rich>=13
 pytest>=8
 torch>=2
 numpy>=1
+scipy>=1.14.1
 setuptools>=68
 requests~=2.32.3
 prompting~=0.1.0

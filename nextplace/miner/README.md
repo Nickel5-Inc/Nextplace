@@ -24,6 +24,15 @@ Install dependencies
 ```
 pip install -r requirements.txt
 ```
+Install package
+```
+pip install -e .
+```
+
+## Register hotkey
+```
+btcli subnets register --netuid 48 --wallet.name <YOUR_COLDKEY> --wallet.hotkey <YOUR_HOTKEY>
+```
 
 ## Using the Base Statistical Model
 You can run this command to use the base statistical model
