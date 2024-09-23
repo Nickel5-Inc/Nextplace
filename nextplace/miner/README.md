@@ -31,13 +31,13 @@ pip install -e .
 
 ## Register hotkey
 ```
-btcli subnets register --netuid <UID> --wallet.name <YOUR_COLDKEY> --wallet.hotkey <YOUR_HOTKEY>
+btcli subnets register --netuid 48 --wallet.name <YOUR_COLDKEY> --wallet.hotkey <YOUR_HOTKEY>
 ```
 
 ## Using the Base Statistical Model
 You can run this command to use the base statistical model
 ```
-pm2 start --name "statistical-miner" python -- ./neurons/miner.py --wallet.name <your_wallet> --wallet.hotkey <your_hotkey> --logging.trace --subtensor.chain_endpoint <chain_endpoint> --subtensor.network <network> --axon.port 8092 --model.source hugging_face --model_path Nickel5HF/NextPlace --model_filename StatisticalBaseModel.py
+pm2 start --name "statistical-miner" python -- ./neurons/miner.py --wallet.name <your_wallet> --wallet.hotkey <your_hotkey> --logging.trace --subtensor.chain_endpoint <chain_endpoint> --subtensor.network <network> --netuid 48 --axon.port 8092 --model.source hugging_face --model_path Nickel5HF/NextPlace --model_filename StatisticalBaseModel.py
 ```
 
 ## Using the Base Machine Learning Model

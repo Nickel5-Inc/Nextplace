@@ -4,7 +4,7 @@
 
 ## Real Estate Market Research <!-- omit in toc -->
 
-[Discord](https://discord.gg/bittensor) • [Network](https://taostats.io/) • [Website](https://nextplace.ai/)
+[Discord](https://discord.gg/xbRhw9jX) • [Taostats](https://taostats.io/subnets/48/metagraph) • [Website](https://nextplace.ai/)
 </div>
 
 # Nextplace AI 🏡
