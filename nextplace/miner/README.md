@@ -25,10 +25,9 @@ Install dependencies
 pip install -r requirements.txt
 ```
 
-## Clone the Repo
+## Register hotkey
 ```
-git clone https://github.com/Nickel5-Inc/Nextplace.git
-cd nextplace
+btcli subnets register --netuid <UID> --wallet.name <YOUR_COLDKEY> --wallet.hotkey <YOUR_HOTKEY>
 ```
 
 ## Using the Base Statistical Model
