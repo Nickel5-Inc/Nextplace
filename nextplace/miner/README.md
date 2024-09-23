@@ -37,13 +37,13 @@ btcli subnets register --netuid 48 --wallet.name <YOUR_COLDKEY> --wallet.hotkey 
 ## Using the Base Statistical Model
 You can run this command to use the base statistical model
 ```
-pm2 start --name "statistical-miner" python -- ./neurons/miner.py --wallet.name <your_wallet> --wallet.hotkey <your_hotkey> --logging.trace --subtensor.chain_endpoint <chain_endpoint> --subtensor.network <network> --netuid 48 --axon.port 8092 --model.source hugging_face --model_path Nickel5HF/NextPlace --model_filename StatisticalBaseModel.py
+pm2 start --name "statistical-miner" python -- ./neurons/miner.py --wallet.name <your_wallet> --wallet.hotkey <your_hotkey> --logging.trace --subtensor.chain_endpoint <chain_endpoint> --subtensor.network <network> --axon.port 8092 --model_source hugging_face --model_path Nickel5HF/NextPlace --model_filename StatisticalBaseModel.py
 ```
 
 ## Using the Base Machine Learning Model
 You can run this command to use the base machine learning model
 ```
-pm2 start --name "ml-miner" python -- ./neurons/miner.py --wallet.name <your_wallet> --wallet.hotkey <your_hotkey> --logging.trace --subtensor.chain_endpoint <chain_endpoint> --subtensor.network <network> --axon.port 8093 --model.source hugging_face --model_path Nickel5HF/NextPlace --model_filename MLBaseModel.py
+pm2 start --name "ml-miner" python -- ./neurons/miner.py --wallet.name <your_wallet> --wallet.hotkey <your_hotkey> --logging.trace --subtensor.chain_endpoint <chain_endpoint> --subtensor.network <network> --axon.port 8093 --model_source hugging_face --model_path Nickel5HF/NextPlace --model_filename MLBaseModelDriver.py
 ```
 
 ## Using a Custom Model
