@@ -62,34 +62,35 @@ class PropertiesAPI(ApiBase):
         """
         Ingest all valid results into the `properties` table
         Args:
-            valid_results: list of valid properties on market
+            homes: list of valid properties on market
             market: the current market
 
         Returns:
             None
         """
-        with self.database_manager.lock:
-            query_str = """
-                INSERT OR IGNORE INTO properties (
-                    nextplace_id, property_id, listing_id, address, city, state, zip_code, price, beds, baths,
-                    sqft, lot_size, year_built, days_on_market, latitude, longitude,
-                    property_type, last_sale_date, hoa_dues, query_date, market
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """
-            values = []
-            for home in homes:
-                 self._process_home_for_ingestion(home, market, values)
-            self.database_manager.query_and_commit_many(query_str, values)
+        query_str = """
+            INSERT OR IGNORE INTO properties (
+                nextplace_id, property_id, listing_id, address, city, state, zip_code, price, beds, baths,
+                sqft, lot_size, year_built, days_on_market, latitude, longitude,
+                property_type, last_sale_date, hoa_dues, query_date, market
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """
+        values = []
+        for home in homes:
+            self._process_home_for_ingestion(home, market, values)  # Conditionally add home to the `values` list
+        with self.database_manager.lock:  # Acquire database lock
+            self.database_manager.query_and_commit_many(query_str, values)  # Update properties table
 
     def _process_home_for_ingestion(self, home: any, market_name: str, values: list) -> None:
         """
-        Build ingestable tuple from home object
+        Check if `price` is present in data. If so, build tuple and add to list of values for ingestion
         Args:
             home: home object
             market_name: current market
+            values: list of tuples for ingestion
 
         Returns:
-            tuple for ingestion
+            None. `values` are updated by reference
         """
         home_data = home['homeData']  # Extract the homeData field
         home_object = self._build_property_object(home_data)  # Build the Home object
@@ -97,13 +98,12 @@ class PropertiesAPI(ApiBase):
         if home_object['price'] is not None:
             query_date = datetime.now(timezone.utc).strftime(ISO8601)  # Get current datetime
             data_tuple = (
-                home_object['nextplace_id'], home_object['property_id'], home_object['listing_id'], home_object['address'],
-                home_object['city'], home_object['state'], home_object['zip_code'], home_object['price'],
-                home_object['beds'],
-                home_object['baths'], home_object['sqft'], home_object['lot_size'], home_object['year_built'],
-                home_object['days_on_market'], home_object['latitude'], home_object['longitude'],
-                home_object['property_type'], home_object['last_sale_date'], home_object['hoa_dues'], query_date,
-                market_name
+                home_object['nextplace_id'], home_object['property_id'], home_object['listing_id'],
+                home_object['address'], home_object['city'], home_object['state'], home_object['zip_code'],
+                home_object['price'], home_object['beds'], home_object['baths'], home_object['sqft'],
+                home_object['lot_size'], home_object['year_built'], home_object['days_on_market'],
+                home_object['latitude'], home_object['longitude'], home_object['property_type'],
+                home_object['last_sale_date'], home_object['hoa_dues'], query_date, market_name
             )
             values.append(data_tuple)
 
