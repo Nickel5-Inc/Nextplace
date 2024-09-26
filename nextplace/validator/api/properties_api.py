@@ -76,10 +76,12 @@ class PropertiesAPI(ApiBase):
                     property_type, last_sale_date, hoa_dues, query_date, market
                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """
-            values = [self._process_home_for_ingestion(home, market) for home in homes]
+            values = []
+            for home in homes:
+                 self._process_home_for_ingestion(home, market, values)
             self.database_manager.query_and_commit_many(query_str, values)
 
-    def _process_home_for_ingestion(self, home: any, market_name: str) -> tuple:
+    def _process_home_for_ingestion(self, home: any, market_name: str, values: list) -> None:
         """
         Build ingestable tuple from home object
         Args:
@@ -91,17 +93,19 @@ class PropertiesAPI(ApiBase):
         """
         home_data = home['homeData']  # Extract the homeData field
         home_object = self._build_property_object(home_data)  # Build the Home object
-        query_date = datetime.now(timezone.utc).strftime(ISO8601)  # Get current datetime
 
-        return (
-            home_object['nextplace_id'], home_object['property_id'], home_object['listing_id'], home_object['address'],
-            home_object['city'], home_object['state'], home_object['zip_code'], home_object['price'],
-            home_object['beds'],
-            home_object['baths'], home_object['sqft'], home_object['lot_size'], home_object['year_built'],
-            home_object['days_on_market'], home_object['latitude'], home_object['longitude'],
-            home_object['property_type'], home_object['last_sale_date'], home_object['hoa_dues'], query_date,
-            market_name
-        )
+        if home_object['price'] is not None:
+            query_date = datetime.now(timezone.utc).strftime(ISO8601)  # Get current datetime
+            data_tuple = (
+                home_object['nextplace_id'], home_object['property_id'], home_object['listing_id'], home_object['address'],
+                home_object['city'], home_object['state'], home_object['zip_code'], home_object['price'],
+                home_object['beds'],
+                home_object['baths'], home_object['sqft'], home_object['lot_size'], home_object['year_built'],
+                home_object['days_on_market'], home_object['latitude'], home_object['longitude'],
+                home_object['property_type'], home_object['last_sale_date'], home_object['hoa_dues'], query_date,
+                market_name
+            )
+            values.append(data_tuple)
 
     def _build_property_object(self, home_data: any) -> Home:
         """
