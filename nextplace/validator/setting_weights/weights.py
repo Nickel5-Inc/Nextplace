@@ -16,9 +16,9 @@ class WeightSetter:
 
     def is_time_to_set_weights(self) -> bool:
         """
-        Check if it has been 2.5 hours since the timer was last reset
+        Check if it has been 3 hours since the timer was last reset
         Returns:
-            True if it has been 2.5 hours, else False
+            True if it has been 3 hours, else False
         """
         now = datetime.now(timezone.utc)
         time_diff = now - self.timer
@@ -26,7 +26,7 @@ class WeightSetter:
 
     def check_timer_set_weights(self) -> None:
         """
-        Set weights every 2.5 hours
+        Set weights every 3 hours
         Returns:
             None
         """
@@ -53,50 +53,48 @@ class WeightSetter:
             return torch.zeros(len(self.metagraph.hotkeys))
 
     def calculate_weights(self, scores):
-        # Sort miners by score in descending order
-        sorted_indices = torch.argsort(scores, descending=True)
         n_miners = len(scores)
+        sorted_indices = torch.argsort(scores, descending=True)
+        
+        weights = torch.zeros(n_miners)
+        
+        top_10_pct = max(1, int(0.1 * n_miners))
+        next_40_pct = max(1, int(0.4 * n_miners))
+        remaining = n_miners - top_10_pct - next_40_pct
+        
+        # Indices for each tier
+        top_indices = sorted_indices[:top_10_pct]
+        next_indices = sorted_indices[top_10_pct:top_10_pct+next_40_pct]
+        bottom_indices = sorted_indices[top_10_pct+next_40_pct:]
+        
+        # Scores for each tier
+        top_scores = scores[top_indices]
+        next_scores = scores[next_indices]
+        bottom_scores = scores[bottom_indices]
+        
+        # Sum of scores in each tier
+        sum_top_scores = top_scores.sum()
+        sum_next_scores = next_scores.sum()
+        sum_bottom_scores = bottom_scores.sum()
+        
+        # Assign weights proportionally within each tier
+        if sum_top_scores > 0:
+            weights[top_indices] = (top_scores / sum_top_scores) * 0.4
+        else:
+            weights[top_indices] = 0.4 / len(top_indices)
+        
+        if sum_next_scores > 0:
+            weights[next_indices] = (next_scores / sum_next_scores) * 0.4
+        else:
+            weights[next_indices] = 0.4 / len(next_indices)
+        
+        if sum_bottom_scores > 0:
+            weights[bottom_indices] = (bottom_scores / sum_bottom_scores) * 0.2
+        else:
+            weights[bottom_indices] = 0.2 / len(bottom_indices)
+        
+        return weights
 
-        # Computes the optimal constant for the rewards distribution
-        def compute_error(lambda_):
-            # Compute weights using exponential decay
-            ranks = torch.arange(n_miners, dtype=torch.float32)
-            weights = torch.exp(-lambda_ * ranks)
-            weights = weights / weights.sum()
-
-            # Compute cumulative sums at desired percentiles
-            cum_weights = torch.cumsum(weights, dim=0)
-
-            idx_10 = max(1, int(0.1 * n_miners) - 1)
-            idx_50 = max(1, int(0.5 * n_miners) - 1)
-
-            C10 = cum_weights[idx_10].item()
-            C50 = cum_weights[idx_50].item()
-
-            # Error based on the difference from desired cumulative percentages
-            error = (C10 - 0.4)**2 + (C50 - 0.8)**2
-            return error
-
-        # Optimize lambda to minimize the error
-        try:
-            res = minimize_scalar(compute_error, bounds=(0.001, 10), method='bounded')
-            lambda_opt = res.x
-
-            # Compute final weights with the optimized lambda
-            ranks = torch.arange(n_miners, dtype=torch.float32)
-            weights = torch.exp(-lambda_opt * ranks)
-            weights = weights / weights.sum()
-
-            # Map weights back to the original miner indices
-            final_weights = torch.zeros_like(weights)
-            final_weights[sorted_indices] = weights
-
-            return final_weights
-
-        except Exception as e:
-            bt.logging.error(f"Error calculating weights: {str(e)}")
-            bt.logging.error(traceback.format_exc())
-            return torch.zeros(n_miners)
 
     def set_weights(self):
         current_thread = threading.current_thread()

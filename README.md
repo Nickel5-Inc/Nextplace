@@ -64,16 +64,9 @@ The average performance on all sold homes in the last 30 days will be used to ca
 
 #### Weight Calculation using Exponential Decay:
 
-Validators calculate the weights assigned to miners using an exponential decay method to reward the best miners disproportionally. The weights decay exponentially, and the optimal lambda (decay constant) is determined by minimizing the error in cumulative weight distribution for the top 10% and 50% of miners.
+Validators reward the best miners disproportionally. The weights decay drastically as miners become less accurate.
 
-The cumulative weight target for the top 10% of miners 40% of rewards, and the next 40% of miners get 40% of rewards. The bottom 50% of miners receive just 10% of rewards since they are not providing differentiated value.
-
-#### Example of weight calculation:
-
-For n_miners miners, the ranks are computed, and the exponential decay function is applied:
-
-- `weights = exp(-lambda * ranks)`
-- The `lambda` value is optimized to give the desired distribution, and the weights are normalized to ensure they sum to 1.
+The top 10% of miners receive 40% of total rewards, and the next 40% of miners get 40% of rewards. The bottom 50% of miners receive just 20% of rewards since they are not providing differentiated value.
 
 ## Installation 
 
