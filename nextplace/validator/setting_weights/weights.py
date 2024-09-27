@@ -16,17 +16,17 @@ class WeightSetter:
 
     def is_time_to_set_weights(self) -> bool:
         """
-        Check if it has been 2.5 hours since the timer was last reset
+        Check if it has been 3 hours since the timer was last reset
         Returns:
-            True if it has been 2.5 hours, else False
+            True if it has been 3 hours, else False
         """
         now = datetime.now(timezone.utc)
         time_diff = now - self.timer
-        return time_diff >= timedelta(hours=0)
+        return time_diff >= timedelta(hours=3)
 
     def check_timer_set_weights(self) -> None:
         """
-        Set weights every 2.5 hours
+        Set weights every 3 hours
         Returns:
             None
         """
