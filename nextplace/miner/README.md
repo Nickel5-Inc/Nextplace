@@ -23,6 +23,8 @@ source venv/bin/activate
 Install dependencies
 ```
 pip install -r requirements.txt
+pip install pandas
+pip install scikit-learn
 ```
 Install package
 ```
