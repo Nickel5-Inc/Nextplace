@@ -46,7 +46,7 @@ class Scorer:
         Returns: None
         """
         current_thread = threading.current_thread()
-        # self.database_manager.delete_all_sales()
+        self.database_manager.delete_all_sales()
         self._clear_out_old_scored_predictions()
         bt.logging.info(f"| {current_thread.name} | ✅ Finished updating scores")
 

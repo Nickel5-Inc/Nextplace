@@ -38,7 +38,7 @@ class RealEstateValidator(BaseValidatorNeuron):
         """Sync the metagraph with the latest state from the network"""
         bt.logging.info("🔗 Syncing metagraph")
         self.metagraph.sync(subtensor=self.subtensor)
-        bt.logging.trace(f"📈 Metagraph: {self.metagraph.hotkeys}")
+        bt.logging.trace(f"📈 Metagraph has {len(self.metagraph.hotkeys)} hotkeys")
 
     def manage_miner_data(self) -> None:
         """
