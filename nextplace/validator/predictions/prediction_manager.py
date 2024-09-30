@@ -47,17 +47,9 @@ class PredictionManager:
                     miner_hotkey = self.metagraph.hotkeys[idx]
                     if miner_hotkey is not None:
 
-                        # Check if predicted_sale_price is None, if so, calculate it using 70% of listing price
-                        if prediction.predicted_sale_price is None:
-                            listing_price = prediction.price
-                            if listing_price:
-                                prediction.predicted_sale_price = listing_price * 0.7
-                            else:
+                        # Check if a predicted date or sale is empty; if so, ignore
+                        if prediction.predicted_sale_price is None or prediction.predicted_sale_date is None:
                                 continue
-
-                        # Check if predicted_sale_date is None, if so, use the current date
-                        if prediction.predicted_sale_date is None:
-                            prediction.predicted_sale_date = current_utc_datetime.strftime('%Y-%m-%d')
 
                         values = (
                             prediction.nextplace_id,
