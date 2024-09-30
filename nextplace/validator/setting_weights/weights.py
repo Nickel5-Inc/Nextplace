@@ -89,8 +89,7 @@ class WeightSetter:
         
         top_10_pct = max(1, int(0.1 * n_miners))
         next_40_pct = max(1, int(0.4 * n_miners))
-        remaining = n_miners - top_10_pct - next_40_pct
-        
+
         # Indices for each tier
         top_indices = sorted_indices[:top_10_pct]
         next_indices = sorted_indices[top_10_pct:top_10_pct+next_40_pct]
