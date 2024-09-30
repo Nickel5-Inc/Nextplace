@@ -49,6 +49,7 @@ class RealEstateValidator(BaseValidatorNeuron):
             None
         """
         current_thread = threading.current_thread().name
+        bt.logging.trace(f"| {current_thread} | Managing active miners")
 
         # Build sets
         metagraph_hotkeys = set(self.metagraph.hotkeys)  # Get hotkeys in metagraph
@@ -76,6 +77,8 @@ class RealEstateValidator(BaseValidatorNeuron):
             tuples = [(x,) for x in new_hotkeys]
             with self.database_manager.lock:
                 self.database_manager.query_and_commit_many("INSERT OR IGNORE INTO active_miners (miner_hotkey) VALUES (?)", tuples)
+
+        bt.logging.trace(f"| {current_thread} | Thread terminating")
 
     def check_timer_set_weights(self) -> None:
         """
