@@ -20,7 +20,7 @@ def main(validator):
             validator.forward(step)  # Get predictions from the Miners
 
             if step % 100 == 0:
-                thread = threading.Thread(target=validator.manage_miner_data, name="🩺 MinerRegistrationThread 🩺")
+                thread = threading.Thread(target=validator.manage_miner_data, name="📋 MinerRegistrationThread 📋")
                 thread.start()
 
             if step >= 1000:  # Time to update scores and set weights

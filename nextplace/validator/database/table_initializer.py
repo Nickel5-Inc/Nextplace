@@ -20,6 +20,7 @@ class TableInitializer:
         self._create_predictions_table(cursor)
         self._create_sales_table(cursor)
         self._create_miner_scores_table(cursor)
+        self._create_active_miners_table(cursor)
         db_connection.commit()
         cursor.close()
         db_connection.close()

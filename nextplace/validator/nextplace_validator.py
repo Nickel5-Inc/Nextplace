@@ -63,17 +63,19 @@ class RealEstateValidator(BaseValidatorNeuron):
         if len(deregistered_hotkeys) > 0:
             bt.logging.trace(f"| {current_thread} | 🚨 Found {len(deregistered_hotkeys)} deregistered hotkeys. Cleaning out their data.")
             # For all deregistered miners, clear out their predictions & scores. Remove from active_miners table
+            tuples = [(x,) for x in deregistered_hotkeys]
             with self.database_manager.lock:
-                self.database_manager.query_and_commit_many("DELETE FROM predictions WHERE miner_hotkey = ?", deregistered_hotkeys)
-                self.database_manager.query_and_commit_many("DELETE FROM miner_scores WHERE miner_hotkey = ?", deregistered_hotkeys)
-                self.database_manager.query_and_commit_many("DELETE FROM active_miners WHERE miner_hotkey = ?", deregistered_hotkeys)
+                self.database_manager.query_and_commit_many("DELETE FROM predictions WHERE miner_hotkey = ?", tuples)
+                self.database_manager.query_and_commit_many("DELETE FROM miner_scores WHERE miner_hotkey = ?", tuples)
+                self.database_manager.query_and_commit_many("DELETE FROM active_miners WHERE miner_hotkey = ?", tuples)
 
         # If we have recently registered miners
         if len(new_hotkeys) > 0:
             bt.logging.trace(f"| {current_thread} | ♻️ Found {len(new_hotkeys)} newly registered hotkeys. Tracking.")
             # Add newly registered miners to active_miners table
+            tuples = [(x,) for x in new_hotkeys]
             with self.database_manager.lock:
-                self.database_manager.query_and_commit_many("INSERT OR IGNORE INTO active_miners (miner_hotkey) VALUES (?)", new_hotkeys)
+                self.database_manager.query_and_commit_many("INSERT OR IGNORE INTO active_miners (miner_hotkey) VALUES (?)", tuples)
 
     def check_timer_set_weights(self) -> None:
         """
