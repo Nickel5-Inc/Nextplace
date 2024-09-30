@@ -140,7 +140,7 @@ class TableInitializer:
 
     def _create_active_miners_table(self, cursor) -> None:
         """
-        Create the miner scores table
+        Create the active miners table
         Args:
             cursor: a database cursor
 
