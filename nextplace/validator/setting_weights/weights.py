@@ -2,8 +2,9 @@ import torch
 import bittensor as bt
 import traceback
 import threading
-from scipy.optimize import minimize_scalar
 from datetime import datetime, timezone, timedelta
+from nextplace.validator.utils.contants import ISO8601
+
 
 class WeightSetter:
     def __init__(self, metagraph, wallet, subtensor, config, database_manager):

@@ -39,34 +39,33 @@ class PredictionManager:
         for idx, real_estate_predictions in enumerate(responses):  # Iterate responses
 
             for prediction in real_estate_predictions.predictions:  # Iterate predictions in each response
+
                 # Only process valid predictions
-                if prediction is None or prediction.property_id is None:
+                if prediction is None or prediction.predicted_sale_price is None or prediction.predicted_sale_date is None:
                     continue
 
                 try:
                     miner_hotkey = self.metagraph.hotkeys[idx]
-                    if miner_hotkey is not None:
 
-                        # Check if a predicted date or sale is empty; if so, ignore
-                        if prediction.predicted_sale_price is None or prediction.predicted_sale_date is None:
-                                continue
+                    if miner_hotkey is None:
+                        continue
 
-                        values = (
-                            prediction.nextplace_id,
-                            prediction.property_id,
-                            miner_hotkey,
-                            prediction.predicted_sale_price,
-                            prediction.predicted_sale_date,
-                            timestamp,
-                            prediction.market,
-                            False
-                        )
+                    values = (
+                        prediction.nextplace_id,
+                        prediction.property_id,
+                        miner_hotkey,
+                        prediction.predicted_sale_price,
+                        prediction.predicted_sale_date,
+                        timestamp,
+                        prediction.market,
+                        False
+                    )
 
-                        # Parse force update flag
-                        if prediction.force_update_past_predictions:
-                            replace_policy_data_for_ingestion.append(values)
-                        else:
-                            ignore_policy_data_for_ingestion.append(values)
+                    # Parse force update flag
+                    if prediction.force_update_past_predictions:
+                        replace_policy_data_for_ingestion.append(values)
+                    else:
+                        ignore_policy_data_for_ingestion.append(values)
 
                 except Exception as e:
                     bt.logging.error(f"❗Failed to process prediction: {e}")
