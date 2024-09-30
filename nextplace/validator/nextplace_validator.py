@@ -37,8 +37,38 @@ class RealEstateValidator(BaseValidatorNeuron):
     def sync_metagraph(self):
         """Sync the metagraph with the latest state from the network"""
         bt.logging.info("🔗 Syncing metagraph")
-        self.metagraph.sync(subtensor=self.subtensor)  # TODO: verify that deregistered keys are handled
+        self.metagraph.sync(subtensor=self.subtensor)
+        self._manage_miner_data()
         bt.logging.trace(f"📈 Metagraph: {self.metagraph.hotkeys}")
+
+    def _manage_miner_data(self) -> None:
+        """
+        Remove miner data if miner has deregistered
+        Store hotkey if miner has registered
+        Returns:
+            None
+        """
+        # Build sets
+        metagraph_hotkeys = set(self.metagraph.hotkeys)  # Get hotkeys in metagraph
+        stored_hotkeys = set(self.database_manager.query("SELECT * FROM active_miners"))  # Get stored hotkeys
+
+        # Set operations
+        deregistered_hotkeys = list(stored_hotkeys.difference(metagraph_hotkeys))  # Deregistered hotkeys are stored, but not in the metagraph
+        new_hotkeys = list(metagraph_hotkeys.difference(stored_hotkeys))  # New hotkeys are in the metagraph, but not stored
+
+        # If we have recently deregistered miners
+        if len(deregistered_hotkeys) > 0:
+            bt.logging.trace(f"🚨 Found {len(deregistered_hotkeys)} deregistered hotkeys. Cleaning out their data.")
+            # For all deregistered miners, clear out their predictions & scores. Remove from active_miners table
+            self.database_manager.query_and_commit_many("DELETE FROM predictions WHERE miner_hotkey = ?", deregistered_hotkeys)
+            self.database_manager.query_and_commit_many("DELETE FROM miner_scores WHERE miner_hotkey = ?", deregistered_hotkeys)
+            self.database_manager.query_and_commit_many("DELETE FROM active_miners WHERE miner_hotkey = ?", deregistered_hotkeys)
+
+        # If we have recently registered miners
+        if len(new_hotkeys) > 0:
+            bt.logging.trace(f"♻️ Found {len(new_hotkeys)} newly registered hotkeys. Tracking.")
+            # Add newly registered miners to active_miners table
+            self.database_manager.query_and_commit_many("INSERT OR IGNORE INTO active_miners (miner_hotkey) VALUES (?)", new_hotkeys)
 
     def check_timer_set_weights(self) -> None:
         """

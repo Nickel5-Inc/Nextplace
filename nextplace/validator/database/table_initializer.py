@@ -136,3 +136,19 @@ class TableInitializer:
                 last_update_timestamp DATETIME
             )
         ''')
+
+
+    def _create_active_miners_table(self, cursor) -> None:
+        """
+        Create the miner scores table
+        Args:
+            cursor: a database cursor
+
+        Returns:
+            None
+        """
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS active_miners (
+                miner_hotkey TEXT PRIMARY KEY
+            )
+        ''')
