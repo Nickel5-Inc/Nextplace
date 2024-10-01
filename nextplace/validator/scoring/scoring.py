@@ -46,24 +46,24 @@ class Scorer:
         Returns: None
         """
         current_thread = threading.current_thread()
-        # self.database_manager.delete_all_sales()
-        self._clear_out_old_scored_predictions()
+        self.database_manager.delete_all_sales()
+        self._clear_out_old_predictions()
         bt.logging.info(f"| {current_thread.name} | ✅ Finished updating scores")
 
-    def _clear_out_old_scored_predictions(self) -> None:
+    def _clear_out_old_predictions(self) -> None:
         """
         Remove predictions that were scored more than 5 days ago
         Returns:
             None
         """
         current_thread = threading.current_thread()
-        max_days = 5
+        max_days = 21
         today = datetime.now(timezone.utc)
         min_date = (today - timedelta(days=max_days)).strftime(ISO8601)
-        bt.logging.trace(f"| {current_thread.name} | ✘ Attempting to delete scored predictions older than {min_date}")
+        bt.logging.trace(f"| {current_thread.name} | ✘ Deleting predictions older than {min_date}")
         query_str = f"""
                         DELETE FROM predictions
-                        WHERE score_timestamp < '{min_date}'
+                        WHERE prediction_timestamp < '{min_date}'
                     """
         self.database_manager.query_and_commit(query_str)
 

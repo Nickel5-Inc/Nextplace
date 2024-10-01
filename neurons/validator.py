@@ -19,7 +19,11 @@ def main(validator):
             validator.sync_metagraph()  # Sync metagraph
             validator.forward(step)  # Get predictions from the Miners
 
-            if step >= 1000:  # Time to update scores and set weights
+            if step % 100 == 0:  # Check if any registrations/deregistrations have happened, make necessary updates
+                thread = threading.Thread(target=validator.manage_miner_data, name="📋 MinerRegistrationThread 📋")
+                thread.start()
+
+            if step >= 1250:  # Time to update scores and set weights
                 thread = threading.Thread(target=validator.scorer.run_score_predictions, name="🏋🏻 ScoreThread 🏋🏻")  # Create thread
                 thread.start()  # Start thread
                 step = 0  # Reset the step

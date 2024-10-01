@@ -2,8 +2,9 @@ import torch
 import bittensor as bt
 import traceback
 import threading
-from scipy.optimize import minimize_scalar
 from datetime import datetime, timezone, timedelta
+from nextplace.validator.utils.contants import ISO8601
+
 
 class WeightSetter:
     def __init__(self, metagraph, wallet, subtensor, config, database_manager):
@@ -33,6 +34,31 @@ class WeightSetter:
         bt.logging.trace("📸 Time to set weights, resetting timer and setting weights.")
         self.timer = datetime.now(timezone.utc)  # Reset the timer
         self.set_weights()  # Set weights
+    
+    def adjust_scores_based_on_recent_activity(self, scores, hotkey_to_uid):
+        """
+        Adjust scores to zero for miners with fewer than 10 predictions in the last 5 days.
+        """
+        # Get the recent date threshold
+        recent_date = (datetime.now(timezone.utc) - timedelta(days=5)).strftime(ISO8601)
+
+        # Query to get the count of recent predictions for each miner
+        query = f'''
+            SELECT miner_hotkey, COUNT(*) as recent_count
+            FROM predictions
+            WHERE score_timestamp > '{recent_date}'
+            GROUP BY miner_hotkey
+        '''
+        recent_counts = self.database_manager.query(query)
+
+        # Build a dictionary of miner_hotkey to recent_count
+        recent_counts_dict = {miner_hotkey: recent_count for miner_hotkey, recent_count in recent_counts}
+
+        # Set scores to 0 for miners with less than 10 recent predictions
+        for miner_hotkey, uid in hotkey_to_uid.items():
+            recent_count = recent_counts_dict.get(miner_hotkey, 0)
+            if recent_count < 8:
+                scores[uid] = 0
 
     def calculate_miner_scores(self):
         try:  # database_manager lock is already acquire at this point
@@ -45,6 +71,9 @@ class WeightSetter:
                 if miner_hotkey in hotkey_to_uid:
                     uid = hotkey_to_uid[miner_hotkey]
                     scores[uid] = lifetime_score
+                
+            # Adjust scores based on recent activity
+            self.adjust_scores_based_on_recent_activity(scores, hotkey_to_uid)
 
             return scores
 
@@ -60,8 +89,7 @@ class WeightSetter:
         
         top_10_pct = max(1, int(0.1 * n_miners))
         next_40_pct = max(1, int(0.4 * n_miners))
-        remaining = n_miners - top_10_pct - next_40_pct
-        
+
         # Indices for each tier
         top_indices = sorted_indices[:top_10_pct]
         next_indices = sorted_indices[top_10_pct:top_10_pct+next_40_pct]

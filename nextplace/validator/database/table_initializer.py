@@ -20,6 +20,7 @@ class TableInitializer:
         self._create_predictions_table(cursor)
         self._create_sales_table(cursor)
         self._create_miner_scores_table(cursor)
+        self._create_active_miners_table(cursor)
         db_connection.commit()
         cursor.close()
         db_connection.close()
@@ -134,5 +135,21 @@ class TableInitializer:
                 lifetime_score REAL,
                 total_predictions INTEGER,
                 last_update_timestamp DATETIME
+            )
+        ''')
+
+
+    def _create_active_miners_table(self, cursor) -> None:
+        """
+        Create the active miners table
+        Args:
+            cursor: a database cursor
+
+        Returns:
+            None
+        """
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS active_miners (
+                miner_hotkey TEXT PRIMARY KEY
             )
         ''')
