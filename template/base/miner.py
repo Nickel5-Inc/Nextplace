@@ -27,6 +27,7 @@ from template.base.neuron import BaseNeuron
 from template.utils.config import add_miner_args
 
 from typing import Union
+from datetime import datetime, timezone, timedelta
 
 class BaseMinerNeuron(BaseNeuron):
     """
@@ -69,6 +70,19 @@ class BaseMinerNeuron(BaseNeuron):
         self.is_running: bool = False
         self.thread: Union[threading.Thread, None] = None
         self.lock = asyncio.Lock()
+
+        # Setup timer for metagraph sync
+        self.timer = datetime.now(timezone.utc)
+
+    def is_time_to_resync(self) -> bool:
+        """
+        Check if it has been 1 hour since the timer was last reset
+        Returns:
+            True if it has been 1 hour, else False
+        """
+        now = datetime.now(timezone.utc)
+        time_diff = now - self.timer
+        return time_diff >= timedelta(minutes=1)
 
     def run(self):
         """
@@ -122,8 +136,11 @@ class BaseMinerNeuron(BaseNeuron):
                     if self.should_exit:
                         break
 
-                # Sync metagraph and potentially set weights.
-                self.sync()
+                # Check if it's time to resync metagraph
+                if self.step % 10 == 0 and self.is_time_to_resync():
+                    self.timer = datetime.now(timezone.utc)  # Reset the timer
+                    self.sync()  # Sync metagraph
+
                 self.step += 1
 
         # If someone intentionally stops the miner, it'll safely terminate operations.
