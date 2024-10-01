@@ -145,6 +145,7 @@ class BaseMinerNeuron(BaseNeuron):
                     bt.logging.trace(f"🏁 Resetting step")
                     self.step = 0  # Reset the step
 
+                time.sleep(1)
                 self.step += 1
 
         # If someone intentionally stops the miner, it'll safely terminate operations.
