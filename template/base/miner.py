@@ -57,13 +57,13 @@ class BaseMinerNeuron(BaseNeuron):
         self.axon = bt.axon(wallet=self.wallet, config=self.config() if callable(self.config) else self.config)
 
         # Attach determiners which functions are called when servicing a request.
-        bt.logging.info(f"Attaching forward function to miner axon.")
+        bt.logging.info(f"🧩 Attaching forward function to miner axon.")
         self.axon.attach(
             forward_fn=self.forward,
             blacklist_fn=self.blacklist,
             priority_fn=self.priority,
         )
-        bt.logging.info(f"Axon created: {self.axon}")
+        bt.logging.info(f"🛠️ Axon created: {self.axon}")
 
         # Instantiate runners
         self.should_exit: bool = False
@@ -113,14 +113,14 @@ class BaseMinerNeuron(BaseNeuron):
         # Serve passes the axon information to the network + netuid we are hosting on.
         # This will auto-update if the axon port of external ip have changed.
         bt.logging.info(
-            f"Serving miner axon {self.axon} on network: {self.config.subtensor.chain_endpoint} with netuid: {self.config.netuid}"
+            f"🍹 Serving miner axon {self.axon} on network: {self.config.subtensor.chain_endpoint} with netuid: {self.config.netuid}"
         )
         self.axon.serve(netuid=self.config.netuid, subtensor=self.subtensor)
 
         # Start  starts the miner's axon, making it active on the network.
         self.axon.start()
 
-        bt.logging.info(f"Miner starting at block: {self.block}")
+        bt.logging.info(f"🚀 Miner starting at block: {self.block}")
 
         # This loop maintains the miner's operations until intentionally stopped.
         try:
@@ -142,6 +142,7 @@ class BaseMinerNeuron(BaseNeuron):
                     self.sync()  # Sync metagraph
 
                 if self.step >= 1000:  # No reason for the step to grow interminably
+                    bt.logging.trace(f"🏁 Resetting step")
                     self.step = 0  # Reset the step
 
                 self.step += 1
@@ -149,7 +150,7 @@ class BaseMinerNeuron(BaseNeuron):
         # If someone intentionally stops the miner, it'll safely terminate operations.
         except KeyboardInterrupt:
             self.axon.stop()
-            bt.logging.success("Miner killed by keyboard interrupt.")
+            bt.logging.success("💀 Miner killed by keyboard interrupt.")
             exit()
 
         # In case of unforeseen errors, the miner will log the error and continue operations.
