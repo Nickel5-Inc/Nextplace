@@ -141,6 +141,9 @@ class BaseMinerNeuron(BaseNeuron):
                     self.timer = datetime.now(timezone.utc)  # Reset the timer
                     self.sync()  # Sync metagraph
 
+                if self.step >= 1000:  # No reason for the step to grow interminably
+                    self.step = 0  # Reset the step
+
                 self.step += 1
 
         # If someone intentionally stops the miner, it'll safely terminate operations.
