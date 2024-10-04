@@ -17,7 +17,6 @@ class Watchdog:
         self.pm2_process_name = self.get_pm2_process_name()
         self.database_manager = database_manager
         self.timeout = timedelta(minutes=5)
-        bt.logging.trace(f"| {self.thread_name} | 🚀 Watchdog is setup")
 
     def get_pm2_process_name(self) -> str or None:
         """
@@ -51,8 +50,8 @@ class Watchdog:
         bt.logging.info(f"| {self.thread_name} | ⌛ Checking for recent synapse timestamp")
         timestamp = self.database_manager.get_synapse_timestamp()  # Extract stored timestamp for db
         if timestamp is None:  # We haven't stored a synapse yet
-            bt.logging.trace(f"| {self.thread_name} | ⏰ No timestamp found in synapse table")
-            return False
+            bt.logging.error(f"| {self.thread_name} | ⏰ No timestamp found in synapse table!")
+            return True
         bt.logging.trace(f"| {self.thread_name} | 🕓 Most recent synapse timestamp: {timestamp}")
         now = datetime.now(timezone.utc)  # Get current date time
         time_diff = now - timestamp  # Calculate difference

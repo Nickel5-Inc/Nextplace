@@ -31,6 +31,7 @@ class RealEstateMiner(BaseMinerNeuron):
             None
         """
         sleep(5 * 60)  # Sleep for 5 minutes so the Miner can get setup. Need this to avoid infinite restart loop.
+        bt.logging.trace(f"| {self.watchdog.thread_name} | 🚀 Watchdog entering watch loop")
         while True:
             if self.watchdog.miner_should_restart():  # Check if we've got a synapse in the last 3 minutes
                 self.watchdog.restart_process()  # Restart if we need to
