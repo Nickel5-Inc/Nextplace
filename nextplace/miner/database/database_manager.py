@@ -21,14 +21,20 @@ class DatabaseManager:
         self.setup_table()
 
     def setup_table(self):
-        create_table_string = '''
+        now = datetime.now(timezone.utc)
+        create_table_string = """
             CREATE TABLE IF NOT EXISTS synapse (
-                timestamp DATETIME PRIMARY KEY,
-                id INTEGER
+                id INTEGER PRIMARY KEY,
+                timestamp DATETIME
             )
-        '''
+        """
+        add_entry_query = f"""
+            INSERT OR REPLACE INTO synapse (id, timestamp)
+            VALUES (1, '{now}')
+        """
         with self.lock:
             self.query_and_commit(create_table_string)
+            self.query_and_commit(add_entry_query)
 
     def get_synapse_timestamp(self) -> str or None:
         """
@@ -59,8 +65,8 @@ class DatabaseManager:
         timestamp = datetime.now(timezone.utc)
         query_str = f"""
             UPDATE synapse
-            WHERE id = 1
             SET timestamp = '{timestamp}'
+            WHERE id = 1
         """
         with self.lock:
             self.query_and_commit(query_str)

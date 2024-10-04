@@ -18,7 +18,6 @@ class RealEstateMiner(BaseMinerNeuron):
         else:
             bt.logging.trace("🐨 Not forcing update of past predictions")
         self.database_manager = DatabaseManager()
-        self.watchdog = Watchdog(self.database_manager)
         self.model = Model(model_args)
         self.force_update_past_predictions = force_update_past_predictions
 
@@ -30,11 +29,12 @@ class RealEstateMiner(BaseMinerNeuron):
         Returns:
             None
         """
+        watchdog = Watchdog(self.database_manager)
         sleep(5 * 60)  # Sleep for 5 minutes so the Miner can get setup. Need this to avoid infinite restart loop.
-        bt.logging.trace(f"| {self.watchdog.thread_name} | 🚀 Watchdog entering watch loop")
+        bt.logging.trace(f"| {watchdog.thread_name} | 🚀 Watchdog entering watch loop")
         while True:
-            if self.watchdog.miner_should_restart():  # Check if we've got a synapse in the last 3 minutes
-                self.watchdog.restart_process()  # Restart if we need to
+            if watchdog.miner_should_restart():  # Check if we've got a synapse in the last 3 minutes
+                watchdog.restart_process()  # Restart if we need to
             sleep(60)  # Sleep for 1 minute
 
     def forward(self, synapse: RealEstateSynapse) -> RealEstateSynapse:
