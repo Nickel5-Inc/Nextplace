@@ -120,12 +120,12 @@ def main():
     check_args(model_args)  # Check the model args to the Miner
     miner = RealEstateMiner(model_args, force_update_past_predictions, config)  # instantiate Miner object
 
-    bt.logging.info("✨ Miner has been initialized and we are connected to the network. Starting miner.")
-    miner.run()  # run the miner
-
     # Create & start the watchdog thread
     watchdog_thread = Thread(target=miner.run_watchdog, name='🐶 WatchdogThread 🐶')
     watchdog_thread.start()
+
+    bt.logging.info("✨ Miner has been initialized and we are connected to the network. Starting miner.")
+    miner.run()  # run the miner
 
 
 # Entrypoint
