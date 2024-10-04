@@ -27,6 +27,7 @@ from template.base.neuron import BaseNeuron
 from template.utils.config import add_miner_args
 
 from typing import Union
+from datetime import datetime, timezone, timedelta
 
 class BaseMinerNeuron(BaseNeuron):
     """
@@ -56,19 +57,32 @@ class BaseMinerNeuron(BaseNeuron):
         self.axon = bt.axon(wallet=self.wallet, config=self.config() if callable(self.config) else self.config)
 
         # Attach determiners which functions are called when servicing a request.
-        bt.logging.info(f"Attaching forward function to miner axon.")
+        bt.logging.info(f"🧩 Attaching forward function to miner axon.")
         self.axon.attach(
             forward_fn=self.forward,
             blacklist_fn=self.blacklist,
             priority_fn=self.priority,
         )
-        bt.logging.info(f"Axon created: {self.axon}")
+        bt.logging.info(f"🛠️ Axon created: {self.axon}")
 
         # Instantiate runners
         self.should_exit: bool = False
         self.is_running: bool = False
         self.thread: Union[threading.Thread, None] = None
         self.lock = asyncio.Lock()
+
+        # Setup timer for metagraph sync
+        self.timer = datetime.now(timezone.utc)
+
+    def is_time_to_resync(self) -> bool:
+        """
+        Check if it has been 1 hour since the timer was last reset
+        Returns:
+            True if it has been 1 hour, else False
+        """
+        now = datetime.now(timezone.utc)
+        time_diff = now - self.timer
+        return time_diff >= timedelta(minutes=1)
 
     def run(self):
         """
@@ -99,14 +113,14 @@ class BaseMinerNeuron(BaseNeuron):
         # Serve passes the axon information to the network + netuid we are hosting on.
         # This will auto-update if the axon port of external ip have changed.
         bt.logging.info(
-            f"Serving miner axon {self.axon} on network: {self.config.subtensor.chain_endpoint} with netuid: {self.config.netuid}"
+            f"🍹 Serving miner axon {self.axon} on network: {self.config.subtensor.chain_endpoint} with netuid: {self.config.netuid}"
         )
         self.axon.serve(netuid=self.config.netuid, subtensor=self.subtensor)
 
         # Start  starts the miner's axon, making it active on the network.
         self.axon.start()
 
-        bt.logging.info(f"Miner starting at block: {self.block}")
+        bt.logging.info(f"🚀 Miner starting at block: {self.block}")
 
         # This loop maintains the miner's operations until intentionally stopped.
         try:
@@ -122,14 +136,22 @@ class BaseMinerNeuron(BaseNeuron):
                     if self.should_exit:
                         break
 
-                # Sync metagraph and potentially set weights.
-                self.sync()
+                # Check if it's time to resync metagraph
+                if self.step % 10 == 0 and self.is_time_to_resync():
+                    self.timer = datetime.now(timezone.utc)  # Reset the timer
+                    self.sync()  # Sync metagraph
+
+                if self.step >= 1000:  # No reason for the step to grow interminably
+                    bt.logging.trace(f"🏁 Resetting step")
+                    self.step = 0  # Reset the step
+
+                time.sleep(1)
                 self.step += 1
 
         # If someone intentionally stops the miner, it'll safely terminate operations.
         except KeyboardInterrupt:
             self.axon.stop()
-            bt.logging.success("Miner killed by keyboard interrupt.")
+            bt.logging.success("💀 Miner killed by keyboard interrupt.")
             exit()
 
         # In case of unforeseen errors, the miner will log the error and continue operations.
@@ -186,7 +208,7 @@ class BaseMinerNeuron(BaseNeuron):
 
     def resync_metagraph(self):
         """Resyncs the metagraph and updates the hotkeys and moving averages based on the new metagraph."""
-        bt.logging.info("resync_metagraph()")
+        bt.logging.info("🔄 resync_metagraph()")
 
         # Sync the metagraph.
         self.metagraph.sync(subtensor=self.subtensor)
