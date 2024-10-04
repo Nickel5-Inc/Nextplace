@@ -27,8 +27,14 @@ class Watchdog:
         try:
             # Fetch the list of PM2 processes in JSON format
             result = subprocess.run(['pm2', 'jlist'], capture_output=True, text=True)
-            processes = json.loads(result.stdout)
+            bt.logging.trace(f"| {self.thread_name} | result of captured output: {result}")
             current_pid = os.getpid()
+            bt.logging.trace(f"| {self.thread_name} | PID: {current_pid}")
+            try:
+                processes = json.loads(result.stdout)
+            except json.JSONDecodeError as json_err:
+                bt.logging.error(f"| {self.thread_name} | ❌ Invalid JSON from PM2: {json_err}")
+                return None
 
             # Search for the process that matches the current PID
             for process in processes:
