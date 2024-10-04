@@ -27,9 +27,15 @@ class Watchdog:
         try:
             # Fetch the list of PM2 processes in JSON format
             result = subprocess.run(['pm2', 'jlist'], capture_output=True, text=True)
-            bt.logging.trace(f"| {self.thread_name} | result of captured output: {result}")
+            bt.logging.trace(f"| {self.thread_name} | Result of captured output: {result}")
+            bt.logging.trace(f"| {self.thread_name} | stderr: {result.stderr}")
             current_pid = os.getpid()
             bt.logging.trace(f"| {self.thread_name} | PID: {current_pid}")
+
+            if result.returncode != 0:
+                bt.logging.error(f"| {self.thread_name} | ❌ PM2 command failed with returncode {result.returncode}")
+                return None
+
             try:
                 processes = json.loads(result.stdout)
             except json.JSONDecodeError as json_err:
