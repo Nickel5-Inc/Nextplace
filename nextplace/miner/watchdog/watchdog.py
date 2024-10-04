@@ -4,7 +4,7 @@ import subprocess
 import json
 import bittensor as bt
 from datetime import datetime, timedelta, timezone
-
+from dateutil import parser
 from nextplace.miner.database.database_manager import DatabaseManager
 
 
@@ -52,6 +52,7 @@ class Watchdog:
         if timestamp is None:  # We haven't stored a synapse yet
             bt.logging.error(f"| {self.thread_name} | ⏰ No timestamp found in synapse table!")
             return True
+        timestamp = parser.parse(timestamp)  # Parse the timestamp
         bt.logging.trace(f"| {self.thread_name} | 🕓 Most recent synapse timestamp: {timestamp}")
         now = datetime.now(timezone.utc)  # Get current date time
         time_diff = now - timestamp  # Calculate difference

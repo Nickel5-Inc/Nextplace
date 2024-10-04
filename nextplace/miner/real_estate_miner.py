@@ -30,6 +30,7 @@ class RealEstateMiner(BaseMinerNeuron):
             None
         """
         watchdog = Watchdog(self.database_manager)
+        bt.logging.trace(f"| {watchdog.thread_name} | 🏁 Watchdog has been initialized")
         sleep(5 * 60)  # Sleep for 5 minutes so the Miner can get setup. Need this to avoid infinite restart loop.
         bt.logging.trace(f"| {watchdog.thread_name} | 🚀 Watchdog entering watch loop")
         while True:
