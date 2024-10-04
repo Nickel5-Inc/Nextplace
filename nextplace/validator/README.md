@@ -12,7 +12,7 @@ Note: Runpod and Vast are not recommended. Validating this subnet does not requi
 ## Clone the Repo
 ```
 git clone https://github.com/Nickel5-Inc/Nextplace.git
-cd nextplace
+cd Nextplace
 ```
 
 ## Install System Dependencies
@@ -27,6 +27,7 @@ source venv/bin/activate
 Install dependencies
 ```
 pip install -r requirements.txt
+pip install -e .
 ```
 
 ## Register hotkey
