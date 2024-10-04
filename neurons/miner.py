@@ -1,5 +1,7 @@
 from argparse import ArgumentParser
 import sys
+from threading import Thread
+
 import bittensor as bt
 from nextplace.miner.ml.model_loader import ModelArgs
 from nextplace.miner.real_estate_miner import RealEstateMiner
@@ -81,16 +83,16 @@ def check_args(args: ModelArgs) -> None:
     # If any of these fields are empty, the others need to be as well
     if source == '' or path == '' or filename == '':
         if not (source == '' and path == '' and filename == ''):
-            bt.logging.error("If providing one of '--model_source', '--model_path', or '--model_class_filename', you must provide the others.")
+            bt.logging.error("❌ If providing one of '--model_source', '--model_path', or '--model_class_filename', you must provide the others.")
             sys.exit(1)
 
     # Checks if an API key is provided
     if api_key != '':
         if source == 'local':  # '--model_source' must not be 'local'
-            bt.logging.error("If providing an api key, you must specify `hugging_face` as your --model_source")
+            bt.logging.error("❌ If providing an api key, you must specify `hugging_face` as your --model_source")
             sys.exit(1)
         if source == '' or path == '' or filename == '':  # All other fields must be specified
-            bt.logging.error("If providing an api key, you must provide '--model_source', '--model_path', and '--model_class_filename' as well.")
+            bt.logging.error("❌ If providing an api key, you must provide '--model_source', '--model_path', and '--model_class_filename' as well.")
             sys.exit(1)
 
 
@@ -115,12 +117,15 @@ def main():
     else:
         force_update_past_predictions = False
 
-    check_args(model_args)
-
+    check_args(model_args)  # Check the model args to the Miner
     miner = RealEstateMiner(model_args, force_update_past_predictions, config)  # instantiate Miner object
 
-    bt.logging.info("Miner has been initialized and we are connected to the network. Calling miner.run()")
+    bt.logging.info("✨ Miner has been initialized and we are connected to the network. Starting miner.")
     miner.run()  # run the miner
+
+    # Create & start the watchdog thread
+    watchdog_thread = Thread(target=miner.run_watchdog, name='🐶 WatchdogThread 🐶')
+    watchdog_thread.start()
 
 
 # Entrypoint
