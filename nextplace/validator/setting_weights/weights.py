@@ -3,6 +3,7 @@ import bittensor as bt
 import traceback
 import threading
 from datetime import datetime, timezone, timedelta
+from nextplace.validator.utils.system import timeout_with_multiprocess
 from nextplace.validator.utils.contants import ISO8601
 
 
@@ -148,7 +149,7 @@ class WeightSetter:
                 uids=self.metagraph.uids,
                 weights=weights,
                 wait_for_inclusion=True,
-                wait_for_finalization=True,
+                wait_for_finalization=False,
             )
 
             success = result[0] if isinstance(result, tuple) and len(result) >= 1 else False
