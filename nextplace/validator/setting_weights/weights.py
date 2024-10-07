@@ -124,7 +124,7 @@ class WeightSetter:
         
         return weights
 
-
+    @timeout_with_multiprocess(seconds=180)
     def set_weights(self):
         current_thread = threading.current_thread()
         # Sync the metagraph to get the latest data
