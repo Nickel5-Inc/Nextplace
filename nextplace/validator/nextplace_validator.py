@@ -56,7 +56,7 @@ class RealEstateValidator(BaseValidatorNeuron):
         # Build sets
         metagraph_hotkeys = set(self.metagraph.hotkeys)  # Get hotkeys in metagraph
         with self.database_manager.lock:
-            stored_hotkeys = set(self.database_manager.query("SELECT * FROM active_miners"))  # Get stored hotkeys
+            stored_hotkeys = set(row[0] for row in self.database_manager.query("SELECT miner_hotkey FROM active_miners"))  # Get stored hotkeys
 
         # Set operations
         deregistered_hotkeys = list(stored_hotkeys.difference(metagraph_hotkeys))  # Deregistered hotkeys are stored, but not in the metagraph

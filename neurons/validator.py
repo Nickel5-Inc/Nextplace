@@ -7,7 +7,7 @@ from nextplace.validator.nextplace_validator import RealEstateValidator
 
 
 def main(validator):
-    step = 199  # Initialize step
+    step = 200  # Initialize step
 
     while True:
         try:
