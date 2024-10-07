@@ -9,6 +9,7 @@ from nextplace.validator.scoring.scoring import Scorer
 from nextplace.validator.synapse.synapse_manager import SynapseManager
 from nextplace.validator.setting_weights.weights import WeightSetter
 from template.base.validator import BaseValidatorNeuron
+from nextplace.validator.outgoing_data.website_comms import WebsiteProcessor
 import threading
 
 
@@ -24,6 +25,7 @@ class RealEstateValidator(BaseValidatorNeuron):
         self.scorer = Scorer(self.database_manager, self.markets)
         self.synapse_manager = SynapseManager(self.database_manager)
         self.prediction_manager = PredictionManager(self.database_manager, self.metagraph)
+        self.website_processor = WebsiteProcessor(self.database_manager)
         self.netuid = self.config.netuid
         
         self.weight_setter = WeightSetter(
@@ -95,6 +97,13 @@ class RealEstateValidator(BaseValidatorNeuron):
                 self.weight_setter.check_timer_set_weights()
             finally:
                 self.database_manager.lock.release()
+
+    def process_and_send_predictions(self) -> None:
+        """
+        Process scored predictions and send them to the website.
+        """
+        bt.logging.info("🔄 Processing and sending predictions to the website.")
+        self.website_processor.send_data()
 
     # OVERRIDE | Required
     def forward(self, step: int) -> None:

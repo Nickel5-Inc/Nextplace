@@ -7,7 +7,7 @@ from nextplace.validator.nextplace_validator import RealEstateValidator
 
 
 def main(validator):
-    step = 1  # Initialize step
+    step = 199  # Initialize step
 
     while True:
         try:
@@ -22,6 +22,9 @@ def main(validator):
             if step % 100 == 0:  # Check if any registrations/deregistrations have happened, make necessary updates
                 thread = threading.Thread(target=validator.manage_miner_data, name="📋 MinerRegistrationThread 📋")
                 thread.start()
+            
+            if step % 200 == 0:
+                validator.process_and_send_predictions() # Send predictions to website
 
             if step >= 1250:  # Time to update scores and set weights
                 thread = threading.Thread(target=validator.scorer.run_score_predictions, name="🏋🏻 ScoreThread 🏋🏻")  # Create thread
