@@ -85,44 +85,34 @@ class WeightSetter:
     def calculate_weights(self, scores):
         n_miners = len(scores)
         sorted_indices = torch.argsort(scores, descending=True)
-        
         weights = torch.zeros(n_miners)
         
+        top_indices, next_indices, bottom_indices = self.get_tier_indices(sorted_indices, n_miners)
+        
+        for indices, weight in [(top_indices, 0.7), (next_indices, 0.2), (bottom_indices, 0.1)]:
+            tier_scores = self.apply_quadratic_scaling(scores[indices])
+            weights[indices] = self.calculate_tier_weights(tier_scores, weight)
+        
+        weights /= weights.sum()  # Normalize weights to sum to 1.0
+        return weights
+
+    def get_tier_indices(self, sorted_indices, n_miners):
         top_10_pct = max(1, int(0.1 * n_miners))
         next_40_pct = max(1, int(0.4 * n_miners))
-
-        # Indices for each tier
         top_indices = sorted_indices[:top_10_pct]
         next_indices = sorted_indices[top_10_pct:top_10_pct+next_40_pct]
         bottom_indices = sorted_indices[top_10_pct+next_40_pct:]
-        
-        # Scores for each tier
-        top_scores = scores[top_indices]
-        next_scores = scores[next_indices]
-        bottom_scores = scores[bottom_indices]
-        
-        # Sum of scores in each tier
-        sum_top_scores = top_scores.sum()
-        sum_next_scores = next_scores.sum()
-        sum_bottom_scores = bottom_scores.sum()
-        
-        # Assign weights proportionally within each tier
-        if sum_top_scores > 0:
-            weights[top_indices] = (top_scores / sum_top_scores) * 0.4
+        return top_indices, next_indices, bottom_indices
+
+    def apply_quadratic_scaling(self, scores):
+        return scores ** 2
+
+    def calculate_tier_weights(self, tier_scores, total_weight):
+        sum_scores = tier_scores.sum()
+        if sum_scores > 0:
+            return (tier_scores / sum_scores) * total_weight
         else:
-            weights[top_indices] = 0.4 / len(top_indices)
-        
-        if sum_next_scores > 0:
-            weights[next_indices] = (next_scores / sum_next_scores) * 0.4
-        else:
-            weights[next_indices] = 0.4 / len(next_indices)
-        
-        if sum_bottom_scores > 0:
-            weights[bottom_indices] = (bottom_scores / sum_bottom_scores) * 0.2
-        else:
-            weights[bottom_indices] = 0.2 / len(bottom_indices)
-        
-        return weights
+            return torch.full_like(tier_scores, total_weight / len(tier_scores))
 
 
     def set_weights(self):
