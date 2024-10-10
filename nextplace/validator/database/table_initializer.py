@@ -22,6 +22,7 @@ class TableInitializer:
         self._create_miner_scores_table(cursor)
         self._create_active_miners_table(cursor)
         self._create_website_comms_table(cursor)
+        self._create_ids_table(cursor)
         db_connection.commit()
         cursor.close()
         db_connection.close()
@@ -174,5 +175,21 @@ class TableInitializer:
                 predicted_sale_date DATE,
                 already_sent INTEGER DEFAULT 0,
                 PRIMARY KEY (nextplace_id, miner_hotkey)
+            )
+        ''')
+
+
+    def _create_ids_table(self, cursor) -> None:
+        """
+        Create the active miners table
+        Args:
+            cursor: a database cursor
+
+        Returns:
+            None
+        """
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS ids (
+                nextplace_id TEXT PRIMARY KEY
             )
         ''')
