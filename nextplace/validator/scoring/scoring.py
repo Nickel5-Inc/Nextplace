@@ -67,7 +67,7 @@ class Scorer:
                     """
         self.database_manager.query_and_commit(query_str)
 
-    def _get_scorable_predictions(self) -> list:
+    def _get_scorable_predictions(self):
         """
         Query to get scorable predictions that haven't been scored yet
         Returns:
@@ -76,7 +76,6 @@ class Scorer:
         ids = self._get_ids()
         bt.logging.trace(f"| {self.current_thread} | 🔎 Found {len(ids)} potential homes for scoring")
 
-        results = []
         for candidate_id in ids:  # Iterate homes
 
             query_str = f"""
@@ -93,12 +92,13 @@ class Scorer:
                 if len(scorable_predictions) > 0:
                     self.scoring_calculator.process_scorable_predictions(scorable_predictions)  # Score predictions for this home
 
+        # Delete ids from table
+        delete_query = f"""
+            DELETE FROM ids
+            WHERE nextplace_id IN ({ids})
         """
-        ToDo
-            - Clean ids from ids table!
-        """
-
-        return results
+        with self.database_manager.lock:
+            self.database_manager.query_and_commit(delete_query)
 
     def _get_ids(self) -> List[str]:
         """
