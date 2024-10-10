@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Tuple
 import bittensor as bt
 from datetime import datetime, timezone
 from nextplace.protocol import RealEstatePredictions
@@ -35,6 +35,7 @@ class PredictionManager:
         timestamp = current_utc_datetime.strftime(ISO8601)
         replace_policy_data_for_ingestion: list[tuple] = []
         ignore_policy_data_for_ingestion: list[tuple] = []
+        ids: List[Tuple[str]] = []
 
         for idx, real_estate_predictions in enumerate(responses):  # Iterate responses
 
@@ -67,12 +68,15 @@ class PredictionManager:
                     else:
                         ignore_policy_data_for_ingestion.append(values)
 
+                    ids.append((prediction.nextplace_id,))  # Add to list of id's
+
                 except Exception as e:
                     bt.logging.error(f"❗Failed to process prediction: {e}")
 
         # Store predictions in the database
         self._handle_ingestion('IGNORE', ignore_policy_data_for_ingestion)
         self._handle_ingestion('REPLACE', replace_policy_data_for_ingestion)
+        self._store_ids(ids)
 
         table_size = self.database_manager.get_size_of_table('predictions')
         bt.logging.trace(f"📢 There are now {table_size} predictions in the database")
@@ -84,3 +88,12 @@ class PredictionManager:
             VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         """
         self.database_manager.query_and_commit_many(query_str, values)
+
+    def _store_ids(self, values: list[tuple]) -> None:
+        query_str = """
+            INSERT OR IGNORE INTO ids
+            (nextplace_id)
+            VALUES (?)
+        """
+        self.database_manager.query_and_commit_many(query_str, values)
+
