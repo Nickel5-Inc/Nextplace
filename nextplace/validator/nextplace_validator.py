@@ -118,6 +118,7 @@ class RealEstateValidator(BaseValidatorNeuron):
         if not self.database_manager.lock.acquire(blocking=True, timeout=10):
             # If the lock is held by another thread, wait for 10 seconds, if still not available, return
             bt.logging.trace("🚧 Another thread is holding the database_manager lock.")
+            self.step -= 1  # We don't want the step to increment, so decrement it here
             return
 
         try:

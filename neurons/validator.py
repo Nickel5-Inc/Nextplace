@@ -23,11 +23,11 @@ def main(validator):
                 thread = threading.Thread(target=validator.manage_miner_data, name="📋 MinerRegistrationThread 📋")
                 thread.start()
             
-            if step % 200 == 0:  # Send predictions to website
-                thread = threading.Thread(target=validator.process_and_send_predictions, name="🛰️ WebsiteConnectionThread 🛰️")
-                thread.start()
+            # if step % 200 == 0:  # Send predictions to website
+            #     thread = threading.Thread(target=validator.process_and_send_predictions, name="🛰️ WebsiteConnectionThread 🛰️")
+            #     thread.start()
 
-            if step >= 1250:  # Time to update scores and set weights
+            if step >= 1000:  # Time to update scores and set weights
                 thread = threading.Thread(target=validator.scorer.run_score_predictions, name="🏋🏻 ScoreThread 🏋🏻")  # Create thread
                 thread.start()  # Start thread
                 step = 0  # Reset the step
