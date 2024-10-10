@@ -27,7 +27,10 @@ def main(validator):
             if step >= 1000:  # Time to update scores and set weights
                 thread = threading.Thread(target=validator.scorer.run_score_predictions, name="🏋🏻 ScoreThread 🏋🏻")  # Create thread
                 thread.start()  # Start thread
-                step = 0  # Reset the step
+
+                # Reset the step
+                step = 1
+                validator.should_step = False
 
             if validator.should_step:
                 step += 1  # Increment step
