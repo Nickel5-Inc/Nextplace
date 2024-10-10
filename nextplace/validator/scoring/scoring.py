@@ -38,7 +38,7 @@ class Scorer:
         with self.database_manager.lock:
             num_sales = self.database_manager.get_size_of_table('sales')
             bt.logging.info(f"| {self.current_thread} | 🛒 Ingested {num_sales} sold homes since our oldest prediction. Checking for overlapping predictions.")
-        self._get_scorable_predictions()
+        self.score_predictions()
         with self.database_manager.lock:
             self._cleanup()
 
@@ -67,7 +67,7 @@ class Scorer:
                     """
         self.database_manager.query_and_commit(query_str)
 
-    def _get_scorable_predictions(self):
+    def score_predictions(self):
         """
         Query to get scorable predictions that haven't been scored yet
         Returns:

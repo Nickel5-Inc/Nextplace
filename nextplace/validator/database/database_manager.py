@@ -19,6 +19,42 @@ class DatabaseManager:
         self.lock = RLock()  # Reentrant lock for thread safety
         if not os.path.exists(db_dir):
             os.makedirs(db_dir)  # Create db dir
+        self._check_and_migrate_ids()
+
+    def _check_and_migrate_ids(self):
+        ids_table_query_str = """
+            SELECT name
+            FROM sqlite_master
+            WHERE type='table' AND name='ids'
+        """
+        ids_result = self.query(ids_table_query_str)
+        ids_exists = ids_result is not None and len(ids_result) > 0
+
+        predictions_table_query_str = """
+            SELECT name
+            FROM sqlite_master
+            WHERE type='table' AND name='predictions'
+        """
+        predictions_result = self.query(predictions_table_query_str)
+        predictions_exists = predictions_result is not None and len(predictions_result) > 0
+
+        if predictions_exists and not ids_exists:
+            self._migrate_prediction_ids()
+
+    def _migrate_prediction_ids(self):
+        distinct_ids_query = """
+            SELECT DISTINCT(nextplace_id)
+            FROM predictions
+        """
+        ids_results = self.query(distinct_ids_query)
+
+        insert_query = """
+            INSERT INTO ids (nextplace_id)
+            VALUES(?)
+        """
+        values = [(result[0],) for result in ids_results]
+        self.query_and_commit_many(insert_query, values)
+
 
     def query(self, query: str) -> list:
         """
