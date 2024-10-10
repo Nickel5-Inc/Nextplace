@@ -76,6 +76,24 @@ class DatabaseManager:
             cursor.close()
             db_connection.close()
 
+    def query_and_commit_with_values(self, query: str, values: tuple) -> None:
+        """
+        Use for updating the database
+        Args:
+            query: query string
+            values: a tuple of values
+
+        Returns:
+            None
+        """
+        cursor, db_connection = self.get_cursor()
+        try:
+            cursor.execute(query, values)
+            db_connection.commit()
+        finally:
+            cursor.close()
+            db_connection.close()
+
     def query_and_commit_many(self, query: str, values: list[tuple]) -> None:
         """
         Use for updating the database with many rows at once
