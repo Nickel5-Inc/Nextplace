@@ -10,6 +10,7 @@ def main(validator):
     step = 1  # Initialize step
 
     while True:
+        validator.should_step = True
         try:
             bt.logging.info(f"🦶 Validator step: {step}")
 
@@ -28,7 +29,9 @@ def main(validator):
                 thread.start()  # Start thread
                 step = 0  # Reset the step
 
-            step += 1  # Increment step
+            if validator.should_step:
+                step += 1  # Increment step
+
             time.sleep(5)  # Sleep for a bit
 
         except Exception as e:
