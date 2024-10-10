@@ -27,7 +27,8 @@ class RealEstateValidator(BaseValidatorNeuron):
         self.prediction_manager = PredictionManager(self.database_manager, self.metagraph)
         self.website_processor = WebsiteProcessor(self.database_manager)
         self.netuid = self.config.netuid
-        
+        self.should_step = True
+
         self.weight_setter = WeightSetter(
             metagraph=self.metagraph,
             wallet=self.wallet,
@@ -118,7 +119,7 @@ class RealEstateValidator(BaseValidatorNeuron):
         if not self.database_manager.lock.acquire(blocking=True, timeout=10):
             # If the lock is held by another thread, wait for 10 seconds, if still not available, return
             bt.logging.trace("🚧 Another thread is holding the database_manager lock.")
-            self.step -= 1  # We don't want the step to increment, so decrement it here
+            self.should_step = False
             return
 
         try:
@@ -127,6 +128,7 @@ class RealEstateValidator(BaseValidatorNeuron):
             if not self.market_manager.lock.acquire(blocking=True, timeout=10):
                 # If the lock is held by another thread, wait for 10 seconds, if still not available, return
                 bt.logging.trace("🚧 Another thread is holding the market_manager lock.")
+                self.should_step = False
                 return
 
             try:
