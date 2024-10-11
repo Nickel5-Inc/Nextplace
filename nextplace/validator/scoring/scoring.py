@@ -78,7 +78,7 @@ class Scorer:
         for candidate_id in ids:  # Iterate homes
 
             query_str = f"""
-                SELECT predictions.property_id, predictions.miner_hotkey, predictions.predicted_sale_price, predictions.predicted_sale_date
+                SELECT predictions.property_id, predictions.miner_hotkey, predictions.predicted_sale_price, predictions.predicted_sale_date, sales.sale_price, sales.sale_date
                 FROM predictions
                 JOIN sales ON predictions.nextplace_id = sales.nextplace_id
                 WHERE predictions.nextplace_id = '{candidate_id}'
