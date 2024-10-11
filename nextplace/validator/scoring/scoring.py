@@ -92,9 +92,10 @@ class Scorer:
                     self.scoring_calculator.process_scorable_predictions(scorable_predictions)  # Score predictions for this home
 
         # Delete ids from table
+        formatted_ids = ','.join(f"'{str(nextplace_id)}'" for nextplace_id in ids)
         delete_query = f"""
             DELETE FROM ids
-            WHERE nextplace_id IN ({ids})
+            WHERE nextplace_id IN ({formatted_ids})
         """
         with self.database_manager.lock:
             self.database_manager.query_and_commit(delete_query)
