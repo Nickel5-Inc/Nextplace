@@ -1,6 +1,5 @@
 from datetime import datetime, timezone, timedelta
 from typing import List
-
 import bittensor as bt
 import threading
 from nextplace.validator.scoring.scoring_calculator import ScoringCalculator
