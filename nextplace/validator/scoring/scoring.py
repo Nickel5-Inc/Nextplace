@@ -60,11 +60,23 @@ class Scorer:
         today = datetime.now(timezone.utc)
         min_date = (today - timedelta(days=max_days)).strftime(ISO8601)
         bt.logging.trace(f"| {self.current_thread} | ✘ Deleting predictions older than {min_date}")
+
+        # Clear out predictions table
+        ids = self.database_manager.query(f"SELECT DISTINCT(nextplace_id) FROM predictions WHERE prediction_timestamp < '{min_date}'")
         query_str = f"""
                         DELETE FROM predictions
                         WHERE prediction_timestamp < '{min_date}'
                     """
         self.database_manager.query_and_commit(query_str)
+
+        # Clear out IDs table
+        ids = [result[0] for result in ids]
+        formatted_ids = ','.join(f"'{str(nextplace_id)}'" for nextplace_id in ids)
+        delete_query = f"""
+                    DELETE FROM ids
+                    WHERE nextplace_id IN ({formatted_ids})
+                """
+        self.database_manager.query_and_commit(delete_query)
 
     def score_predictions(self):
         """
