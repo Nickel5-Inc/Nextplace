@@ -14,7 +14,6 @@ class SynapseManager:
 
     def __init__(self, database_manager: DatabaseManager):
         self.database_manager = database_manager
-        self.current_thread = threading.currentThread().name
 
     def get_synapse(self) -> RealEstateSynapse or None:
         """
@@ -23,6 +22,7 @@ class SynapseManager:
             A RealEstateSynapse to send to Miners, or None
         """
 
+        current_thread = threading.currentThread().name
         try:
             # Query to get the next round of properties
             retrieve_query = f'''
@@ -51,21 +51,21 @@ class SynapseManager:
                         next_property = self._property_from_database_row(property_datum)
                         outgoing_data.append(next_property)
                     except IndexError as ie:
-                        bt.logging.error(f"| {self.current_thread} | ❗IndexError: {ie} - The data from the database failed to convert to a Synapse")
+                        bt.logging.error(f"| {current_thread} | ❗IndexError: {ie} - The data from the database failed to convert to a Synapse")
                         return None
                 else:
-                    bt.logging.warning(f"| {self.current_thread} | ❗No property data found in the database")
+                    bt.logging.warning(f"| {current_thread} | ❗No property data found in the database")
                     return None
 
             real_estate_predictions = RealEstatePredictions(predictions=outgoing_data)
             synapse = RealEstateSynapse.create(real_estate_predictions=real_estate_predictions)
             market_index = 20
             market = property_data[0][market_index]
-            bt.logging.trace(f"| {self.current_thread} | ✉️ Created Synapse with {len(outgoing_data)} properties in {market}")
+            bt.logging.trace(f"| {current_thread} | ✉️ Created Synapse with {len(outgoing_data)} properties in {market}")
             return synapse
 
         except IndexError:
-            bt.logging.info(f"| {self.current_thread} | ❗No property data available")
+            bt.logging.info(f"| {current_thread} | ❗No property data available")
             return None
 
     def _property_from_database_row(self, property_data: any) -> RealEstatePrediction:

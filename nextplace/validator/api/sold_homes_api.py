@@ -13,7 +13,6 @@ class SoldHomesAPI(ApiBase):
 
     def __init__(self, database_manager: DatabaseManager, markets: list[dict[str, str]]):
         super(SoldHomesAPI, self).__init__(database_manager, markets)
-        self.current_thread = threading.currentThread().name
 
     def get_sold_properties(self) -> None:
         """
@@ -21,15 +20,16 @@ class SoldHomesAPI(ApiBase):
         Returns:
             None
         """
+        current_thread = threading.currentThread().name
         num_markets = len(self.markets)
         with self.database_manager.lock:
             oldest_prediction = self._get_oldest_prediction()
-        bt.logging.trace(f"| {self.current_thread} | 🕵🏻 Looking for homes sold since oldest unscored prediction: '{oldest_prediction}'")
+        bt.logging.trace(f"| {current_thread} | 🕵🏻 Looking for homes sold since oldest unscored prediction: '{oldest_prediction}'")
         for idx, market in enumerate(self.markets):
-            bt.logging.trace(f"| {self.current_thread} | 🔍 Getting sold homes in {market['name']}")
+            bt.logging.trace(f"| {current_thread} | 🔍 Getting sold homes in {market['name']}")
             self._process_region_sold_homes(market, oldest_prediction)
             percent_done = round(((idx + 1) / num_markets) * 100, 2)
-            bt.logging.trace(f"| {self.current_thread} | {percent_done}% of markets processed")
+            bt.logging.trace(f"| {current_thread} | {percent_done}% of markets processed")
 
     def _process_region_sold_homes(self, market: dict, oldest_prediction: str) -> None:
         """
@@ -61,7 +61,8 @@ class SoldHomesAPI(ApiBase):
 
             # Only proceed with status code is 200
             if response.status_code != 200:
-                bt.logging.error(f"| {self.current_thread} | ❗Error querying sold properties: {response.status_code}")
+                current_thread = threading.currentThread().name
+                bt.logging.error(f"| {current_thread} | ❗Error querying sold properties: {response.status_code}")
                 bt.logging.error(response.text)
                 break
 

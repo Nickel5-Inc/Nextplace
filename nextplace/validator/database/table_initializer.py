@@ -1,3 +1,5 @@
+import threading
+
 from nextplace.validator.database.database_manager import DatabaseManager
 import bittensor as bt
 
@@ -51,7 +53,8 @@ class TableInitializer:
             self._migrate_prediction_ids()
 
     def _migrate_prediction_ids(self):
-        bt.logging.trace(f"💾 Migrating prediction ID's to new table")
+        current_thread = threading.currentThread().name
+        bt.logging.trace(f"| {current_thread} | 💾 Migrating prediction ID's to new table")
         distinct_ids_query = """
             SELECT DISTINCT(nextplace_id)
             FROM predictions
