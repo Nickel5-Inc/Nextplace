@@ -161,7 +161,7 @@ class RealEstateValidator(BaseValidatorNeuron):
                     return
 
                 elif number_of_properties == 0:
-                    bt.logging.info(f"| {self.current_thread} | 🍃 Waiting for properties thread to populate properties table. This is expected behavior 😊.")
+                    bt.logging.info(f"| {self.current_thread} | 🏘️ No properties in the properties table. PropertiesThread should be updating this table.")
                     return
 
             finally:
