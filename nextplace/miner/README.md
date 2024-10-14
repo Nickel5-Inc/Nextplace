@@ -36,6 +36,12 @@ pip install -e .
 btcli subnets register --netuid 48 --wallet.name <YOUR_COLDKEY> --wallet.hotkey <YOUR_HOTKEY>
 ```
 
+### Registering on testnet - UID 208
+```
+btcli subnets register --netuid 208 --wallet.name <YOUR_COLDKEY> --wallet.hotkey <YOUR_HOTKEY> --subtensor.network test
+```
+
+To use testnet, change to `--netuid 208` and `--subtensor.network test` for all future commands.
 
 ## Using the Base Statistical Model
 You can run this command to use the base statistical model
