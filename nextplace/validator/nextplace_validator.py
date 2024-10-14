@@ -31,8 +31,6 @@ class RealEstateValidator(BaseValidatorNeuron):
         self.netuid = self.config.netuid
         self.should_step = True
         self.current_thread = threading.current_thread().name
-        self.waiting_on_db_lock = False
-        self.waiting_on_db_timer = None
 
         self.weight_setter = WeightSetter(
             metagraph=self.metagraph,
@@ -129,23 +127,10 @@ class RealEstateValidator(BaseValidatorNeuron):
         # Need database lock to handle synapse creation and prediction management
         if not self.database_manager.lock.acquire(blocking=True, timeout=10):
             # If the lock is held by another thread, wait for 10 seconds, if still not available, return
-            if not self.waiting_on_db_lock:
-                self.waiting_on_db_lock = True
-                self.waiting_on_db_timer = datetime.now(timezone.utc)
-            now = datetime.now(timezone.utc)
-            diff = now - self.waiting_on_db_timer
-            log_alert = ''
-            if diff > timedelta(hours=1):
-                log_alert = 'still '
-            elif diff > timedelta(hours=2, minutes=30):
-                log_alert = 'vali is still '
-            bt.logging.trace(f"| {self.current_thread} | 🍃 Another thread is holding the database_manager lock, {log_alert}waiting for that thread to complete. This is expected behavior 😊.")
+            bt.logging.trace(f"| {self.current_thread} | 🍃 Another thread is holding the database_manager lock, waiting for that thread to complete. This is expected behavior 😊.")
             self.should_step = False
             time.sleep(10)
             return
-
-        self.waiting_on_db_lock = False
-        self.waiting_on_db_timer = None
 
         try:
 
