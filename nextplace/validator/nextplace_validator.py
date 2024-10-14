@@ -111,6 +111,12 @@ class RealEstateValidator(BaseValidatorNeuron):
         bt.logging.info(f"| {self.current_thread} | 🔄 Processing and sending predictions to the website.")
         self.website_processor.send_data()
 
+    def is_thread_running(self, thread_name: str):
+        for thread in threading.enumerate():  # Get a list of all active threads
+            if thread.name == thread_name:
+                return True
+        return False
+
     # OVERRIDE | Required
     def forward(self, step: int) -> None:
         """
@@ -154,9 +160,10 @@ class RealEstateValidator(BaseValidatorNeuron):
             try:
                 # If we don't have any properties AND we aren't getting them yet, start thread to get properties
                 number_of_properties = self.database_manager.get_size_of_table('properties')
-                if number_of_properties == 0 and not self.market_manager.updating_properties:
-                    self.market_manager.updating_properties = True  # Set flag
-                    thread = threading.Thread(target=self.market_manager.get_properties_for_market, name="🏠 PropertiesThread 🏠")  # Create thread
+                properties_thread_name = "🏠 PropertiesThread 🏠"
+                properties_thread_is_running = self.is_thread_running(properties_thread_name)
+                if number_of_properties == 0 and not properties_thread_is_running:
+                    thread = threading.Thread(target=self.market_manager.get_properties_for_market, name=properties_thread_name)  # Create thread
                     thread.start()  # Start thread
                     return
 

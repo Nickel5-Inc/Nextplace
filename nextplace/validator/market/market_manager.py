@@ -14,7 +14,6 @@ class MarketManager:
         self.markets = markets
         self.properties_api = PropertiesAPI(database_manager, markets)
         self.lock = threading.RLock()  # Reentrant lock for thread safety
-        self.updating_properties = False
         current_thread = threading.current_thread().name
         initial_market_index = self._find_initial_market_index()
         bt.logging.info(f"| {current_thread} | 🏁 Initial market index: {initial_market_index}")
@@ -95,5 +94,3 @@ class MarketManager:
         with self.lock:  # Acquire lock
             bt.logging.info(f"| {current_thread} | ✅ Finished ingesting properties in {current_market['name']}")
             self.market_index = self.market_index + 1 if self.market_index < len(self.markets) - 1 else 0 # Wrap index around
-            self.updating_properties = False  # Update flag
-
