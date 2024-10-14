@@ -1,3 +1,4 @@
+import time
 import bittensor as bt
 from nextplace.protocol import RealEstateSynapse
 from nextplace.validator.database.database_manager import DatabaseManager
@@ -28,6 +29,7 @@ class RealEstateValidator(BaseValidatorNeuron):
         self.website_processor = WebsiteProcessor(self.database_manager)
         self.netuid = self.config.netuid
         self.should_step = True
+        self.current_thread = threading.currentThread().name
 
         self.weight_setter = WeightSetter(
             metagraph=self.metagraph,
@@ -39,9 +41,9 @@ class RealEstateValidator(BaseValidatorNeuron):
 
     def sync_metagraph(self):
         """Sync the metagraph with the latest state from the network"""
-        bt.logging.info("🔗 Syncing metagraph")
+        bt.logging.info(f"| {self.current_thread} | 🔗 Syncing metagraph")
         self.metagraph.sync(subtensor=self.subtensor)
-        bt.logging.trace(f"📈 Metagraph has {len(self.metagraph.hotkeys)} hotkeys")
+        bt.logging.trace(f"| {self.current_thread} | 📈 Metagraph has {len(self.metagraph.hotkeys)} hotkeys")
 
     def manage_miner_data(self) -> None:
         """
@@ -92,7 +94,7 @@ class RealEstateValidator(BaseValidatorNeuron):
         if self.weight_setter.is_time_to_set_weights():
             if not self.database_manager.lock.acquire(blocking=True, timeout=10):
                 # If the lock is held by another thread, wait for 10 seconds, if still not available, return
-                bt.logging.trace("🚧 Another thread is holding the database_manager lock. Will check timer and set weights later.")
+                bt.logging.trace(f"| {self.current_thread} | 🍃 Another thread is holding the database_manager lock. Will check timer and set weights later.")
                 return
             try:
                 self.weight_setter.check_timer_set_weights()
@@ -103,7 +105,7 @@ class RealEstateValidator(BaseValidatorNeuron):
         """
         Process scored predictions and send them to the website.
         """
-        bt.logging.info("🔄 Processing and sending predictions to the website.")
+        bt.logging.info(f"| {self.current_thread} | 🔄 Processing and sending predictions to the website.")
         self.website_processor.send_data()
 
     # OVERRIDE | Required
@@ -113,13 +115,14 @@ class RealEstateValidator(BaseValidatorNeuron):
         Returns:
             None
         """
-        bt.logging.info("⏩ Running forward pass")
+        bt.logging.info(f"| {self.current_thread} | ⏩ Running forward pass")
 
         # Need database lock to handle synapse creation and prediction management
         if not self.database_manager.lock.acquire(blocking=True, timeout=10):
             # If the lock is held by another thread, wait for 10 seconds, if still not available, return
-            bt.logging.trace("🚧 Another thread is holding the database_manager lock.")
+            bt.logging.trace(f"| {self.current_thread} | 🍃 Another thread is holding the database_manager lock, waiting for that thread to complete.")
             self.should_step = False
+            time.sleep(10)
             return
 
         try:
@@ -127,8 +130,9 @@ class RealEstateValidator(BaseValidatorNeuron):
             # Need market lock to maintain market manager state safely
             if not self.market_manager.lock.acquire(blocking=True, timeout=10):
                 # If the lock is held by another thread, wait for 10 seconds, if still not available, return
-                bt.logging.trace("🚧 Another thread is holding the market_manager lock.")
+                bt.logging.trace(f"| {self.current_thread} | 🍃 Another thread is holding the market_manager lock, waiting for that thread to complete.")
                 self.should_step = False
+                time.sleep(10)
                 return
 
             try:
@@ -141,7 +145,7 @@ class RealEstateValidator(BaseValidatorNeuron):
                     return
 
                 elif number_of_properties == 0:
-                    bt.logging.info("🚧 Waiting for properties thread to populate properties table")
+                    bt.logging.info(f"| {self.current_thread} | 🍃 Waiting for properties thread to populate properties table")
                     return
 
             finally:
@@ -149,7 +153,7 @@ class RealEstateValidator(BaseValidatorNeuron):
 
             synapse: RealEstateSynapse = self.synapse_manager.get_synapse()  # Prepare data for miners
             if synapse is None or len(synapse.real_estate_predictions.predictions) == 0:
-                bt.logging.trace("↻ No data for Synapse, returning.")
+                bt.logging.trace(f"| {self.current_thread} | ↻ No data for Synapse, returning.")
                 return
 
             responses = self.dendrite.query(

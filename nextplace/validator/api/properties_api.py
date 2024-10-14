@@ -1,4 +1,6 @@
 import json
+import threading
+
 import requests
 import bittensor as bt
 from datetime import datetime, timezone
@@ -16,6 +18,7 @@ class PropertiesAPI(ApiBase):
 
     def __init__(self, database_manager: DatabaseManager, markets: list[dict[str, str]]):
         super(PropertiesAPI, self).__init__(database_manager, markets)
+        self.current_thread = threading.currentThread().name
 
     def process_region_market(self, market: dict[str, str]) -> None:
         """
@@ -41,7 +44,7 @@ class PropertiesAPI(ApiBase):
 
             # Only proceed with status code is 200
             if response.status_code != 200:
-                bt.logging.error(f"❗Error querying properties on the market: {response.status_code}")
+                bt.logging.error(f"| {self.current_thread} | ❗Error querying properties on the market: {response.status_code}")
                 bt.logging.error(response.text)
                 break
 

@@ -1,3 +1,4 @@
+import threading
 from typing import List, Tuple
 import bittensor as bt
 from datetime import datetime, timezone
@@ -15,6 +16,7 @@ class PredictionManager:
     def __init__(self, database_manager: DatabaseManager, metagraph):
         self.database_manager = database_manager
         self.metagraph = metagraph
+        self.current_thread = threading.currentThread().name
 
     def process_predictions(self, responses: List[RealEstatePredictions]) -> None:
         """
@@ -25,10 +27,10 @@ class PredictionManager:
         Returns:
             None
         """
-        bt.logging.info(f'📡 Processing Responses')
+        bt.logging.info(f'| {self.current_thread} | 📡 Processing Responses')
 
         if responses is None or len(responses) == 0:
-            bt.logging.error('❗No responses received')
+            bt.logging.error(f'| {self.current_thread} | ❗No responses received')
             return
 
         current_utc_datetime = datetime.now(timezone.utc)
@@ -71,7 +73,7 @@ class PredictionManager:
                     ids.append((prediction.nextplace_id,))  # Add to list of id's
 
                 except Exception as e:
-                    bt.logging.error(f"❗Failed to process prediction: {e}")
+                    bt.logging.error(f"| {self.current_thread} | ❗Failed to process prediction: {e}")
 
         # Store predictions in the database
         self._handle_ingestion('IGNORE', ignore_policy_data_for_ingestion)
@@ -79,7 +81,7 @@ class PredictionManager:
         self._store_ids(ids)
 
         table_size = self.database_manager.get_size_of_table('predictions')
-        bt.logging.trace(f"📢 There are now {table_size} predictions in the database")
+        bt.logging.trace(f"| {self.current_thread} | 📢 There are now {table_size} predictions in the database")
 
     def _handle_ingestion(self, conflict_policy: str, values: list[tuple]) -> None:
         query_str = f"""
