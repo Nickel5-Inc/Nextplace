@@ -14,9 +14,9 @@ class MarketManager:
         self.markets = markets
         self.properties_api = PropertiesAPI(database_manager, markets)
         self.lock = threading.RLock()  # Reentrant lock for thread safety
-        self.updating_properties = False
+        current_thread = threading.current_thread().name
         initial_market_index = self._find_initial_market_index()
-        bt.logging.info(f"🏁 Initial market index: {initial_market_index}")
+        bt.logging.info(f"| {current_thread} | 🏁 Initial market index: {initial_market_index}")
         self.market_index = initial_market_index  # Index into self.markets. The current market
 
     def _find_initial_market_index(self) -> int:
@@ -87,12 +87,10 @@ class MarketManager:
         Returns:
             None
         """
-        current_thread = threading.current_thread()
-        bt.logging.info(f"| {current_thread.name} | 🔑 No properties were found, getting the next market and updating properties")
+        current_thread = threading.current_thread().name
+        bt.logging.info(f"| {current_thread} | 🔑 No properties were found, getting the next market and updating properties")
         current_market = self.markets[self.market_index]  # Extract market object
         self.properties_api.process_region_market(current_market)  # Populate database with this market
         with self.lock:  # Acquire lock
-            bt.logging.info(f"| {current_thread.name} | ✅ Finished ingesting properties in {current_market['name']}")
+            bt.logging.info(f"| {current_thread} | ✅ Finished ingesting properties in {current_market['name']}")
             self.market_index = self.market_index + 1 if self.market_index < len(self.markets) - 1 else 0 # Wrap index around
-            self.updating_properties = False  # Update flag
-

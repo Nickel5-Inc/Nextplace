@@ -1,3 +1,4 @@
+import threading
 from typing import Dict, List, Tuple
 from collections import defaultdict
 from datetime import datetime, timezone
@@ -10,6 +11,7 @@ class ScoringCalculator:
     def __init__(self, database_manager, sold_homes_api):
         self.database_manager = database_manager
         self.sold_homes_api = sold_homes_api
+        self.current_thread = threading.current_thread().name
         
     def process_scorable_predictions(self, scorable_predictions) -> None:
         """
@@ -22,7 +24,7 @@ class ScoringCalculator:
             self._update_miner_scores(cursor, miner_scores, new_scores)
             self._mark_predictions_as_scored(cursor, predictions_to_mark)
             db_connection.commit()
-            bt.logging.info(f"🎯 Scored {len(scorable_predictions)} predictions")
+            bt.logging.info(f"| {self.current_thread} | 🎯 Scored {len(scorable_predictions)} predictions")
         finally:
             cursor.close()
             db_connection.close()
@@ -33,7 +35,7 @@ class ScoringCalculator:
 
     def _get_num_sold_homes(self) -> int:
         num_sold_homes = self.database_manager.get_size_of_table('sales')
-        bt.logging.info(f"🥳 Received {num_sold_homes} sold homes")
+        bt.logging.info(f"| {self.current_thread} | 🥳 Received {num_sold_homes} sold homes")
         return num_sold_homes
 
     def _calculate_new_scores(self, scorable_predictions: List[Tuple]) -> Tuple[Dict[str, Dict[str, float]], List[Tuple]]:

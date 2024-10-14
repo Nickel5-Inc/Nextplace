@@ -8,11 +8,12 @@ from nextplace.validator.nextplace_validator import RealEstateValidator
 
 def main(validator):
     step = 1  # Initialize step
+    current_thread = threading.current_thread().name
 
     while True:
         validator.should_step = True
         try:
-            bt.logging.info(f"🦶 Validator step: {step}")
+            bt.logging.info(f"| {current_thread} | 🦶 Validator step: {step}")
 
             if step % 5 == 0:  # See if it's time to set weights. If so, set weights.
                 validator.check_timer_set_weights()
@@ -22,6 +23,10 @@ def main(validator):
 
             if step % 100 == 0:  # Check if any registrations/deregistrations have happened, make necessary updates
                 thread = threading.Thread(target=validator.manage_miner_data, name="📋 MinerRegistrationThread 📋")
+                thread.start()
+            
+            if step % 200 == 0:  # Send predictions to website
+                thread = threading.Thread(target=validator.process_and_send_predictions, name="🛰️ WebsiteConnectionThread 🛰️")
                 thread.start()
 
             if step >= 1000:  # Time to update scores and set weights
@@ -38,9 +43,9 @@ def main(validator):
             time.sleep(5)  # Sleep for a bit
 
         except Exception as e:
-            bt.logging.error(f"Error in main loop: {str(e)}")
+            bt.logging.error(f"| {current_thread} | Error in main loop: {str(e)}")
             stack_trace = traceback.format_exc()
-            bt.logging.error(f"Stack Trace: {stack_trace}")
+            bt.logging.error(f"| {current_thread} | Stack Trace: {stack_trace}")
             time.sleep(10)
 
 
