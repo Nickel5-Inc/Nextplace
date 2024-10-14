@@ -20,7 +20,7 @@ class SoldHomesAPI(ApiBase):
         Returns:
             None
         """
-        current_thread = threading.currentThread().name
+        current_thread = threading.current_thread().name
         num_markets = len(self.markets)
         with self.database_manager.lock:
             oldest_prediction = self._get_oldest_prediction()
@@ -61,7 +61,7 @@ class SoldHomesAPI(ApiBase):
 
             # Only proceed with status code is 200
             if response.status_code != 200:
-                current_thread = threading.currentThread().name
+                current_thread = threading.current_thread().name
                 bt.logging.error(f"| {current_thread} | ❗Error querying sold properties: {response.status_code}")
                 bt.logging.error(response.text)
                 break

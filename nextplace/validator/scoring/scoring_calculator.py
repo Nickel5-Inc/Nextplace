@@ -11,7 +11,7 @@ class ScoringCalculator:
     def __init__(self, database_manager, sold_homes_api):
         self.database_manager = database_manager
         self.sold_homes_api = sold_homes_api
-        self.current_thread = threading.currentThread().name
+        self.current_thread = threading.current_thread().name
         
     def process_scorable_predictions(self, scorable_predictions) -> None:
         """

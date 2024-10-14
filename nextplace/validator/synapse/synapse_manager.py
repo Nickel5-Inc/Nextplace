@@ -22,7 +22,7 @@ class SynapseManager:
             A RealEstateSynapse to send to Miners, or None
         """
 
-        current_thread = threading.currentThread().name
+        current_thread = threading.current_thread().name
         try:
             # Query to get the next round of properties
             retrieve_query = f'''

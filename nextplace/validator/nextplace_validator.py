@@ -30,7 +30,7 @@ class RealEstateValidator(BaseValidatorNeuron):
         self.website_processor = WebsiteProcessor(self.database_manager)
         self.netuid = self.config.netuid
         self.should_step = True
-        self.current_thread = threading.currentThread().name
+        self.current_thread = threading.current_thread().name
         self.waiting_on_db_lock = False
         self.waiting_on_db_timer = None
 

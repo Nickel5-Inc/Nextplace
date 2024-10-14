@@ -27,7 +27,7 @@ class PredictionManager:
             None
         """
 
-        current_thread = threading.currentThread().name
+        current_thread = threading.current_thread().name
         bt.logging.info(f'| {current_thread} | 📡 Processing Responses')
 
         if responses is None or len(responses) == 0:

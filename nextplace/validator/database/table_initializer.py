@@ -53,7 +53,7 @@ class TableInitializer:
             self._migrate_prediction_ids()
 
     def _migrate_prediction_ids(self):
-        current_thread = threading.currentThread().name
+        current_thread = threading.current_thread().name
         bt.logging.trace(f"| {current_thread} | 💾 Migrating prediction ID's to new table")
         distinct_ids_query = """
             SELECT DISTINCT(nextplace_id)

@@ -43,7 +43,7 @@ class PropertiesAPI(ApiBase):
 
             # Only proceed with status code is 200
             if response.status_code != 200:
-                current_thread = threading.currentThread().name
+                current_thread = threading.current_thread().name
                 bt.logging.error(f"| {current_thread} | ❗Error querying properties on the market: {response.status_code}")
                 bt.logging.error(response.text)
                 break

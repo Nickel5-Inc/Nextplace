@@ -88,7 +88,7 @@ class MarketManager:
         Returns:
             None
         """
-        current_thread = threading.currentThread().name
+        current_thread = threading.current_thread().name
         bt.logging.info(f"| {current_thread} | 🔑 No properties were found, getting the next market and updating properties")
         current_market = self.markets[self.market_index]  # Extract market object
         self.properties_api.process_region_market(current_market)  # Populate database with this market
