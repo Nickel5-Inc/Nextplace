@@ -162,6 +162,7 @@ class RealEstateValidator(BaseValidatorNeuron):
 
                 elif number_of_properties == 0:
                     bt.logging.info(f"| {self.current_thread} | 🏘️ No properties in the properties table. PropertiesThread should be updating this table.")
+                    self.should_step = False
                     return
 
             finally:
