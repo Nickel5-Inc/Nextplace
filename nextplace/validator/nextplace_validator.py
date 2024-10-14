@@ -12,6 +12,7 @@ from nextplace.validator.setting_weights.weights import WeightSetter
 from template.base.validator import BaseValidatorNeuron
 from nextplace.validator.outgoing_data.website_comms import WebsiteProcessor
 import threading
+from datetime import datetime, timezone, timedelta
 
 
 class RealEstateValidator(BaseValidatorNeuron):
@@ -30,6 +31,8 @@ class RealEstateValidator(BaseValidatorNeuron):
         self.netuid = self.config.netuid
         self.should_step = True
         self.current_thread = threading.currentThread().name
+        self.waiting_on_db_lock = False
+        self.waiting_on_db_timer = None
 
         self.weight_setter = WeightSetter(
             metagraph=self.metagraph,
@@ -94,7 +97,7 @@ class RealEstateValidator(BaseValidatorNeuron):
         if self.weight_setter.is_time_to_set_weights():
             if not self.database_manager.lock.acquire(blocking=True, timeout=10):
                 # If the lock is held by another thread, wait for 10 seconds, if still not available, return
-                bt.logging.trace(f"| {self.current_thread} | 🍃 Another thread is holding the database_manager lock. Will check timer and set weights later.")
+                bt.logging.trace(f"| {self.current_thread} | 🍃 Another thread is holding the database_manager lock. Will check timer and set weights later. This is expected behavior 😊.")
                 return
             try:
                 self.weight_setter.check_timer_set_weights()
@@ -120,17 +123,30 @@ class RealEstateValidator(BaseValidatorNeuron):
         # Need database lock to handle synapse creation and prediction management
         if not self.database_manager.lock.acquire(blocking=True, timeout=10):
             # If the lock is held by another thread, wait for 10 seconds, if still not available, return
-            bt.logging.trace(f"| {self.current_thread} | 🍃 Another thread is holding the database_manager lock, waiting for that thread to complete.")
+            if not self.waiting_on_db_lock:
+                self.waiting_on_db_lock = True
+                self.waiting_on_db_timer = datetime.now(timezone.utc)
+            now = datetime.now(timezone.utc)
+            diff = now - self.waiting_on_db_timer
+            log_alert = ''
+            if diff > timedelta(hours=1):
+                log_alert = 'still '
+            elif diff > timedelta(hours=2, minutes=30):
+                log_alert = 'vali is still '
+            bt.logging.trace(f"| {self.current_thread} | 🍃 Another thread is holding the database_manager lock, {log_alert}waiting for that thread to complete. This is expected behavior 😊.")
             self.should_step = False
             time.sleep(10)
             return
+
+        self.waiting_on_db_lock = False
+        self.waiting_on_db_timer = None
 
         try:
 
             # Need market lock to maintain market manager state safely
             if not self.market_manager.lock.acquire(blocking=True, timeout=10):
                 # If the lock is held by another thread, wait for 10 seconds, if still not available, return
-                bt.logging.trace(f"| {self.current_thread} | 🍃 Another thread is holding the market_manager lock, waiting for that thread to complete.")
+                bt.logging.trace(f"| {self.current_thread} | 🍃 Another thread is holding the market_manager lock, waiting for that thread to complete. This is expected behavior 😊.")
                 self.should_step = False
                 time.sleep(10)
                 return
@@ -145,7 +161,7 @@ class RealEstateValidator(BaseValidatorNeuron):
                     return
 
                 elif number_of_properties == 0:
-                    bt.logging.info(f"| {self.current_thread} | 🍃 Waiting for properties thread to populate properties table")
+                    bt.logging.info(f"| {self.current_thread} | 🍃 Waiting for properties thread to populate properties table. This is expected behavior 😊.")
                     return
 
             finally:
