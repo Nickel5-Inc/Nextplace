@@ -42,16 +42,17 @@ class PredictionManager:
 
         for idx, real_estate_predictions in enumerate(responses):  # Iterate responses
 
-            for prediction in real_estate_predictions.predictions:  # Iterate predictions in each response
+            try:
+                miner_hotkey = self.metagraph.hotkeys[idx]
 
-                # Only process valid predictions
-                if prediction is None or prediction.predicted_sale_price is None or prediction.predicted_sale_date is None:
+                if miner_hotkey is None:
+                    bt.logging.error(f"🪲 Failed to find miner_hotkey while processing predictions")
                     continue
 
-                try:
-                    miner_hotkey = self.metagraph.hotkeys[idx]
+                for prediction in real_estate_predictions.predictions:  # Iterate predictions in each response
 
-                    if miner_hotkey is None:
+                    # Only process valid predictions
+                    if prediction is None or prediction.predicted_sale_price is None or prediction.predicted_sale_date is None:
                         continue
 
                     values = (
@@ -73,8 +74,8 @@ class PredictionManager:
 
                     ids.append((prediction.nextplace_id,))  # Add to list of id's
 
-                except Exception as e:
-                    bt.logging.error(f"| {current_thread} | ❗Failed to process prediction: {e}")
+            except Exception as e:
+                bt.logging.error(f"| {current_thread} | ❗Failed to process prediction: {e}")
 
         # Store predictions in the database
         self._handle_ingestion('IGNORE', ignore_policy_data_for_ingestion)
