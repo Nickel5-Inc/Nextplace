@@ -74,7 +74,7 @@ class WeightSetter:
                     scores[uid] = lifetime_score
                 
             # Adjust scores based on recent activity
-            self.adjust_scores_based_on_recent_activity(scores, hotkey_to_uid)
+            # self.adjust_scores_based_on_recent_activity(scores, hotkey_to_uid)
 
             return scores
 
