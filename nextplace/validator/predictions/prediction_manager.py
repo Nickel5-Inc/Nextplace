@@ -46,6 +46,7 @@ class PredictionManager:
                 miner_hotkey = self.metagraph.hotkeys[idx]
 
                 if miner_hotkey is None:
+                    bt.logging.error(f"🪲 Failed to find miner_hotkey while processing predictions")
                     continue
 
                 for prediction in real_estate_predictions.predictions:  # Iterate predictions in each response
