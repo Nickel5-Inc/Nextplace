@@ -73,8 +73,8 @@ class WeightSetter:
                     uid = hotkey_to_uid[miner_hotkey]
                     scores[uid] = lifetime_score
                 
-            # Adjust scores based on recent activity
-            self.adjust_scores_based_on_recent_activity(scores, hotkey_to_uid)
+            # Adjust scores based on recent activity - tune these hyperparameters
+            # self.adjust_scores_based_on_recent_activity(scores, hotkey_to_uid)
 
             return scores
 

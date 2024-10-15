@@ -7,7 +7,7 @@ from nextplace.validator.nextplace_validator import RealEstateValidator
 
 
 def main(validator):
-    step = 199  # Initialize step
+    step = 999  # Initialize step
     current_thread = threading.current_thread().name
 
     while True:
