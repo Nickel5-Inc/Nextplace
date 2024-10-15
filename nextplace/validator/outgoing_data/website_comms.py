@@ -134,8 +134,8 @@ class WebsiteProcessor:
                    predicted_sale_price,
                    predicted_sale_date
             FROM website_comms
-            WHERE already_sent = 0
         '''
+        # Removing temporarily; will add back in the future WHERE already_sent = 0
         with self.db_manager.lock:
             results = self.db_manager.query(query)
         return results
