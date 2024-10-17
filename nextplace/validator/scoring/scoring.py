@@ -33,7 +33,7 @@ class Scorer:
         """
         thread_name = threading.current_thread().name
 
-        # ToDo Migrate predictions
+        self._check_and_migrate_predictions()
 
         while True:
 
@@ -62,6 +62,68 @@ class Scorer:
             with self.database_manager.lock:
                 self.database_manager.delete_all_sales()  # Clear out sales table
                 self._clear_out_old_predictions('scored_predictions')  # Clear out old scored predictions
+
+    def _check_and_migrate_predictions(self) -> None:
+        """
+        Migrate predictions if we need to
+
+        Returns:
+            None
+        """
+        with self.database_manager.lock:
+            predictions_table_exists = self.database_manager.table_exists('predictions')
+            if not predictions_table_exists:
+                return
+
+            all_table_query = "SELECT name FROM sqlite_master WHERE type='table'"
+            all_tables = self.database_manager.query(all_table_query)  # Get all tables in database
+            miner_predictions_tables_exist = any("predictions_" in s for s in all_tables)  # Check if we have any tables that start with "predictions_"
+
+            if miner_predictions_tables_exist:
+                return
+
+            thread_name = threading.current_thread().name
+            bt.logging.trace(f"| {thread_name} | 💾 Migrating predictions, this may take a while...")
+
+            all_hotkeys_in_predictions = self.database_manager.query("SELECT DISTINCT(miner_hotkey) FROM predictions")
+            for idx, miner_hotkey in enumerate(all_hotkeys_in_predictions):
+
+                # Build table name
+                table_name = build_miner_predictions_table_name(miner_hotkey)
+
+                # Create and index table
+                create_str = f"""
+                    CREATE TABLE IF NOT EXISTS {table_name} (
+                        nextplace_id TEXT,
+                        miner_hotkey TEXT,
+                        predicted_sale_price REAL,
+                        predicted_sale_date TEXT,
+                        prediction_timestamp TEXT,
+                        market TEXT,
+                        PRIMARY KEY (nextplace_id, miner_hotkey)
+                    )
+                """
+                idx_str = f"CREATE INDEX IF NOT EXISTS idx_prediction_timestamp ON {table_name}(prediction_timestamp)"
+                self.database_manager.query_and_commit(create_str)
+                self.database_manager.query_and_commit(idx_str)
+
+                # Get predictions
+                miner_predictions = self.database_manager.query(f"""
+                    SELECT nextplace_id, miner_hotkey, predicted_sale_price, predicted_sale_date, prediction_timestamp, market
+                    FROM predictions
+                    WHERE miner_hotkey='{miner_hotkey}'
+                """)
+
+                # Migrate predictions
+                insert_query = f"""
+                    INSERT OR IGNORE INTO {table_name}
+                    (nextplace_id, miner_hotkey, predicted_sale_price, predicted_sale_date, prediction_timestamp, market),
+                    VALUES(?, ?, ?, ?, ?, ?)
+                """
+                self.database_manager.query_and_commit_many(insert_query, miner_predictions)
+
+                percent_done = round(((idx + 1) / len(all_hotkeys_in_predictions)) * 100, 2)
+                bt.logging.trace(f"| {thread_name} | 📩 {percent_done}% done migrating predictions")
 
     def score_predictions(self, table_name: str, miner_hotkey: str) -> None:
         """
