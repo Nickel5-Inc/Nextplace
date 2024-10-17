@@ -56,7 +56,7 @@ class Scorer:
                 except sqlite3.OperationalError as e:
                     bt.logging.trace(f"| {thread_name} | 🏖️ SQLITE operational error: {e}. Note that this is may be caused by miner deregistration while trying to score the deregistered miner, in which case it is not a bug.")
 
-                sleep(60)  # Sleep thread for 2 minutes
+                sleep(120)  # Sleep thread for 2 minutes
 
             with self.database_manager.lock:
                 self.database_manager.delete_all_sales()  # Clear out sales table

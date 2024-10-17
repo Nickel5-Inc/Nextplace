@@ -24,7 +24,7 @@ class ScoringCalculator:
             new_scores = self._calculate_new_scores(scorable_predictions)
             self._update_miner_scores(cursor, miner_scores, new_scores)
             db_connection.commit()
-            bt.logging.info(f"| {self.current_thread} | 🎯 Scored {len(scorable_predictions)} predictions for hotkey {miner_hotkey}")
+            bt.logging.info(f"| {self.current_thread} | 🎯 Scored {len(scorable_predictions)} predictions for hotkey '{miner_hotkey}'")
         finally:
             cursor.close()
             db_connection.close()

@@ -63,7 +63,6 @@ class PredictionManager:
                         prediction.predicted_sale_date,
                         timestamp,
                         prediction.market,
-                        False
                     )
 
                     # Parse force update flag
@@ -93,23 +92,25 @@ class PredictionManager:
             None
         """
         table_exists = self.database_manager.table_exists(table_name)
-        if not table_exists:
-            current_thread = threading.current_thread().name
-            bt.logging.error(f"| {current_thread} | 🗂️ Creating predictions table for miner with hotkey '{miner_hotkey}'")
-            create_str = f"""
-                        CREATE TABLE IF NOT EXISTS {table_name} (
-                            nextplace_id TEXT,
-                            miner_hotkey TEXT,
-                            predicted_sale_price REAL,
-                            predicted_sale_date TEXT,
-                            prediction_timestamp TEXT,
-                            market TEXT,
-                            PRIMARY KEY (nextplace_id, miner_hotkey)
-                        )
-                    """
-            idx_str = "CREATE INDEX IF NOT EXISTS idx_prediction_timestamp ON predictions(prediction_timestamp)"
-            self.database_manager.query_and_commit(create_str)
-            self.database_manager.query_and_commit(idx_str)
+        if table_exists:
+            return
+
+        current_thread = threading.current_thread().name
+        bt.logging.error(f"| {current_thread} | 🗂️ Creating predictions table for miner with hotkey '{miner_hotkey}'")
+        create_str = f"""
+                    CREATE TABLE IF NOT EXISTS {table_name} (
+                        nextplace_id TEXT,
+                        miner_hotkey TEXT,
+                        predicted_sale_price REAL,
+                        predicted_sale_date TEXT,
+                        prediction_timestamp TEXT,
+                        market TEXT,
+                        PRIMARY KEY (nextplace_id, miner_hotkey)
+                    )
+                """
+        idx_str = f"CREATE INDEX IF NOT EXISTS idx_prediction_timestamp ON {table_name}(prediction_timestamp)"
+        self.database_manager.query_and_commit(create_str)
+        self.database_manager.query_and_commit(idx_str)
 
     def _handle_ingestion(self, conflict_policy: str, values: list[tuple], table_name: str) -> None:
         """
