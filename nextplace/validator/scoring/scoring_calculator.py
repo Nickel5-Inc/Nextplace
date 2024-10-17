@@ -18,25 +18,21 @@ class ScoringCalculator:
         """
         Score miner predictions in bulk
         """
-        cursor, db_connection = self.database_manager.get_cursor()
-        try:
-            miner_scores = self._fetch_current_miner_score(cursor, miner_hotkey)
-            new_scores = self._calculate_new_scores(scorable_predictions)
-            self._update_miner_scores(cursor, miner_scores, new_scores)
-            db_connection.commit()
-            bt.logging.info(f"| {self.current_thread} | 🎯 Scored {len(scorable_predictions)} predictions for hotkey '{miner_hotkey}'")
-        finally:
-            cursor.close()
-            db_connection.close()
+        miner_score = self._fetch_current_miner_score(miner_hotkey)
+        new_scores = self._calculate_new_scores(scorable_predictions)
+        self._update_miner_scores(miner_score, new_scores)
+        bt.logging.info(f"| {self.current_thread} | 🎯 Scored {len(scorable_predictions)} predictions for hotkey '{miner_hotkey}'")
 
-    def _fetch_current_miner_score(self, cursor: sqlite3.Cursor, miner_hotkey: str) -> Dict[str, Dict[str, float]]:
+    def _fetch_current_miner_score(self, miner_hotkey: str) -> Dict[str, Dict[str, float]]:
         query_str = f"""
             SELECT miner_hotkey, lifetime_score, total_predictions
             WHERE miner_hotkey='{miner_hotkey}'
             FROM miner_scores
+            LIMIT 1
         """
-        cursor.execute(query_str)
-        return {row[0]: {'lifetime_score': row[1], 'total_predictions': row[2]} for row in cursor.fetchall()}
+        with self.database_manager.lock:
+            result = self.database_manager.query(query_str)[0]
+        return {result[0]: {'lifetime_score': result[1], 'total_predictions': result[2]}}
 
     def _get_num_sold_homes(self) -> int:
         num_sold_homes = self.database_manager.get_size_of_table('sales')
@@ -55,13 +51,13 @@ class ScoringCalculator:
 
         return new_scores
 
-    def _update_miner_scores(self, cursor, miner_scores: Dict[str, Dict[str, float]], new_scores: Dict[str, Dict[str, float]]) -> None:
+    def _update_miner_scores(self, miner_score: Dict[str, Dict[str, float]], new_scores: Dict[str, Dict[str, float]]) -> None:
         updates = []
         inserts = []
         for miner_hotkey, data in new_scores.items():
-            if miner_hotkey in miner_scores:
-                old_score = miner_scores[miner_hotkey]['lifetime_score']
-                old_predictions = miner_scores[miner_hotkey]['total_predictions']
+            if miner_hotkey in miner_score:
+                old_score = miner_score[miner_hotkey]['lifetime_score']
+                old_predictions = miner_score[miner_hotkey]['total_predictions']
                 new_total_score = (old_score * old_predictions) + data['total_score']
                 new_total_predictions = old_predictions + data['new_predictions']
                 new_lifetime_score = new_total_score / new_total_predictions
@@ -71,16 +67,17 @@ class ScoringCalculator:
                 inserts.append((miner_hotkey, new_lifetime_score, data['new_predictions']))
 
         now = datetime.now(timezone.utc).strftime(ISO8601)
-        cursor.executemany(f'''
-            UPDATE miner_scores 
-            SET lifetime_score = ?, total_predictions = ?, last_update_timestamp = '{now}'
-            WHERE miner_hotkey = ?
-        ''', updates)
+        with self.database_manager.lock:
+            self.database_manager.query_and_commit_many(f'''
+                UPDATE miner_scores 
+                SET lifetime_score = ?, total_predictions = ?, last_update_timestamp = '{now}'
+                WHERE miner_hotkey = ?
+            ''', updates)
 
-        cursor.executemany(f'''
-            INSERT INTO miner_scores (miner_hotkey, lifetime_score, total_predictions, last_update_timestamp)
-            VALUES (?, ?, ?, '{now}')
-        ''', inserts)
+            self.database_manager.query_and_commit_many(f'''
+                INSERT INTO miner_scores (miner_hotkey, lifetime_score, total_predictions, last_update_timestamp)
+                VALUES (?, ?, ?, '{now}')
+            ''', inserts)
 
     def calculate_score(self, actual_price: str, predicted_price: str, actual_date: str, predicted_date: str):
         # Convert date strings to datetime objects

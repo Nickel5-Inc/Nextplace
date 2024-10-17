@@ -135,7 +135,25 @@ class Scorer:
         Returns:
             list of query results
         """
+        current_thread = threading.current_thread().name
+        scorable_predictions = self._get_scorable_predictions(table_name)
+        bt.logging.trace(f"| {current_thread} | 🏅 Found {len(scorable_predictions)} predictions to score")
+        if len(scorable_predictions) > 0:
+            scoring_data = [(x[1], x[2], x[3], x[6], x[7]) for x in scorable_predictions]
+            self.scoring_calculator.process_scorable_predictions(scoring_data, miner_hotkey)  # Score predictions for this home
+            self._send_data_to_website(scorable_predictions)  # Send data to website
+            self._move_predictions_to_scored(scoring_data)  # Move scored predictions to scored_predictions table
+            self._remove_scored_predictions_from_miner_predictions_table(table_name, scorable_predictions)  # Drop scored predictions from miner predictions table
 
+    def _get_scorable_predictions(self, table_name: str) -> list[tuple]:
+        """
+        Retrieve scorable predictions for current miner
+        Args:
+            table_name: name of miner's predictions table
+
+        Returns:
+            List of scorable predictions
+        """
         query_str = f"""
             SELECT {table_name}.nextplace_id, {table_name}.miner_hotkey, {table_name}.predicted_sale_price, {table_name}.predicted_sale_date, {table_name}.prediction_timestamp, {table_name}.market, sales.sale_price, sales.sale_date
             FROM {table_name}
@@ -145,13 +163,7 @@ class Scorer:
 
         with self.database_manager.lock:  # Acquire lock
             scorable_predictions = self.database_manager.query(query_str)  # Get scorable predictions for this home
-        if len(scorable_predictions) > 0:
-            scoring_data = [(x[1], x[2], x[3], x[6], x[7]) for x in scorable_predictions]
-            with self.database_manager.lock:  # Acquire lock
-                self.scoring_calculator.process_scorable_predictions(scoring_data, miner_hotkey)  # Score predictions for this home
-            self._send_data_to_website(scorable_predictions)
-            self._move_predictions_to_scored(scoring_data)
-            self._remove_scored_predictions_from_miner_predictions_table(table_name, scorable_predictions)
+        return scorable_predictions
 
     def _send_data_to_website(self, scored_predictions: list[tuple]) -> None:
         """
