@@ -3,7 +3,7 @@ from typing import List, Tuple
 import bittensor as bt
 from datetime import datetime, timezone
 from nextplace.protocol import RealEstatePredictions
-from nextplace.validator.utils.contants import ISO8601
+from nextplace.validator.utils.contants import ISO8601, build_miner_predictions_table_name
 from nextplace.validator.database.database_manager import DatabaseManager
 
 """
@@ -54,7 +54,7 @@ class PredictionManager:
                     if prediction is None or prediction.predicted_sale_price is None or prediction.predicted_sale_date is None:
                         continue
 
-                    table_name = f"predictions_{miner_hotkey}"
+                    table_name = build_miner_predictions_table_name(miner_hotkey)
 
                     values = (
                         prediction.nextplace_id,

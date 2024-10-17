@@ -9,6 +9,7 @@ from nextplace.validator.predictions.prediction_manager import PredictionManager
 from nextplace.validator.scoring.scoring import Scorer
 from nextplace.validator.synapse.synapse_manager import SynapseManager
 from nextplace.validator.setting_weights.weights import WeightSetter
+from nextplace.validator.utils.contants import build_miner_predictions_table_name
 from template.base.validator import BaseValidatorNeuron
 from nextplace.validator.outgoing_data.website_comms import WebsiteProcessor
 import threading
@@ -71,7 +72,10 @@ class RealEstateValidator(BaseValidatorNeuron):
             # For all deregistered miners, clear out their predictions & scores. Remove from active_miners table
             tuples = [(x,) for x in deregistered_hotkeys]
             with self.database_manager.lock:
-                self.database_manager.query_and_commit_many("DELETE FROM predictions WHERE miner_hotkey = ?", tuples)
+                # Drop predictions tables for deregistered miners
+                for hotkey in tuples:
+                    table_name = build_miner_predictions_table_name(hotkey)
+                    self.database_manager.query_and_commit(f"DROP TABLE IF EXISTS '{table_name}'")
                 self.database_manager.query_and_commit_many("DELETE FROM miner_scores WHERE miner_hotkey = ?", tuples)
                 self.database_manager.query_and_commit_many("DELETE FROM active_miners WHERE miner_hotkey = ?", tuples)
 
