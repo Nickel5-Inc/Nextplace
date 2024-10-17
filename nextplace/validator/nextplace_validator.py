@@ -71,7 +71,7 @@ class RealEstateValidator(BaseValidatorNeuron):
             tuples = [(x,) for x in deregistered_hotkeys]
             with self.database_manager.lock:
                 # Drop predictions tables for deregistered miners
-                for hotkey in tuples:
+                for hotkey in deregistered_hotkeys:
                     table_name = build_miner_predictions_table_name(hotkey)
                     self.database_manager.query_and_commit(f"DROP TABLE IF EXISTS '{table_name}'")
                 self.database_manager.query_and_commit_many("DELETE FROM miner_scores WHERE miner_hotkey = ?", tuples)
