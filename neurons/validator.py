@@ -33,7 +33,7 @@ def main(validator):
                 thread = threading.Thread(target=validator.manage_miner_data, name="📋 MinerRegistrationThread 📋")
                 thread.start()
 
-            if step % 200 == 0:
+            if step % 200 == 0:  # Check that the scoring thread is running, if not, start it up
                 scoring_thread_is_alive = validator.is_thread_running(SCORE_THREAD_NAME)
                 if not scoring_thread_is_alive:
                     scoring_thread = threading.Thread(target=validator.scorer.run_score_thread, name=SCORE_THREAD_NAME)
