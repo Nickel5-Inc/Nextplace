@@ -29,12 +29,6 @@ class MarketManager:
         number_of_properties = self.database_manager.get_size_of_table('properties')
         if number_of_properties > 0:
             return self._find_initial_market_from_properties()
-
-        # Get from the predictions table
-        number_of_predictions = self.database_manager.get_size_of_table('predictions')
-        if number_of_predictions > 0:
-            return self._find_initial_market_from_predictions()
-
         # Just start at beginning
         return 0
 
