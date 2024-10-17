@@ -38,7 +38,6 @@ class PredictionManager:
         timestamp = current_utc_datetime.strftime(ISO8601)
         replace_policy_data_for_ingestion: list[tuple] = []
         ignore_policy_data_for_ingestion: list[tuple] = []
-        ids: List[Tuple[str]] = []
 
         for idx, real_estate_predictions in enumerate(responses):  # Iterate responses
 
@@ -55,9 +54,10 @@ class PredictionManager:
                     if prediction is None or prediction.predicted_sale_price is None or prediction.predicted_sale_date is None:
                         continue
 
+                    table_name = f"predictions_{miner_hotkey}"
+
                     values = (
                         prediction.nextplace_id,
-                        prediction.property_id,
                         miner_hotkey,
                         prediction.predicted_sale_price,
                         prediction.predicted_sale_date,
@@ -72,32 +72,59 @@ class PredictionManager:
                     else:
                         ignore_policy_data_for_ingestion.append(values)
 
-                    ids.append((prediction.nextplace_id,))  # Add to list of id's
-
             except Exception as e:
                 bt.logging.error(f"| {current_thread} | ❗Failed to process prediction: {e}")
 
         # Store predictions in the database
-        self._handle_ingestion('IGNORE', ignore_policy_data_for_ingestion)
-        self._handle_ingestion('REPLACE', replace_policy_data_for_ingestion)
-        self._store_ids(ids)
+        self._create_table_if_not_exists(table_name, miner_hotkey)
+        self._handle_ingestion('IGNORE', ignore_policy_data_for_ingestion, table_name)
+        self._handle_ingestion('REPLACE', replace_policy_data_for_ingestion, table_name)
 
         table_size = self.database_manager.get_size_of_table('predictions')
         bt.logging.trace(f"| {current_thread} | 📢 There are now {table_size} predictions in the database")
 
-    def _handle_ingestion(self, conflict_policy: str, values: list[tuple]) -> None:
+    def _create_table_if_not_exists(self, table_name: str, miner_hotkey: str) -> None:
+        """
+        Create the predictions table for this miner if it doesn't exist
+        Args:
+            table_name: miner's table name
+
+        Returns:
+            None
+        """
+        table_exists = self.database_manager.table_exists(table_name)
+        if not table_exists:
+            current_thread = threading.current_thread().name
+            bt.logging.error(f"| {current_thread} | 🗂️ Creating predictions table for miner with hotkey '{miner_hotkey}'")
+            create_str = f"""
+                        CREATE TABLE IF NOT EXISTS {table_name} (
+                            nextplace_id TEXT,
+                            miner_hotkey TEXT,
+                            predicted_sale_price REAL,
+                            predicted_sale_date TEXT,
+                            prediction_timestamp TEXT,
+                            market TEXT,
+                            PRIMARY KEY (nextplace_id, miner_hotkey)
+                        )
+                    """
+            idx_str = "CREATE INDEX IF NOT EXISTS idx_prediction_timestamp ON predictions(prediction_timestamp)"
+            self.database_manager.query_and_commit(create_str)
+            self.database_manager.query_and_commit(idx_str)
+
+    def _handle_ingestion(self, conflict_policy: str, values: list[tuple], table_name: str) -> None:
+        """
+        Ingest predictions for a miner
+        Args:
+            conflict_policy: to ignore new predictions or replace existing predictions
+            values: prediction data
+            table_name: the miner's prediction table
+
+        Returns:
+            None
+        """
         query_str = f"""
-            INSERT OR {conflict_policy} INTO predictions 
-            (nextplace_id, property_id, miner_hotkey, predicted_sale_price, predicted_sale_date, prediction_timestamp, market, scored)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT OR {conflict_policy} INTO {table_name} 
+            (nextplace_id, miner_hotkey, predicted_sale_price, predicted_sale_date, prediction_timestamp, market)
+            VALUES (?, ?, ?, ?, ?, ?)
         """
         self.database_manager.query_and_commit_many(query_str, values)
-
-    def _store_ids(self, values: list[tuple]) -> None:
-        query_str = """
-            INSERT OR IGNORE INTO ids
-            (nextplace_id)
-            VALUES (?)
-        """
-        self.database_manager.query_and_commit_many(query_str, values)
-
