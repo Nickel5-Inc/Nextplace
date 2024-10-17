@@ -76,6 +76,7 @@ def check_and_migrate_predictions(validator) -> None:
 
             # Build table name
             table_name = build_miner_predictions_table_name(miner_hotkey)
+            bt.logging.trace(f"| {current_thread} | Migrating predictions to table '{table_name}'")
 
             # Create and index table
             create_str = f"""
