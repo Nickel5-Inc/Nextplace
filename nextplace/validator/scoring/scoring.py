@@ -1,5 +1,5 @@
+import sqlite3
 from datetime import datetime, timezone, timedelta
-from typing import List
 from time import sleep
 import bittensor
 import bittensor as bt
@@ -30,8 +30,10 @@ class Scorer:
         Returns:
             None
         """
+        thread_name = threading.current_thread().name
 
-        # Migrate predictions
+        # ToDo Migrate predictions
+
         while True:
 
             # Update the `sales` table
@@ -48,9 +50,12 @@ class Scorer:
                 if not table_exists:
                     continue
 
-                # Score predictions
-                self.score_predictions(table_name, hotkey)
-                self._clear_out_old_predictions(table_name)
+                try:
+                    # Score predictions
+                    self.score_predictions(table_name, hotkey)
+                    self._clear_out_old_predictions(table_name)
+                except sqlite3.OperationalError as e:
+                    bt.logging.trace(f"| {thread_name} | 🏖️ SQLITE operational error: {e}. Note that this is may be caused by miner deregistration while trying to score the deregistered miner, in which case it is not a bug.")
 
                 sleep(60)  # Sleep thread for 2 minutes
 
@@ -65,7 +70,7 @@ class Scorer:
         """
 
         query_str = f"""
-            SELECT {table_name}.property_id, {table_name}.miner_hotkey, {table_name}.predicted_sale_price, {table_name}.predicted_sale_date, sales.sale_price, sales.sale_date
+            SELECT {table_name}.nextplace_id, {table_name}.miner_hotkey, {table_name}.predicted_sale_price, {table_name}.predicted_sale_date, {table_name}.prediction_timestamp, {table_name}.market, sales.sale_price, sales.sale_date
             FROM {table_name}
             JOIN sales ON {table_name}.nextplace_id = sales.nextplace_id
             AND {table_name}.prediction_timestamp < sales.sale_date
@@ -73,8 +78,50 @@ class Scorer:
 
         with self.database_manager.lock:  # Acquire lock
             scorable_predictions = self.database_manager.query(query_str)  # Get scorable predictions for this home
-            if len(scorable_predictions) > 0:
-                self.scoring_calculator.process_scorable_predictions(scorable_predictions, miner_hotkey)  # Score predictions for this home
+        if len(scorable_predictions) > 0:
+            scoring_data = [(x[1], x[2], x[3], x[6], x[7]) for x in scorable_predictions]
+            with self.database_manager.lock:  # Acquire lock
+                self.scoring_calculator.process_scorable_predictions(scoring_data, miner_hotkey)  # Score predictions for this home
+            # ToDo Send predictions to website!
+            self._move_predictions_to_scored(scoring_data)
+            self._remove_scored_predictions_from_miner_predictions_table(table_name, scorable_predictions)
+
+    def _move_predictions_to_scored(self, scorable_predictions: list[tuple]) -> None:
+        """
+        Move scorable predictions to scored predictions_table
+        Args:
+            scorable_predictions: list of all scorable predictions from database
+
+        Returns:
+            None
+        """
+        query_str = """
+            INSERT OR IGNORE INTO scored_predictions
+            (nextplace_id, miner_hotkey, predicted_sale_price, predicted_sale_date, prediction_timestamp, market, sale_price, sale_date, score_timestamp)
+            VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """
+        now = datetime.now(timezone.utc).strftime(ISO8601)
+        values = [(x[0], x[1], x[2], x[3], x[4], x[5], x[6], x[7], now) for x in scorable_predictions]
+        with self.database_manager.lock:  # Acquire lock
+            self.database_manager.query_and_commit_many(query_str, values)  # Execute query
+
+    def _remove_scored_predictions_from_miner_predictions_table(self, table_name: str, scorable_predictions: list[tuple]) -> None:
+        """
+        Remove all scored predictions from miner's predictions table
+        Args:
+            table_name: name of the miner table
+            scorable_predictions: list of scored predictions
+
+        Returns:
+            None
+        """
+        row_ids = [x[0] for x in scorable_predictions]
+        formatted_ids = ','.join(f"'{str(nextplace_id)}'" for nextplace_id in row_ids)
+        query_str = f"""
+            DELETE FROM {table_name} WHERE nextplace_id in ({formatted_ids})
+        """
+        with self.database_manager.lock:  # Acquire lock
+            self.database_manager.query_and_commit(query_str)  # Execute query
 
     def _cleanup(self, table_name: str) -> None:
         """
@@ -102,19 +149,4 @@ class Scorer:
                     """
         with self.database_manager.lock:
             self.database_manager.query_and_commit(query_str)
-
-    def _get_ids(self) -> List[str]:
-        """
-        Retrieve all nextplace_ids that are present in both the `ids` table and the `sales` table
-        Returns:
-            list of ids
-        """
-        query_str = """
-            SELECT sales.nextplace_id
-            FROM sales
-            JOIN ids ON sales.nextplace_id = ids.nextplace_id
-        """
-        with self.database_manager.lock:
-            results = self.database_manager.query(query_str)
-        return [result[0] for result in results]
                 

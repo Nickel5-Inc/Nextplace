@@ -21,9 +21,8 @@ class ScoringCalculator:
         cursor, db_connection = self.database_manager.get_cursor()
         try:
             miner_scores = self._fetch_current_miner_score(cursor, miner_hotkey)
-            new_scores, predictions_to_mark = self._calculate_new_scores(scorable_predictions)
+            new_scores = self._calculate_new_scores(scorable_predictions)
             self._update_miner_scores(cursor, miner_scores, new_scores)
-            # ToDo Send predictions to website!
             db_connection.commit()
             bt.logging.info(f"| {self.current_thread} | 🎯 Scored {len(scorable_predictions)} predictions for hotkey {miner_hotkey}")
         finally:
@@ -44,19 +43,17 @@ class ScoringCalculator:
         bt.logging.info(f"| {self.current_thread} | 🥳 Received {num_sold_homes} sold homes")
         return num_sold_homes
 
-    def _calculate_new_scores(self, scorable_predictions: List[Tuple]) -> Tuple[Dict[str, Dict[str, float]], List[Tuple]]:
+    def _calculate_new_scores(self, scorable_predictions: List[Tuple]) -> Dict[str, Dict[str, float]]:
         new_scores = defaultdict(lambda: {'total_score': 0, 'new_predictions': 0})
-        predictions_to_mark = []
 
         for prediction in scorable_predictions:
-            property_id, miner_hotkey, predicted_price, predicted_date, actual_price, actual_date = prediction
+            miner_hotkey, predicted_price, predicted_date, actual_price, actual_date = prediction
             score = self.calculate_score(actual_price, predicted_price, actual_date, predicted_date)
 
             new_scores[miner_hotkey]['total_score'] += score
             new_scores[miner_hotkey]['new_predictions'] += 1
-            predictions_to_mark.append((property_id, miner_hotkey))
 
-        return new_scores, predictions_to_mark
+        return new_scores
 
     def _update_miner_scores(self, cursor, miner_scores: Dict[str, Dict[str, float]], new_scores: Dict[str, Dict[str, float]]) -> None:
         updates = []
