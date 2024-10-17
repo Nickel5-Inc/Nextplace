@@ -225,7 +225,7 @@ class Scorer:
         max_days = 21
         today = datetime.now(timezone.utc)
         min_date = (today - timedelta(days=max_days)).strftime(ISO8601)
-        bt.logging.trace(f"| {self.current_thread} | ✘ Deleting predictions older than {min_date}")
+        bt.logging.trace(f"| {self.current_thread} | ✘ Deleting predictions older than {min_date} from table '{table_name}'")
 
         # Clear out predictions table
         query_str = f"""

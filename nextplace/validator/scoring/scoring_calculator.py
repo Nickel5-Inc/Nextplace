@@ -87,7 +87,6 @@ class ScoringCalculator:
         """
         with self.database_manager.lock:
             results = self.database_manager.query(query_str)
-        bt.logging.debug(f"| {current_thread} | DEBUG Found scores {results} for hotkey '{miner_hotkey}'")
         if len(results) > 0:  # Update existing Miner score
             bt.logging.debug(f"| {current_thread} | 🦉 Found existing scores for miner with hotkey '{miner_hotkey}'")
             result = results[0]

@@ -6,6 +6,7 @@ import traceback
 from nextplace.validator.nextplace_validator import RealEstateValidator
 from nextplace.validator.utils.contants import build_miner_predictions_table_name
 
+SCORE_THREAD_NAME = "🏋🏻 ScoreThread 🏋🏻"
 
 def main(validator):
     step = 1  # Initialize step
@@ -14,7 +15,7 @@ def main(validator):
     check_and_migrate_predictions(validator)
 
     # Start the scoring thread
-    scoring_thread = threading.Thread(target=validator.scorer.run_score_thread, name="🏋🏻 ScoreThread 🏋🏻")
+    scoring_thread = threading.Thread(target=validator.scorer.run_score_thread, name=SCORE_THREAD_NAME)
     scoring_thread.start()
 
     while True:
@@ -33,9 +34,9 @@ def main(validator):
                 thread.start()
 
             if step % 200 == 0:
-                scoring_thread_is_alive = validator.is_thread_running("🏋🏻 ScoreThread 🏋🏻")
+                scoring_thread_is_alive = validator.is_thread_running(SCORE_THREAD_NAME)
                 if not scoring_thread_is_alive:
-                    scoring_thread = threading.Thread(target=validator.scorer.run_score_thread, name="🏋🏻 ScoreThread 🏋🏻")
+                    scoring_thread = threading.Thread(target=validator.scorer.run_score_thread, name=SCORE_THREAD_NAME)
                     scoring_thread.start()
 
             if step % 250 == 0:  # Print total predictions across all miners
