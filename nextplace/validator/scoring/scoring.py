@@ -8,6 +8,7 @@ from nextplace.validator.scoring.scoring_calculator import ScoringCalculator
 from nextplace.validator.api.sold_homes_api import SoldHomesAPI
 from nextplace.validator.database.database_manager import DatabaseManager
 from nextplace.validator.utils.contants import ISO8601, build_miner_predictions_table_name
+import requests
 
 """
 Helper class manages scoring Miner predictions
@@ -82,9 +83,63 @@ class Scorer:
             scoring_data = [(x[1], x[2], x[3], x[6], x[7]) for x in scorable_predictions]
             with self.database_manager.lock:  # Acquire lock
                 self.scoring_calculator.process_scorable_predictions(scoring_data, miner_hotkey)  # Score predictions for this home
-            # ToDo Send predictions to website!
+            self._send_data_to_website(scorable_predictions)
             self._move_predictions_to_scored(scoring_data)
             self._remove_scored_predictions_from_miner_predictions_table(table_name, scorable_predictions)
+
+    def _send_data_to_website(self, scored_predictions: list[tuple]) -> None:
+        thread_name = threading.current_thread().name
+        formatted_predictions = [(x[0], x[1], None, x[4], x[2], x[3]) for x in scored_predictions]
+        data_to_send = []
+        for prediction in formatted_predictions:
+            nextplace_id, miner_hotkey, miner_coldkey, prediction_date, predicted_sale_price, predicted_sale_date = prediction
+            prediction_date_parsed = self.parse_iso_datetime(prediction_date) if isinstance(prediction_date, str) else prediction_date
+            predicted_sale_date_parsed = self.parse_iso_datetime(predicted_sale_date) if isinstance(predicted_sale_date, str) else predicted_sale_date
+
+            if prediction_date_parsed is None or predicted_sale_date_parsed is None:
+                bt.logging.trace(f"| {thread_name} | 🏃🏻‍♂️ Skipping prediction {nextplace_id} due to date parsing error.")
+                continue
+
+            prediction_date_iso = prediction_date_parsed.strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3] + 'Z'
+            predicted_sale_date_iso = predicted_sale_date_parsed.strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3] + 'Z'
+
+            data_dict = {
+                "nextplaceId": nextplace_id,
+                "minerHotKey": miner_hotkey,
+                "minerColdKey": miner_coldkey if miner_coldkey else "DummyColdkey",
+                "predictionDate": prediction_date_iso,
+                "predictedSalePrice": predicted_sale_price,
+                "predictedSaleDate": predicted_sale_date_iso
+            }
+            data_to_send.append(data_dict)
+
+        if not data_to_send:
+            bt.logging.trace(
+                f"| {thread_name} | Ø No valid predictions to send to Nextplace site after parsing.")
+            return
+
+        bt.logging.info(f"| {thread_name} | ➠ Sending {len(data_to_send)} predictions to the website")
+
+        headers = {
+            'Accept': '*/*',
+            'Content-Type': 'application/json'
+        }
+
+        try:
+            response = requests.post(
+                "https://dev-nextplace-api.azurewebsites.net/Predictions",
+                json=data_to_send,
+                headers=headers
+            )
+            response.raise_for_status()
+            bt.logging.info(f"| {thread_name} | ✅ Data sent to Nextplace site successfully.")
+
+        except requests.exceptions.HTTPError as e:
+            bt.logging.warning(f"| {thread_name} | ❗ HTTP error occurred: {e}. No data was sent to the Nextplace site.")
+            if e.response is not None:
+                bt.logging.warning(f"| {thread_name} | ❗ Error sending data to site. Response content: {e.response.text}")
+        except requests.exceptions.RequestException as e:
+            bt.logging.warning(f"| {thread_name} | ❗ Error sending data to site. An error occurred while sending data: {e}. No data was sent to the Nextplace site.")
 
     def _move_predictions_to_scored(self, scorable_predictions: list[tuple]) -> None:
         """
@@ -105,7 +160,7 @@ class Scorer:
         with self.database_manager.lock:  # Acquire lock
             self.database_manager.query_and_commit_many(query_str, values)  # Execute query
 
-    def _remove_scored_predictions_from_miner_predictions_table(self, table_name: str, scorable_predictions: list[tuple]) -> None:
+    def _remove_scored_predictions_from_miner_predictions_table(self, table_name: str, scored_predictions: list[tuple]) -> None:
         """
         Remove all scored predictions from miner's predictions table
         Args:
@@ -115,7 +170,7 @@ class Scorer:
         Returns:
             None
         """
-        row_ids = [x[0] for x in scorable_predictions]
+        row_ids = [x[0] for x in scored_predictions]
         formatted_ids = ','.join(f"'{str(nextplace_id)}'" for nextplace_id in row_ids)
         query_str = f"""
             DELETE FROM {table_name} WHERE nextplace_id in ({formatted_ids})
@@ -149,4 +204,20 @@ class Scorer:
                     """
         with self.database_manager.lock:
             self.database_manager.query_and_commit(query_str)
+
+    def parse_iso_datetime(self, datetime_str: str):
+        """
+        Parses an ISO 8601 datetime string, handling strings that end with 'Z'.
+        Returns a naive datetime object (without timezone info).
+        """
+        try:
+            if datetime_str.endswith('Z'):
+                datetime_str = datetime_str.rstrip('Z')
+                dt = datetime.strptime(datetime_str, '%Y-%m-%dT%H:%M:%S')
+                return dt
+            else:
+                return datetime.fromisoformat(datetime_str)
+        except ValueError as e:
+            bt.logging.info(f"| {self.thread_name} | ❗ Error in sending data. Trying to parse datetime string '{datetime_str}': {e}")
+            return None
                 
