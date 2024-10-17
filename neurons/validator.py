@@ -32,6 +32,12 @@ def main(validator):
                 thread = threading.Thread(target=validator.manage_miner_data, name="📋 MinerRegistrationThread 📋")
                 thread.start()
 
+            if step % 200 == 0:
+                scoring_thread_is_alive = validator.is_thread_running("🏋🏻 ScoreThread 🏋🏻")
+                if not scoring_thread_is_alive:
+                    scoring_thread = threading.Thread(target=validator.scorer.run_score_thread, name="🏋🏻 ScoreThread 🏋🏻")
+                    scoring_thread.start()
+
             if step % 250 == 0:  # Print total predictions across all miners
                 thread = threading.Thread(target=validator.print_total_number_of_predictions, name="🔮 PredictionCountingThread 🔮")
                 thread.start()

@@ -24,7 +24,6 @@ class Scorer:
         self.scoring_calculator = ScoringCalculator(database_manager, self.sold_homes_api)
         self.current_thread = threading.current_thread().name
         self.sales_timer = datetime.now(timezone.utc)
-        self.time_delta = timedelta(hours=12)
 
     def run_score_thread(self) -> None:
         """
@@ -34,13 +33,13 @@ class Scorer:
         """
         thread_name = threading.current_thread().name
         bt.logging.trace(f"| {thread_name} | 🏁 Beginning scoring thread")
-        self.sold_homes_api.get_sold_properties()  # Get recently sold homes
+        # self.sold_homes_api.get_sold_properties()  # Get recently sold homes
 
         while True:
 
-            # Update the `sales` table every 12ish hours
+            # Update the `sales` table every 8ish hours
             now = datetime.now(timezone.utc)
-            if now - self.sales_timer > self.time_delta:
+            if now - self.sales_timer > timedelta(hours=8):
                 bt.logging.trace(f"| {thread_name} | 🏷️ Time to refresh recently sold homes")
                 self.sales_timer = now
                 self.database_manager.delete_all_sales()  # Clear out sales table
@@ -172,7 +171,7 @@ class Scorer:
         except requests.exceptions.RequestException as e:
             bt.logging.warning(f"| {thread_name} | ❗ Error sending data to site. An error occurred while sending data: {e}. No data was sent to the Nextplace site.")
 
-    def _move_predictions_to_scored(self, scorable_predictions: list[tuple]) -> None:
+    def _move_predictions_to_scored(self, scored_predictions: list[tuple]) -> None:
         """
         Move scorable predictions to scored predictions_table
         Args:
@@ -181,13 +180,15 @@ class Scorer:
         Returns:
             None
         """
+        current_thread = threading.current_thread().name
         query_str = """
             INSERT OR IGNORE INTO scored_predictions
             (nextplace_id, miner_hotkey, predicted_sale_price, predicted_sale_date, prediction_timestamp, market, sale_price, sale_date, score_timestamp)
             VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)
         """
         now = datetime.now(timezone.utc).strftime(ISO8601)
-        values = [(x[0], x[1], x[2], x[3], x[4], x[5], x[6], x[7], now) for x in scorable_predictions]
+        bt.logging.debug(f"| {current_thread} | DEBUG scored_predictions: {scored_predictions}")
+        values = [(x[0], x[1], x[2], x[3], x[4], x[5], x[6], x[7], now) for x in scored_predictions]
         with self.database_manager.lock:  # Acquire lock
             self.database_manager.query_and_commit_many(query_str, values)  # Execute query
 
