@@ -110,6 +110,7 @@ def check_and_migrate_predictions(validator) -> None:
                 SELECT nextplace_id, miner_hotkey, predicted_sale_price, predicted_sale_date, prediction_timestamp, market
                 FROM predictions
                 WHERE miner_hotkey='{miner_hotkey}'
+--                 AND scored IS NOT 1
             """)
 
             # Migrate predictions
