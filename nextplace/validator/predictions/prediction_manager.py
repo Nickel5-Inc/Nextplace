@@ -39,6 +39,7 @@ class PredictionManager:
         replace_policy_data_for_ingestion: list[tuple] = []
         ignore_policy_data_for_ingestion: list[tuple] = []
         ids: List[Tuple[str]] = []
+        valid_miners = set()
 
         for idx, real_estate_predictions in enumerate(responses):  # Iterate responses
 
@@ -48,6 +49,8 @@ class PredictionManager:
                 if miner_hotkey is None:
                     bt.logging.error(f"🪲 Failed to find miner_hotkey while processing predictions")
                     continue
+
+                valid_miners.add(miner_hotkey)
 
                 for prediction in real_estate_predictions.predictions:  # Iterate predictions in each response
 
@@ -81,9 +84,19 @@ class PredictionManager:
         self._handle_ingestion('IGNORE', ignore_policy_data_for_ingestion)
         self._handle_ingestion('REPLACE', replace_policy_data_for_ingestion)
         self._store_ids(ids)
+        self._track_miners(valid_miners)
 
         table_size = self.database_manager.get_size_of_table('predictions')
         bt.logging.trace(f"| {current_thread} | 📢 There are now {table_size} predictions in the database")
+
+    def _track_miners(self, valid_hotkeys: set[str]) -> None:
+        formatted = [(x[0],) for x in valid_hotkeys]
+        query_str = """
+            INSERT OR IGNORE INTO active_miners
+            (miner_hotkey)
+            VALUES (?)
+        """
+        self.database_manager.query_and_commit_many(query_str, formatted)
 
     def _handle_ingestion(self, conflict_policy: str, values: list[tuple]) -> None:
         query_str = f"""
