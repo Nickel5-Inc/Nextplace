@@ -81,19 +81,19 @@ class ScoringCalculator:
         current_thread = threading.current_thread().name
         query_str = f"""
             SELECT miner_hotkey, lifetime_score, total_predictions
-            WHERE miner_hotkey='{miner_hotkey}'
             FROM miner_scores
+            WHERE miner_hotkey = '{miner_hotkey}'
             LIMIT 1
         """
         with self.database_manager.lock:
             results = self.database_manager.query(query_str)
         bt.logging.debug(f"| {current_thread} | DEBUG Found scores {results} for hotkey '{miner_hotkey}'")
         if len(results) > 0:  # Update existing Miner score
-            bt.logging.debug(f"| {current_thread} | 🦉 Found existing scores for miner wit hotkey '{miner_hotkey}'")
+            bt.logging.debug(f"| {current_thread} | 🦉 Found existing scores for miner with hotkey '{miner_hotkey}'")
             result = results[0]
             return {'lifetime_score': result[1], 'total_predictions': result[2]}
         else:  # No scores for this Miner yet
-            bt.logging.debug(f"| {current_thread} | 🐦‍⬛ Found no existing scores for miner wit hotkey '{miner_hotkey}'")
+            bt.logging.debug(f"| {current_thread} | 🐦‍⬛ Found no existing scores for miner with hotkey '{miner_hotkey}'")
             return None
 
     def _get_num_sold_homes(self) -> int:

@@ -23,6 +23,8 @@ class Scorer:
         self.sold_homes_api = SoldHomesAPI(database_manager, markets)
         self.scoring_calculator = ScoringCalculator(database_manager, self.sold_homes_api)
         self.current_thread = threading.current_thread().name
+        self.sales_timer = datetime.now(timezone.utc)
+        self.time_delta = timedelta(hours=12)
 
     def run_score_thread(self) -> None:
         """
@@ -32,11 +34,17 @@ class Scorer:
         """
         thread_name = threading.current_thread().name
         bt.logging.trace(f"| {thread_name} | 🏁 Beginning scoring thread")
+        self.sold_homes_api.get_sold_properties()  # Get recently sold homes
 
         while True:
 
-            # Update the `sales` table
-            self.sold_homes_api.get_sold_properties()
+            # Update the `sales` table every 12ish hours
+            now = datetime.now(timezone.utc)
+            if now - self.sales_timer > self.time_delta:
+                bt.logging.trace(f"| {thread_name} | 🏷️ Time to refresh recently sold homes")
+                self.sales_timer = now
+                self.database_manager.delete_all_sales()  # Clear out sales table
+                self.sold_homes_api.get_sold_properties()  # Get recently sold homes
 
             bt.logging.trace(f"| {thread_name} | 🚀 Beginning metagraph hotkey iteration")
 
@@ -61,7 +69,6 @@ class Scorer:
                 sleep(120)  # Sleep thread for 2 minutes
 
             with self.database_manager.lock:
-                self.database_manager.delete_all_sales()  # Clear out sales table
                 self._clear_out_old_predictions('scored_predictions')  # Clear out old scored predictions
 
     def score_predictions(self, table_name: str, miner_hotkey: str) -> None:
