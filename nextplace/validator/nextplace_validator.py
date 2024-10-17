@@ -11,7 +11,6 @@ from nextplace.validator.synapse.synapse_manager import SynapseManager
 from nextplace.validator.setting_weights.weights import WeightSetter
 from nextplace.validator.utils.contants import build_miner_predictions_table_name
 from template.base.validator import BaseValidatorNeuron
-from nextplace.validator.outgoing_data.website_comms import WebsiteProcessor
 import threading
 
 
@@ -27,7 +26,6 @@ class RealEstateValidator(BaseValidatorNeuron):
         self.scorer = Scorer(self.database_manager, self.markets, self.metagraph)
         self.synapse_manager = SynapseManager(self.database_manager)
         self.prediction_manager = PredictionManager(self.database_manager, self.metagraph)
-        self.website_processor = WebsiteProcessor(self.database_manager)
         self.netuid = self.config.netuid
         self.should_step = True
         self.current_thread = threading.current_thread().name
@@ -104,13 +102,6 @@ class RealEstateValidator(BaseValidatorNeuron):
                 self.weight_setter.check_timer_set_weights()
             finally:
                 self.database_manager.lock.release()
-
-    def process_and_send_predictions(self) -> None:
-        """
-        Process scored predictions and send them to the website.
-        """
-        bt.logging.info(f"| {self.current_thread} | 🔄 Processing and sending predictions to the website.")
-        self.website_processor.send_data()
 
     def is_thread_running(self, thread_name: str):
         for thread in threading.enumerate():  # Get a list of all active threads

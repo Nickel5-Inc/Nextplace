@@ -28,10 +28,6 @@ def main(validator):
             if step % 100 == 0:  # Check if any registrations/deregistrations have happened, make necessary updates
                 thread = threading.Thread(target=validator.manage_miner_data, name="📋 MinerRegistrationThread 📋")
                 thread.start()
-            
-            if step % 200 == 0:  # Send predictions to website
-                thread = threading.Thread(target=validator.process_and_send_predictions, name="🛰️ WebsiteConnectionThread 🛰️")
-                thread.start()
 
                 # Reset the step
                 step = 1

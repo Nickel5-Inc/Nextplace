@@ -88,10 +88,22 @@ class Scorer:
             self._remove_scored_predictions_from_miner_predictions_table(table_name, scorable_predictions)
 
     def _send_data_to_website(self, scored_predictions: list[tuple]) -> None:
+        """
+        Send scored prediction data to the NextPlace website
+        Args:
+            scored_predictions: list of scored predictions
+
+        Returns:
+            None
+        """
         thread_name = threading.current_thread().name
+        bt.logging.trace(f"| {thread_name} | 🎢 Attempting to send {len(scored_predictions)} scored predictions to NextPlace website")
+
         formatted_predictions = [(x[0], x[1], None, x[4], x[2], x[3]) for x in scored_predictions]
         data_to_send = []
+
         for prediction in formatted_predictions:
+
             nextplace_id, miner_hotkey, miner_coldkey, prediction_date, predicted_sale_price, predicted_sale_date = prediction
             prediction_date_parsed = self.parse_iso_datetime(prediction_date) if isinstance(prediction_date, str) else prediction_date
             predicted_sale_date_parsed = self.parse_iso_datetime(predicted_sale_date) if isinstance(predicted_sale_date, str) else predicted_sale_date
@@ -114,8 +126,7 @@ class Scorer:
             data_to_send.append(data_dict)
 
         if not data_to_send:
-            bt.logging.trace(
-                f"| {thread_name} | Ø No valid predictions to send to Nextplace site after parsing.")
+            bt.logging.trace(f"| {thread_name} | Ø No valid predictions to send to Nextplace site after parsing.")
             return
 
         bt.logging.info(f"| {thread_name} | ➠ Sending {len(data_to_send)} predictions to the website")
