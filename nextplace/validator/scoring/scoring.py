@@ -78,17 +78,12 @@ class Scorer:
         """
         current_thread = threading.current_thread().name
         scorable_predictions = self._get_scorable_predictions(table_name)
-        bt.logging.debug(f"| {current_thread} | DEBUG LINE 81 1st scorable prediction: {scorable_predictions[0]}")
         bt.logging.trace(f"| {current_thread} | 🏅 Found {len(scorable_predictions)} predictions to score")
         if len(scorable_predictions) > 0:
             scoring_data = [(x[1], x[2], x[3], x[6], x[7]) for x in scorable_predictions]
-            bt.logging.debug(f"| {current_thread} | DEBUG LINE 85 1st scorable prediction: {scorable_predictions[0]}")
             self.scoring_calculator.process_scorable_predictions(scoring_data, miner_hotkey)  # Score predictions for this home
-            bt.logging.debug(f"| {current_thread} | DEBUG LINE 87 1st scorable prediction: {scorable_predictions[0]}")
             self._send_data_to_website(scorable_predictions)  # Send data to website
-            bt.logging.debug(f"| {current_thread} | DEBUG LINE 89 1st scorable prediction: {scorable_predictions[0]}")
-            self._move_predictions_to_scored(scoring_data)  # Move scored predictions to scored_predictions table
-            bt.logging.debug(f"| {current_thread} | DEBUG LINE 91 1st scorable prediction: {scorable_predictions[0]}")
+            self._move_predictions_to_scored(scorable_predictions)  # Move scored predictions to scored_predictions table
             self._remove_scored_predictions_from_miner_predictions_table(table_name, scorable_predictions)  # Drop scored predictions from miner predictions table
 
     def _get_scorable_predictions(self, table_name: str) -> list[tuple]:
@@ -185,14 +180,12 @@ class Scorer:
         Returns:
             None
         """
-        current_thread = threading.current_thread().name
         query_str = """
             INSERT OR IGNORE INTO scored_predictions
             (nextplace_id, miner_hotkey, predicted_sale_price, predicted_sale_date, prediction_timestamp, market, sale_price, sale_date, score_timestamp)
             VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)
         """
         now = datetime.now(timezone.utc).strftime(ISO8601)
-        bt.logging.debug(f"| {current_thread} | DEBUG scored_predictions: {scored_predictions}")
         values = [(x[0], x[1], x[2], x[3], x[4], x[5], x[6], x[7], now) for x in scored_predictions]
         with self.database_manager.lock:  # Acquire lock
             self.database_manager.query_and_commit_many(query_str, values)  # Execute query
