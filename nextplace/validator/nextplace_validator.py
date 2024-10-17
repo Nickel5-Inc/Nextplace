@@ -53,12 +53,13 @@ class RealEstateValidator(BaseValidatorNeuron):
             None
         """
         current_thread = threading.current_thread().name
-        bt.logging.trace(f"| {current_thread} | Managing active miners")
 
         # Build sets
         metagraph_hotkeys = set(self.metagraph.hotkeys)  # Get hotkeys in metagraph
         with self.database_manager.lock:
             stored_hotkeys = set(row[0] for row in self.database_manager.query("SELECT miner_hotkey FROM active_miners"))  # Get stored hotkeys
+
+        bt.logging.trace(f"| {current_thread} | Managing active miners. Found {len(stored_hotkeys)} tracked miners and {len(metagraph_hotkeys)} metagraph hotkeys")
 
         # Set operations
         deregistered_hotkeys = list(stored_hotkeys.difference(metagraph_hotkeys))  # Deregistered hotkeys are stored, but not in the metagraph

@@ -32,6 +32,7 @@ class Scorer:
             None
         """
         thread_name = threading.current_thread().name
+        bt.logging.trace(f"| {thread_name} | 🏁 Beginning scoring thread")
 
         self._check_and_migrate_predictions()
 
@@ -40,16 +41,19 @@ class Scorer:
             # Update the `sales` table
             self.sold_homes_api.get_sold_properties()
 
+            bt.logging.trace(f"| {thread_name} | 🚀 Beginning metagraph hotkey iteration")
             # Update sales table
             for hotkey in self.metagraph.hotkeys:
 
                 table_name = build_miner_predictions_table_name(hotkey)
 
-                # Check if preds table exists. If not, continue
+                # Check if predictions table exists for this hotkey. If not, continue
                 with self.database_manager.lock:
                     table_exists = self.database_manager.table_exists(table_name)
                 if not table_exists:
                     continue
+
+                bt.logging.trace(f"| {thread_name} | ⛏️ Scoring miner with hotkey '{hotkey}'")
 
                 try:
                     self.score_predictions(table_name, hotkey)  # Score predictions
@@ -76,7 +80,7 @@ class Scorer:
                 return
 
             all_table_query = "SELECT name FROM sqlite_master WHERE type='table'"
-            all_tables = self.database_manager.query(all_table_query)  # Get all tables in database
+            all_tables = [x[0] for x in self.database_manager.query(all_table_query)]  # Get all tables in database
             miner_predictions_tables_exist = any("predictions_" in s for s in all_tables)  # Check if we have any tables that start with "predictions_"
 
             if miner_predictions_tables_exist:
