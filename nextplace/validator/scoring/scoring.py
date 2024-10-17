@@ -33,11 +33,18 @@ class Scorer:
         """
         thread_name = threading.current_thread().name
         bt.logging.trace(f"| {thread_name} | 🏁 Beginning scoring thread")
-        # self.sold_homes_api.get_sold_properties()  # Get recently sold homes
+
+        # If no sales, get them
+        with self.database_manager.lock:
+            number_of_sales = self.database_manager.get_size_of_table('sales')
+        if number_of_sales == 0:
+            self.sold_homes_api.get_sold_properties()  # Get recently sold homes
+            now = datetime.now(timezone.utc)
+            self.sales_timer = now
 
         while True:
 
-            # Update the `sales` table every 8ish hours
+            # Refresh the `sales` table every 8ish hours
             now = datetime.now(timezone.utc)
             if now - self.sales_timer > timedelta(hours=8):
                 bt.logging.trace(f"| {thread_name} | 🏷️ Time to refresh recently sold homes")
