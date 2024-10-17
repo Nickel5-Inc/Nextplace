@@ -82,10 +82,10 @@ class Scorer:
         Returns:
             list of query results
         """
-        current_thread = threading.current_thread().name
         scorable_predictions = self._get_scorable_predictions(table_name)
-        bt.logging.trace(f"| {current_thread} | 🏅 Found {len(scorable_predictions)} predictions to score")
         if len(scorable_predictions) > 0:
+            current_thread = threading.current_thread().name
+            bt.logging.trace(f"| {current_thread} | 🏅 Found {len(scorable_predictions)} predictions to score")
             scoring_data = [(x[1], x[2], x[3], x[6], x[7]) for x in scorable_predictions]
             self.scoring_calculator.process_scorable_predictions(scoring_data, miner_hotkey)  # Score predictions for this home
             self._send_data_to_website(scorable_predictions)  # Send data to website
