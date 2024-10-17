@@ -32,6 +32,11 @@ def main(validator):
                 thread = threading.Thread(target=validator.manage_miner_data, name="📋 MinerRegistrationThread 📋")
                 thread.start()
 
+            if step % 250 == 0:  # Print total predictions across all miners
+                thread = threading.Thread(target=validator.print_total_number_of_predictions, name="🔮 PredictionCountingThread 🔮")
+                thread.start()
+
+            if step >= 1000:
                 # Reset the step
                 step = 1
                 validator.should_step = False

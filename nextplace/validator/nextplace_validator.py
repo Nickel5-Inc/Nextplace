@@ -79,6 +79,23 @@ class RealEstateValidator(BaseValidatorNeuron):
 
         bt.logging.trace(f"| {current_thread} | Thread terminating")
 
+    def print_total_number_of_predictions(self) -> None:
+        """
+        RUN IN THREAD
+        Prints total number of predictions across all miners
+        Returns:
+            None
+        """
+        current_thread = threading.current_thread().name
+        all_table_query = "SELECT name FROM sqlite_master WHERE type='table'"
+        all_tables = [x[0] for x in self.database_manager.query(all_table_query)]  # Get all tables in database
+        predictions_tables = [s for s in all_tables if s.startswith("predictions_")]
+        count = 0
+        for predictions_table in predictions_tables:
+            with self.database_manager.lock:
+                count += self.database_manager.get_size_of_table(predictions_table)
+        bt.logging.info(f"| {current_thread} | ✨ Database currently has {count} predictions")
+
     def check_timer_set_weights(self) -> None:
         """
         Check weight setting timer. If time to set weights, try to acquire lock and set weights

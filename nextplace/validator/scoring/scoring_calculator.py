@@ -51,6 +51,15 @@ class ScoringCalculator:
             ''', values)
 
     def _handle_new_miner_score(self, miner_hotkey: str, new_scores: dict) -> None:
+        """
+        Add scores for a miner without any scores yet
+        Args:
+            miner_hotkey: Hotkey of the miner
+            new_scores: Miner's new score data
+
+        Returns:
+            None
+        """
         now = datetime.now(timezone.utc).strftime(ISO8601)
         query_str = f"""
                         INSERT INTO miner_scores (miner_hotkey, lifetime_score, total_predictions, last_update_timestamp)
@@ -61,6 +70,15 @@ class ScoringCalculator:
             self.database_manager.query_and_commit_with_values(query_str, values)
 
     def _fetch_current_miner_score(self, miner_hotkey: str) -> Dict[str, float] or None:
+        """
+        Retrieve scores for a miner
+        Args:
+            miner_hotkey: Hotkey of the miner
+
+        Returns:
+            Miners scores or None
+        """
+        current_thread = threading.current_thread().name
         query_str = f"""
             SELECT miner_hotkey, lifetime_score, total_predictions
             WHERE miner_hotkey='{miner_hotkey}'
@@ -69,10 +87,13 @@ class ScoringCalculator:
         """
         with self.database_manager.lock:
             results = self.database_manager.query(query_str)
+        bt.logging.debug(f"| {current_thread} | DEBUG Found scores {results} for hotkey '{miner_hotkey}'")
         if len(results) > 0:  # Update existing Miner score
+            bt.logging.debug(f"| {current_thread} | 🦉 Found existing scores for miner wit hotkey '{miner_hotkey}'")
             result = results[0]
             return {'lifetime_score': result[1], 'total_predictions': result[2]}
         else:  # No scores for this Miner yet
+            bt.logging.debug(f"| {current_thread} | 🐦‍⬛ Found no existing scores for miner wit hotkey '{miner_hotkey}'")
             return None
 
     def _get_num_sold_homes(self) -> int:
