@@ -42,10 +42,10 @@ class Scorer:
             self.sold_homes_api.get_sold_properties()
 
             bt.logging.trace(f"| {thread_name} | 🚀 Beginning metagraph hotkey iteration")
-            # Update sales table
-            for hotkey in self.metagraph.hotkeys:
 
-                table_name = build_miner_predictions_table_name(hotkey)
+            for hotkey in self.metagraph.hotkeys:  # Iterate metagraph hotkeys
+
+                table_name = build_miner_predictions_table_name(hotkey)  # Get name of this miner's predictions table
 
                 # Check if predictions table exists for this hotkey. If not, continue
                 with self.database_manager.lock:
