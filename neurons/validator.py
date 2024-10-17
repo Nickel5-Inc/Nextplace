@@ -103,7 +103,7 @@ def check_and_migrate_predictions(validator) -> None:
             # Migrate predictions
             insert_query = f"""
                 INSERT OR IGNORE INTO {table_name}
-                (nextplace_id, miner_hotkey, predicted_sale_price, predicted_sale_date, prediction_timestamp, market),
+                (nextplace_id, miner_hotkey, predicted_sale_price, predicted_sale_date, prediction_timestamp, market)
                 VALUES(?, ?, ?, ?, ?, ?)
             """
             validator.database_manager.query_and_commit_many(insert_query, miner_predictions)
