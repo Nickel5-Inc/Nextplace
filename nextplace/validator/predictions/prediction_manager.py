@@ -36,8 +36,6 @@ class PredictionManager:
 
         current_utc_datetime = datetime.now(timezone.utc)
         timestamp = current_utc_datetime.strftime(ISO8601)
-        replace_policy_data_for_ingestion: list[tuple] = []
-        ignore_policy_data_for_ingestion: list[tuple] = []
 
         for idx, real_estate_predictions in enumerate(responses):  # Iterate responses
 
@@ -48,13 +46,15 @@ class PredictionManager:
                     bt.logging.error(f"🪲 Failed to find miner_hotkey while processing predictions")
                     continue
 
+                table_name = build_miner_predictions_table_name(miner_hotkey)
+                replace_policy_data_for_ingestion: list[tuple] = []
+                ignore_policy_data_for_ingestion: list[tuple] = []
+
                 for prediction in real_estate_predictions.predictions:  # Iterate predictions in each response
 
                     # Only process valid predictions
                     if prediction is None or prediction.predicted_sale_price is None or prediction.predicted_sale_date is None:
                         continue
-
-                    table_name = build_miner_predictions_table_name(miner_hotkey)
 
                     values = (
                         prediction.nextplace_id,
@@ -71,16 +71,16 @@ class PredictionManager:
                     else:
                         ignore_policy_data_for_ingestion.append(values)
 
+                # Store predictions in the database
+                self._create_table_if_not_exists(table_name, miner_hotkey)
+                if len(ignore_policy_data_for_ingestion) > 0:
+                    self._handle_ingestion('IGNORE', ignore_policy_data_for_ingestion, table_name)
+                if len(replace_policy_data_for_ingestion) > 0:
+                    self._handle_ingestion('REPLACE', replace_policy_data_for_ingestion, table_name)
+
             except Exception as e:
                 bt.logging.error(f"| {current_thread} | ❗Failed to process prediction: {e}")
 
-        # Store predictions in the database
-        self._create_table_if_not_exists(table_name, miner_hotkey)
-        self._handle_ingestion('IGNORE', ignore_policy_data_for_ingestion, table_name)
-        self._handle_ingestion('REPLACE', replace_policy_data_for_ingestion, table_name)
-
-        table_size = self.database_manager.get_size_of_table('predictions')
-        bt.logging.trace(f"| {current_thread} | 📢 There are now {table_size} predictions in the database")
 
     def _create_table_if_not_exists(self, table_name: str, miner_hotkey: str) -> None:
         """
