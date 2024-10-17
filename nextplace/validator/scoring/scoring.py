@@ -1,7 +1,6 @@
 import sqlite3
 from datetime import datetime, timezone, timedelta
 from time import sleep
-import bittensor
 import bittensor as bt
 import threading
 from nextplace.validator.scoring.scoring_calculator import ScoringCalculator
@@ -17,7 +16,7 @@ Helper class manages scoring Miner predictions
 
 class Scorer:
 
-    def __init__(self, database_manager: DatabaseManager, markets: list[dict[str, str]], metagraph: bittensor.Metagraph):
+    def __init__(self, database_manager: DatabaseManager, markets: list[dict[str, str]], metagraph):
         self.metagraph = metagraph
         self.database_manager = database_manager
         self.markets = markets
