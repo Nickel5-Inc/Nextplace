@@ -71,7 +71,7 @@ def check_and_migrate_predictions(validator) -> None:
 
         bt.logging.trace(f"| {current_thread} | 💾 Migrating predictions, this may take a while...")
 
-        all_hotkeys_in_predictions = validator.database_manager.query("SELECT DISTINCT(miner_hotkey) FROM predictions")
+        all_hotkeys_in_predictions = [x[0] for x in validator.database_manager.query("SELECT DISTINCT(miner_hotkey) FROM predictions")]
         for idx, miner_hotkey in enumerate(all_hotkeys_in_predictions):
 
             # Build table name
