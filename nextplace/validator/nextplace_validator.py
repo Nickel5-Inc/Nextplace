@@ -12,7 +12,6 @@ from nextplace.validator.setting_weights.weights import WeightSetter
 from template.base.validator import BaseValidatorNeuron
 from nextplace.validator.outgoing_data.website_comms import WebsiteProcessor
 import threading
-from datetime import datetime, timezone, timedelta
 
 
 class RealEstateValidator(BaseValidatorNeuron):
@@ -24,7 +23,7 @@ class RealEstateValidator(BaseValidatorNeuron):
         self.table_initializer = TableInitializer(self.database_manager)
         self.table_initializer.create_tables()  # Create database tables
         self.market_manager = MarketManager(self.database_manager, self.markets)
-        self.scorer = Scorer(self.database_manager, self.markets)
+        self.scorer = Scorer(self.database_manager, self.markets, self.metagraph)
         self.synapse_manager = SynapseManager(self.database_manager)
         self.prediction_manager = PredictionManager(self.database_manager, self.metagraph)
         self.website_processor = WebsiteProcessor(self.database_manager)

@@ -1,5 +1,7 @@
 from datetime import datetime, timezone, timedelta
 from typing import List
+from time import sleep
+import bittensor
 import bittensor as bt
 import threading
 from nextplace.validator.scoring.scoring_calculator import ScoringCalculator
@@ -14,43 +16,75 @@ Helper class manages scoring Miner predictions
 
 class Scorer:
 
-    def __init__(self, database_manager: DatabaseManager, markets: list[dict[str, str]]):
+    def __init__(self, database_manager: DatabaseManager, markets: list[dict[str, str]], metagraph: bittensor.Metagraph):
+        self.metagraph = metagraph
         self.database_manager = database_manager
         self.markets = markets
         self.sold_homes_api = SoldHomesAPI(database_manager, markets)
         self.scoring_calculator = ScoringCalculator(database_manager, self.sold_homes_api)
         self.current_thread = threading.current_thread().name
 
-    def run_score_predictions(self) -> None:
+    def run_score_thread(self) -> None:
         """
-        RUN IN THREAD
-        Ingest sold homes since oldest unscored prediction, JOIN `sales` and `predictions` table, score predictions
+        Run the scoring thread
         Returns:
             None
         """
-        with self.database_manager.lock:
-            num_predictions = self.database_manager.get_size_of_table('predictions')
-        if num_predictions == 0:
-            bt.logging.trace(f"| {self.current_thread} | No predictions yet, nothing to score.")
-            return
-        self.sold_homes_api.get_sold_properties()  # Update the `sales` table
-        with self.database_manager.lock:
-            num_sales = self.database_manager.get_size_of_table('sales')
-            bt.logging.info(f"| {self.current_thread} | 🛒 Ingested {num_sales} sold homes since our oldest prediction. Checking for overlapping predictions.")
-        self.score_predictions()
-        with self.database_manager.lock:
-            self._cleanup()
 
-    def _cleanup(self) -> None:
+        # Migrate predictions
+        while True:
+
+            # Update the `sales` table
+            self.sold_homes_api.get_sold_properties()
+
+            # Update sales table
+            for hotkey in self.metagraph.hotkeys:
+
+                table_name = f"predictions_{hotkey}"  # Build table name
+
+                # Check if preds table exists. If not, continue
+                with self.database_manager.lock:
+                    table_exists = self.database_manager.table_exists(table_name)
+                if not table_exists:
+                    continue
+
+                # Score predictions
+                self.score_predictions(table_name, hotkey)
+                self._clear_out_old_predictions(table_name)
+
+                sleep(60)  # Sleep thread for 2 minutes
+
+            with self.database_manager.lock:
+                self.database_manager.delete_all_sales()  # Clear out sales table
+
+    def score_predictions(self, table_name: str, miner_hotkey: str) -> None:
+        """
+        Query to get scorable predictions that haven't been scored yet
+        Returns:
+            list of query results
+        """
+
+        query_str = f"""
+            SELECT {table_name}.property_id, {table_name}.miner_hotkey, {table_name}.predicted_sale_price, {table_name}.predicted_sale_date, sales.sale_price, sales.sale_date
+            FROM {table_name}
+            JOIN sales ON {table_name}.nextplace_id = sales.nextplace_id
+            AND {table_name}.prediction_timestamp < sales.sale_date
+        """
+
+        with self.database_manager.lock:  # Acquire lock
+            scorable_predictions = self.database_manager.query(query_str)  # Get scorable predictions for this home
+            if len(scorable_predictions) > 0:
+                self.scoring_calculator.process_scorable_predictions(scorable_predictions, miner_hotkey)  # Score predictions for this home
+
+    def _cleanup(self, table_name: str) -> None:
         """
         Clean up after scoring. Delete all rows from sales table, clean out old predictions
         Returns: None
         """
         self.database_manager.delete_all_sales()
-        self._clear_out_old_predictions()
-        bt.logging.info(f"| {self.current_thread} | ✅ Finished updating scores")
+        self._clear_out_old_predictions(table_name)
 
-    def _clear_out_old_predictions(self) -> None:
+    def _clear_out_old_predictions(self, table_name: str) -> None:
         """
         Remove predictions that were scored more than 5 days ago
         Returns:
@@ -62,55 +96,12 @@ class Scorer:
         bt.logging.trace(f"| {self.current_thread} | ✘ Deleting predictions older than {min_date}")
 
         # Clear out predictions table
-        ids = self.database_manager.query(f"SELECT DISTINCT(nextplace_id) FROM predictions WHERE prediction_timestamp < '{min_date}'")
         query_str = f"""
-                        DELETE FROM predictions
+                        DELETE FROM {table_name}
                         WHERE prediction_timestamp < '{min_date}'
                     """
-        self.database_manager.query_and_commit(query_str)
-
-        # Clear out IDs table
-        ids = [result[0] for result in ids]
-        formatted_ids = ','.join(f"'{str(nextplace_id)}'" for nextplace_id in ids)
-        delete_query = f"""
-                    DELETE FROM ids
-                    WHERE nextplace_id IN ({formatted_ids})
-                """
-        self.database_manager.query_and_commit(delete_query)
-
-    def score_predictions(self):
-        """
-        Query to get scorable predictions that haven't been scored yet
-        Returns:
-            list of query results
-        """
-        ids = self._get_ids()
-        bt.logging.trace(f"| {self.current_thread} | 🔎 Found {len(ids)} potential homes for scoring")
-
-        for candidate_id in ids:  # Iterate homes
-
-            query_str = f"""
-                SELECT predictions.property_id, predictions.miner_hotkey, predictions.predicted_sale_price, predictions.predicted_sale_date, sales.sale_price, sales.sale_date
-                FROM predictions
-                JOIN sales ON predictions.nextplace_id = sales.nextplace_id
-                WHERE predictions.nextplace_id = '{candidate_id}'
-                AND predictions.prediction_timestamp < sales.sale_date
-                AND (predictions.scored = 0 OR predictions.scored = FALSE OR predictions.scored IS NULL)
-            """
-
-            with self.database_manager.lock:  # Acquire lock
-                scorable_predictions = self.database_manager.query(query_str)  # Get scorable predictions for this home
-                if len(scorable_predictions) > 0:
-                    self.scoring_calculator.process_scorable_predictions(scorable_predictions)  # Score predictions for this home
-
-        # Delete ids from table
-        formatted_ids = ','.join(f"'{str(nextplace_id)}'" for nextplace_id in ids)
-        delete_query = f"""
-            DELETE FROM ids
-            WHERE nextplace_id IN ({formatted_ids})
-        """
         with self.database_manager.lock:
-            self.database_manager.query_and_commit(delete_query)
+            self.database_manager.query_and_commit(query_str)
 
     def _get_ids(self) -> List[str]:
         """

@@ -150,3 +150,7 @@ class DatabaseManager:
         query_str = f"SELECT COUNT(*) FROM {table_name}"
         result = self.query(query_str)
         return result[0][0]
+
+    def table_exists(self, table_name: str) -> bool:
+        result = self.query(f"""SELECT name FROM sqlite_master WHERE type='table' AND name='{table_name}'""")
+        return result is not None

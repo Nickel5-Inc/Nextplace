@@ -1,3 +1,4 @@
+import sqlite3
 import threading
 from typing import Dict, List, Tuple
 from collections import defaultdict
@@ -13,24 +14,29 @@ class ScoringCalculator:
         self.sold_homes_api = sold_homes_api
         self.current_thread = threading.current_thread().name
         
-    def process_scorable_predictions(self, scorable_predictions) -> None:
+    def process_scorable_predictions(self, scorable_predictions: list, miner_hotkey: str) -> None:
         """
         Score miner predictions in bulk
         """
         cursor, db_connection = self.database_manager.get_cursor()
         try:
-            miner_scores = self._fetch_current_miner_scores(cursor)
+            miner_scores = self._fetch_current_miner_score(cursor, miner_hotkey)
             new_scores, predictions_to_mark = self._calculate_new_scores(scorable_predictions)
             self._update_miner_scores(cursor, miner_scores, new_scores)
-            self._mark_predictions_as_scored(cursor, predictions_to_mark)
+            # ToDo Send predictions to website!
             db_connection.commit()
-            bt.logging.info(f"| {self.current_thread} | 🎯 Scored {len(scorable_predictions)} predictions")
+            bt.logging.info(f"| {self.current_thread} | 🎯 Scored {len(scorable_predictions)} predictions for hotkey {miner_hotkey}")
         finally:
             cursor.close()
             db_connection.close()
 
-    def _fetch_current_miner_scores(self, cursor) -> Dict[str, Dict[str, float]]:
-        cursor.execute('SELECT miner_hotkey, lifetime_score, total_predictions FROM miner_scores')
+    def _fetch_current_miner_score(self, cursor: sqlite3.Cursor, miner_hotkey: str) -> Dict[str, Dict[str, float]]:
+        query_str = f"""
+            SELECT miner_hotkey, lifetime_score, total_predictions
+            WHERE miner_hotkey='{miner_hotkey}'
+            FROM miner_scores
+        """
+        cursor.execute(query_str)
         return {row[0]: {'lifetime_score': row[1], 'total_predictions': row[2]} for row in cursor.fetchall()}
 
     def _get_num_sold_homes(self) -> int:
@@ -78,14 +84,6 @@ class ScoringCalculator:
             INSERT INTO miner_scores (miner_hotkey, lifetime_score, total_predictions, last_update_timestamp)
             VALUES (?, ?, ?, '{now}')
         ''', inserts)
-
-    def _mark_predictions_as_scored(self, cursor, predictions_to_mark: List[Tuple]) -> None:
-        now = datetime.now(timezone.utc).strftime(ISO8601)
-        cursor.executemany(f'''
-            UPDATE predictions
-            SET scored = 1, score_timestamp = '{now}'
-            WHERE property_id = ? AND miner_hotkey = ?
-        ''', predictions_to_mark)
 
     def calculate_score(self, actual_price: str, predicted_price: str, actual_date: str, predicted_date: str):
         # Convert date strings to datetime objects
