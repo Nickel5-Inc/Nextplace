@@ -89,6 +89,9 @@ class TableInitializer:
                 PRIMARY KEY (nextplace_id, miner_hotkey)
                 )
         ''')
+        cursor.execute('''
+            CREATE INDEX IF NOT EXISTS idx_prediction_timestamp ON scored_predictions(prediction_timestamp)
+        ''')
 
     def _create_properties_table(self, cursor) -> None:
         """

@@ -51,9 +51,8 @@ class Scorer:
                     continue
 
                 try:
-                    # Score predictions
-                    self.score_predictions(table_name, hotkey)
-                    self._clear_out_old_predictions(table_name)
+                    self.score_predictions(table_name, hotkey)  # Score predictions
+                    self._clear_out_old_predictions(table_name)  # Remove old predictions from miner's table
                 except sqlite3.OperationalError as e:
                     bt.logging.trace(f"| {thread_name} | 🏖️ SQLITE operational error: {e}. Note that this is may be caused by miner deregistration while trying to score the deregistered miner, in which case it is not a bug.")
 
@@ -61,6 +60,7 @@ class Scorer:
 
             with self.database_manager.lock:
                 self.database_manager.delete_all_sales()  # Clear out sales table
+                self._clear_out_old_predictions('scored_predictions')  # Clear out old scored predictions
 
     def score_predictions(self, table_name: str, miner_hotkey: str) -> None:
         """
