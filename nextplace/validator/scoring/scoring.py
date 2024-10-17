@@ -22,7 +22,6 @@ class Scorer:
         self.markets = markets
         self.sold_homes_api = SoldHomesAPI(database_manager, markets)
         self.scoring_calculator = ScoringCalculator(database_manager, self.sold_homes_api)
-        self.current_thread = threading.current_thread().name
         self.sales_timer = datetime.now(timezone.utc)
 
     def run_score_thread(self) -> None:
@@ -229,10 +228,11 @@ class Scorer:
         Returns:
             None
         """
+        current_thread = threading.current_thread().name
         max_days = 21
         today = datetime.now(timezone.utc)
         min_date = (today - timedelta(days=max_days)).strftime(ISO8601)
-        bt.logging.trace(f"| {self.current_thread} | ✘ Deleting predictions older than {min_date} from table '{table_name}'")
+        bt.logging.trace(f"| {current_thread} | ✘ Deleting predictions older than {min_date} from table '{table_name}'")
 
         # Clear out predictions table
         query_str = f"""
