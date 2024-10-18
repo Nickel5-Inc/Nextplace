@@ -371,12 +371,12 @@ def query(query_str: str) -> list[tuple]:
         return rows
 
 
-if __name__ == "__main__":
+def get_scored_predictions():
     query_str = """
-        SELECT nextplace_id, miner_hotkey, prediction_timestamp, predicted_sale_price, predicted_sale_date
-        FROM predictions
-        WHERE scored=1
-    """
+            SELECT nextplace_id, miner_hotkey, prediction_timestamp, predicted_sale_price, predicted_sale_date
+            FROM predictions
+            WHERE scored=1
+        """
     results = query(query_str)
     csv_data = []
     for result in results:
@@ -396,3 +396,38 @@ if __name__ == "__main__":
         writer = csv.DictWriter(file, fieldnames=csv_data[0].keys())
         writer.writeheader()  # Write the headers
         writer.writerows(csv_data)  # Write the rows
+
+
+def get_miner_scores():
+    '''
+    miner_hotkey TEXT PRIMARY KEY,
+    lifetime_score REAL,
+    total_predictions INTEGER,
+    last_update_timestamp DATETIME
+    '''
+    query_str = """
+            SELECT *
+            FROM miner_scores
+        """
+    results = query(query_str)
+    csv_data = []
+    for result in results:
+        entry = {
+            'hotkey': result[0],
+            'score': result[1],
+            'predictions': result[2],
+            'last_update': result[3],
+        }
+        csv_data.append(entry)
+
+    csv_file_name = 'miner_scores.csv'
+
+    with open(csv_file_name, mode='w', newline='') as file:
+        writer = csv.DictWriter(file, fieldnames=csv_data[0].keys())
+        writer.writeheader()  # Write the headers
+        writer.writerows(csv_data)  # Write the rows
+
+
+if __name__ == "__main__":
+    get_scored_predictions()
+    get_miner_scores()
