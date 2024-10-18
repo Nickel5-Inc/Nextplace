@@ -2,7 +2,7 @@ import sqlite3
 from typing import Tuple
 import csv
 
-db_path = f'validator_v1.db'  # Set db path
+db_path = f'validator_v1.db'  # Set db path here
 
 real_estate_markets = [
     {
