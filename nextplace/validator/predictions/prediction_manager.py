@@ -104,12 +104,6 @@ class PredictionManager:
         Returns:
             None
         """
-        table_exists = self.database_manager.table_exists(table_name)
-        if table_exists:
-            return
-
-        current_thread = threading.current_thread().name
-        bt.logging.error(f"| {current_thread} | 🗂️ Creating predictions table for miner with hotkey '{miner_hotkey}'")
         create_str = f"""
                     CREATE TABLE IF NOT EXISTS {table_name} (
                         nextplace_id TEXT,
