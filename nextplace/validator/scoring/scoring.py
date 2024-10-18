@@ -45,7 +45,7 @@ class Scorer:
 
             # Refresh the `sales` table every 8ish hours
             now = datetime.now(timezone.utc)
-            if now - self.sales_timer > timedelta(hours=8):
+            if now - self.sales_timer > timedelta(hours=12):
                 bt.logging.trace(f"| {thread_name} | 🏷️ Time to refresh recently sold homes")
                 self.sales_timer = now
                 self.database_manager.delete_all_sales()  # Clear out sales table

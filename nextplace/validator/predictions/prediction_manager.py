@@ -75,7 +75,7 @@ class PredictionManager:
                         ignore_policy_data_for_ingestion.append(values)
 
                 # Store predictions in the database
-                self._create_table_if_not_exists(table_name, miner_hotkey)
+                self._create_table_if_not_exists(table_name)
                 if len(ignore_policy_data_for_ingestion) > 0:
                     self._handle_ingestion('IGNORE', ignore_policy_data_for_ingestion, table_name)
                 if len(replace_policy_data_for_ingestion) > 0:
@@ -95,7 +95,7 @@ class PredictionManager:
         """
         self.database_manager.query_and_commit_many(query_str, formatted)
 
-    def _create_table_if_not_exists(self, table_name: str, miner_hotkey: str) -> None:
+    def _create_table_if_not_exists(self, table_name: str) -> None:
         """
         Create the predictions table for this miner if it doesn't exist
         Args:
