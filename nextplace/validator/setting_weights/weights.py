@@ -117,7 +117,7 @@ class WeightSetter:
         else:
             return torch.full_like(tier_scores, total_weight / len(tier_scores))
 
-    @timeout_with_multiprocess
+    @timeout_with_multiprocess(seconds=180)
     def set_weights(self):
         current_thread = threading.current_thread()
         # Sync the metagraph to get the latest data
