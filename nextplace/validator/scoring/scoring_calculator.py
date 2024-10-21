@@ -10,8 +10,7 @@ class ScoringCalculator:
     def __init__(self, database_manager, sold_homes_api):
         self.database_manager = database_manager
         self.sold_homes_api = sold_homes_api
-        self.current_thread = threading.current_thread().name
-        
+
     def process_scorable_predictions(self, scorable_predictions: list, miner_hotkey: str) -> None:
         """
         Score miner predictions in bulk
@@ -22,7 +21,8 @@ class ScoringCalculator:
             self._update_miner_score(miner_score, new_scores, miner_hotkey)
         else:
             self._handle_new_miner_score(miner_hotkey, new_scores)
-        bt.logging.info(f"| {self.current_thread} | 🎯 Scored {len(scorable_predictions)} predictions for hotkey '{miner_hotkey}'")
+        current_thread = threading.current_thread().name
+        bt.logging.info(f"| {current_thread} | 🎯 Scored {len(scorable_predictions)} predictions for hotkey '{miner_hotkey}'")
 
     def _update_miner_score(self, miner_score: Dict[str, float], new_scores: Dict[str, float], miner_hotkey: str) -> None:
         """
@@ -97,8 +97,10 @@ class ScoringCalculator:
             return None
 
     def _get_num_sold_homes(self) -> int:
+
+        current_thread = threading.current_thread().name
         num_sold_homes = self.database_manager.get_size_of_table('sales')
-        bt.logging.info(f"| {self.current_thread} | 🥳 Received {num_sold_homes} sold homes")
+        bt.logging.info(f"| {current_thread} | 🥳 Received {num_sold_homes} sold homes")
         return num_sold_homes
 
     def _calculate_new_scores(self, scorable_predictions: List[Tuple]) -> Dict[str, float]:
