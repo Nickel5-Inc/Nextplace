@@ -69,61 +69,78 @@ def check_and_migrate_predictions(validator) -> None:
     """
     current_thread = threading.current_thread().name
     bt.logging.trace(f"| {current_thread} | 🔎 Checking if we need to migrate predictions...")
+
     with validator.database_manager.lock:
         predictions_table_exists = validator.database_manager.table_exists('predictions')
-        if not predictions_table_exists:
-            return
 
-        all_table_query = "SELECT name FROM sqlite_master WHERE type='table'"
-        all_tables = [x[0] for x in validator.database_manager.query(all_table_query)]  # Get all tables in database
-        miner_predictions_tables_exist = any("predictions_" in s for s in all_tables)  # Check if we have any tables that start with "predictions_"
+    if not predictions_table_exists:
+        return
 
-        if miner_predictions_tables_exist:
-            return
+    # Get all predictions tables
+    all_table_query = "SELECT name FROM sqlite_master WHERE type='table'"
 
-        bt.logging.trace(f"| {current_thread} | 💾 Migrating predictions, this may take a while...")
+    with validator.database_manager.lock:
+        all_tables = validator.database_manager.query(all_table_query)
 
+    # Get all predictions tables
+    predictions_tables = [table_result[0] for table_result in all_tables if 'predictions_' in table_result[0]]
+
+    if len(predictions_tables) > 235:  # We've already migrated all the miners
+        return
+
+    bt.logging.trace(f"| {current_thread} | 💾 Migrating predictions, this may take a while...")
+
+    with validator.database_manager.lock:
         all_hotkeys_in_predictions = [x[0] for x in validator.database_manager.query("SELECT DISTINCT(miner_hotkey) FROM predictions")]
-        for idx, miner_hotkey in enumerate(all_hotkeys_in_predictions):
 
-            # Build table name
-            table_name = build_miner_predictions_table_name(miner_hotkey)
-            bt.logging.trace(f"| {current_thread} | Migrating predictions to table '{table_name}'")
+    for idx, miner_hotkey in enumerate(all_hotkeys_in_predictions):
 
-            # Create and index table
-            create_str = f"""
-                CREATE TABLE IF NOT EXISTS {table_name} (
-                    nextplace_id TEXT,
-                    miner_hotkey TEXT,
-                    predicted_sale_price REAL,
-                    predicted_sale_date TEXT,
-                    prediction_timestamp TEXT,
-                    market TEXT,
-                    PRIMARY KEY (nextplace_id, miner_hotkey)
-                )
-            """
-            idx_str = f"CREATE INDEX IF NOT EXISTS idx_prediction_timestamp ON {table_name}(prediction_timestamp)"
+        # Check and set weights during migration
+        if idx % 5 == 0:
+            validator.check_timer_set_weights()
+
+        # Build table name
+        table_name = build_miner_predictions_table_name(miner_hotkey)
+        bt.logging.trace(f"| {current_thread} | Migrating predictions to table '{table_name}'")
+
+        # Create and index table
+        create_str = f"""
+            CREATE TABLE IF NOT EXISTS {table_name} (
+                nextplace_id TEXT,
+                miner_hotkey TEXT,
+                predicted_sale_price REAL,
+                predicted_sale_date TEXT,
+                prediction_timestamp TEXT,
+                market TEXT,
+                PRIMARY KEY (nextplace_id, miner_hotkey)
+            )
+        """
+        idx_str = f"CREATE INDEX IF NOT EXISTS idx_prediction_timestamp ON {table_name}(prediction_timestamp)"
+
+        with validator.database_manager.lock:
             validator.database_manager.query_and_commit(create_str)
             validator.database_manager.query_and_commit(idx_str)
 
-            # Get unscored predictions for migration
-            miner_predictions = validator.database_manager.query(f"""
-                SELECT nextplace_id, miner_hotkey, predicted_sale_price, predicted_sale_date, prediction_timestamp, market
-                FROM predictions
-                WHERE miner_hotkey='{miner_hotkey}'
-                AND scored IS NOT 1
-            """)
+        # Get unscored predictions for migration
+        miner_predictions = validator.database_manager.query(f"""
+            SELECT nextplace_id, miner_hotkey, predicted_sale_price, predicted_sale_date, prediction_timestamp, market
+            FROM predictions
+            WHERE miner_hotkey='{miner_hotkey}'
+            AND scored IS NOT 1
+        """)
 
-            # Migrate predictions
-            insert_query = f"""
-                INSERT OR IGNORE INTO {table_name}
-                (nextplace_id, miner_hotkey, predicted_sale_price, predicted_sale_date, prediction_timestamp, market)
-                VALUES(?, ?, ?, ?, ?, ?)
-            """
+        # Migrate predictions
+        insert_query = f"""
+            INSERT OR IGNORE INTO {table_name}
+            (nextplace_id, miner_hotkey, predicted_sale_price, predicted_sale_date, prediction_timestamp, market)
+            VALUES(?, ?, ?, ?, ?, ?)
+        """
+
+        with validator.database_manager.lock:
             validator.database_manager.query_and_commit_many(insert_query, miner_predictions)
 
-            percent_done = round(((idx + 1) / len(all_hotkeys_in_predictions)) * 100, 2)
-            bt.logging.trace(f"| {current_thread} | 📩 {percent_done}% done migrating predictions")
+        percent_done = round(((idx + 1) / len(all_hotkeys_in_predictions)) * 100, 2)
+        bt.logging.trace(f"| {current_thread} | 📩 {percent_done}% done migrating predictions")
 
 
 if __name__ == "__main__":

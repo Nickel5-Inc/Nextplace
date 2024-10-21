@@ -61,11 +61,12 @@ class ScoringCalculator:
             None
         """
         now = datetime.now(timezone.utc).strftime(ISO8601)
+        lifetime_score = new_scores['total_score'] / new_scores['new_predictions']
         query_str = f"""
                         INSERT INTO miner_scores (miner_hotkey, lifetime_score, total_predictions, last_update_timestamp)
                         VALUES (?, ?, ?, ?)
                     """
-        values = (miner_hotkey, new_scores['total_score'], new_scores['new_predictions'], now)
+        values = (miner_hotkey, lifetime_score, new_scores['new_predictions'], now)
         with self.database_manager.lock:
             self.database_manager.query_and_commit_with_values(query_str, values)
 
