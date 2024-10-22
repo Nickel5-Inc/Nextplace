@@ -154,8 +154,6 @@ class Scorer:
             bt.logging.trace(f"| {thread_name} | Ø No valid predictions to send to Nextplace site after parsing.")
             return
 
-        bt.logging.info(f"| {thread_name} | ➠ Sending {len(data_to_send)} predictions to the website")
-
         headers = {
             'Accept': '*/*',
             'Content-Type': 'application/json'
@@ -247,6 +245,7 @@ class Scorer:
         Parses an ISO 8601 datetime string, handling strings that end with 'Z'.
         Returns a naive datetime object (without timezone info).
         """
+        thread_name = threading.current_thread().name
         try:
             if datetime_str.endswith('Z'):
                 datetime_str = datetime_str.rstrip('Z')
@@ -255,6 +254,6 @@ class Scorer:
             else:
                 return datetime.fromisoformat(datetime_str)
         except ValueError as e:
-            bt.logging.info(f"| {self.thread_name} | ❗ Error in sending data. Trying to parse datetime string '{datetime_str}': {e}")
+            bt.logging.info(f"| {thread_name} | ❗ Error in sending data. Trying to parse datetime string '{datetime_str}': {e}")
             return None
                 
