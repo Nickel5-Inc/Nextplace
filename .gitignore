@@ -1,0 +1,14 @@
+# Ignore specific Python script
+print_all.py
+
+# Ignore Python cache files
+__pycache__/
+*.pyc
+
+# Ignore egg-info directory
+*.egg-info/
+
+.env
+venv
+
+# Ignore specific directories
