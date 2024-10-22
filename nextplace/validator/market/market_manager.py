@@ -29,12 +29,6 @@ class MarketManager:
         number_of_properties = self.database_manager.get_size_of_table('properties')
         if number_of_properties > 0:
             return self._find_initial_market_from_properties()
-
-        # Get from the predictions table
-        number_of_predictions = self.database_manager.get_size_of_table('predictions')
-        if number_of_predictions > 0:
-            return self._find_initial_market_from_predictions()
-
         # Just start at beginning
         return 0
 
@@ -54,31 +48,8 @@ class MarketManager:
             market = some_property[0][0]  # Extract market
             idx = next((i for i, obj in enumerate(self.markets) if obj["name"] == market), None)  # Get market index
             return idx + 1 if idx < len(self.markets) - 1 else 0  # Get next market, wrap around if need be
-        else:
-            number_of_predictions = self.database_manager.get_size_of_table('predictions')  # Check size of predictions
-            if number_of_predictions > 0:
-                return self._find_initial_market_from_predictions()
         return 0
 
-    def _find_initial_market_from_predictions(self) -> int:
-        """
-        Get the newest prediction in the predictions table, find that market, then return the next one
-        Returns:
-            The next market
-        """
-        most_recent_prediction = self.database_manager.query(
-            """
-                SELECT market 
-                FROM predictions
-                ORDER BY prediction_timestamp DESC
-                LIMIT 1
-            """
-        )
-        if not most_recent_prediction:
-            return 0
-        market = most_recent_prediction[0][0]  # Extract market name
-        idx = next((i for i, obj in enumerate(self.markets) if obj["name"] == market), None)  # Get index of market
-        return idx + 1 if idx < len(self.markets) - 1 else 0  # Return next one, wrap around if need be
 
     def get_properties_for_market(self) -> None:
         """

@@ -1,6 +1,5 @@
 import threading
 from typing import Dict, List, Tuple
-from collections import defaultdict
 from datetime import datetime, timezone
 import bittensor as bt
 from nextplace.validator.utils.contants import ISO8601
@@ -11,81 +10,110 @@ class ScoringCalculator:
     def __init__(self, database_manager, sold_homes_api):
         self.database_manager = database_manager
         self.sold_homes_api = sold_homes_api
-        self.current_thread = threading.current_thread().name
-        
-    def process_scorable_predictions(self, scorable_predictions) -> None:
+
+    def process_scorable_predictions(self, scorable_predictions: list, miner_hotkey: str) -> None:
         """
         Score miner predictions in bulk
         """
-        cursor, db_connection = self.database_manager.get_cursor()
-        try:
-            miner_scores = self._fetch_current_miner_scores(cursor)
-            new_scores, predictions_to_mark = self._calculate_new_scores(scorable_predictions)
-            self._update_miner_scores(cursor, miner_scores, new_scores)
-            self._mark_predictions_as_scored(cursor, predictions_to_mark)
-            db_connection.commit()
-            bt.logging.info(f"| {self.current_thread} | 🎯 Scored {len(scorable_predictions)} predictions")
-        finally:
-            cursor.close()
-            db_connection.close()
+        miner_score = self._fetch_current_miner_score(miner_hotkey)
+        new_scores = self._calculate_new_scores(scorable_predictions)
+        if miner_score is not None:
+            self._update_miner_score(miner_score, new_scores, miner_hotkey)
+        else:
+            self._handle_new_miner_score(miner_hotkey, new_scores)
+        current_thread = threading.current_thread().name
+        bt.logging.info(f"| {current_thread} | 🎯 Scored {len(scorable_predictions)} predictions for hotkey '{miner_hotkey}'")
 
-    def _fetch_current_miner_scores(self, cursor) -> Dict[str, Dict[str, float]]:
-        cursor.execute('SELECT miner_hotkey, lifetime_score, total_predictions FROM miner_scores')
-        return {row[0]: {'lifetime_score': row[1], 'total_predictions': row[2]} for row in cursor.fetchall()}
+    def _update_miner_score(self, miner_score: Dict[str, float], new_scores: Dict[str, float], miner_hotkey: str) -> None:
+        """
+        Update scores for a miner
+        Args:
+            miner_score: Miner's existing score data
+            new_scores: Miner's new score data
+            miner_hotkey: Miner's hotkey
+
+        Returns:
+            None
+        """
+        now = datetime.now(timezone.utc).strftime(ISO8601)
+        old_score = miner_score['lifetime_score']
+        old_predictions = miner_score['total_predictions']
+        new_total_score = (old_score * old_predictions) + new_scores['total_score']
+        new_total_predictions = old_predictions + new_scores['new_predictions']
+        new_lifetime_score = new_total_score / new_total_predictions
+
+        values = (new_lifetime_score, new_total_predictions, now)
+        with self.database_manager.lock:
+            self.database_manager.query_and_commit_with_values(f'''
+                UPDATE miner_scores 
+                SET lifetime_score = ?, total_predictions = ?, last_update_timestamp = ?
+                WHERE miner_hotkey = '{miner_hotkey}'
+            ''', values)
+
+    def _handle_new_miner_score(self, miner_hotkey: str, new_scores: dict) -> None:
+        """
+        Add scores for a miner without any scores yet
+        Args:
+            miner_hotkey: Hotkey of the miner
+            new_scores: Miner's new score data
+
+        Returns:
+            None
+        """
+        now = datetime.now(timezone.utc).strftime(ISO8601)
+        lifetime_score = new_scores['total_score'] / new_scores['new_predictions']
+        query_str = f"""
+                        INSERT INTO miner_scores (miner_hotkey, lifetime_score, total_predictions, last_update_timestamp)
+                        VALUES (?, ?, ?, ?)
+                    """
+        values = (miner_hotkey, lifetime_score, new_scores['new_predictions'], now)
+        with self.database_manager.lock:
+            self.database_manager.query_and_commit_with_values(query_str, values)
+
+    def _fetch_current_miner_score(self, miner_hotkey: str) -> Dict[str, float] or None:
+        """
+        Retrieve scores for a miner
+        Args:
+            miner_hotkey: Hotkey of the miner
+
+        Returns:
+            Miners scores or None
+        """
+        current_thread = threading.current_thread().name
+        query_str = f"""
+            SELECT miner_hotkey, lifetime_score, total_predictions
+            FROM miner_scores
+            WHERE miner_hotkey = '{miner_hotkey}'
+            LIMIT 1
+        """
+        with self.database_manager.lock:
+            results = self.database_manager.query(query_str)
+        if len(results) > 0:  # Update existing Miner score
+            bt.logging.debug(f"| {current_thread} | 🦉 Found existing scores for miner with hotkey '{miner_hotkey}'")
+            result = results[0]
+            return {'lifetime_score': result[1], 'total_predictions': result[2]}
+        else:  # No scores for this Miner yet
+            bt.logging.debug(f"| {current_thread} | 🐦‍⬛ Found no existing scores for miner with hotkey '{miner_hotkey}'")
+            return None
 
     def _get_num_sold_homes(self) -> int:
+
+        current_thread = threading.current_thread().name
         num_sold_homes = self.database_manager.get_size_of_table('sales')
-        bt.logging.info(f"| {self.current_thread} | 🥳 Received {num_sold_homes} sold homes")
+        bt.logging.info(f"| {current_thread} | 🥳 Received {num_sold_homes} sold homes")
         return num_sold_homes
 
-    def _calculate_new_scores(self, scorable_predictions: List[Tuple]) -> Tuple[Dict[str, Dict[str, float]], List[Tuple]]:
-        new_scores = defaultdict(lambda: {'total_score': 0, 'new_predictions': 0})
-        predictions_to_mark = []
+    def _calculate_new_scores(self, scorable_predictions: List[Tuple]) -> Dict[str, float]:
+        new_scores = {'total_score': 0, 'new_predictions': 0}
 
         for prediction in scorable_predictions:
-            property_id, miner_hotkey, predicted_price, predicted_date, actual_price, actual_date = prediction
+            miner_hotkey, predicted_price, predicted_date, actual_price, actual_date = prediction
             score = self.calculate_score(actual_price, predicted_price, actual_date, predicted_date)
 
-            new_scores[miner_hotkey]['total_score'] += score
-            new_scores[miner_hotkey]['new_predictions'] += 1
-            predictions_to_mark.append((property_id, miner_hotkey))
+            new_scores['total_score'] += score
+            new_scores['new_predictions'] += 1
 
-        return new_scores, predictions_to_mark
-
-    def _update_miner_scores(self, cursor, miner_scores: Dict[str, Dict[str, float]], new_scores: Dict[str, Dict[str, float]]) -> None:
-        updates = []
-        inserts = []
-        for miner_hotkey, data in new_scores.items():
-            if miner_hotkey in miner_scores:
-                old_score = miner_scores[miner_hotkey]['lifetime_score']
-                old_predictions = miner_scores[miner_hotkey]['total_predictions']
-                new_total_score = (old_score * old_predictions) + data['total_score']
-                new_total_predictions = old_predictions + data['new_predictions']
-                new_lifetime_score = new_total_score / new_total_predictions
-                updates.append((new_lifetime_score, new_total_predictions, miner_hotkey))
-            else:
-                new_lifetime_score = data['total_score'] / data['new_predictions']
-                inserts.append((miner_hotkey, new_lifetime_score, data['new_predictions']))
-
-        now = datetime.now(timezone.utc).strftime(ISO8601)
-        cursor.executemany(f'''
-            UPDATE miner_scores 
-            SET lifetime_score = ?, total_predictions = ?, last_update_timestamp = '{now}'
-            WHERE miner_hotkey = ?
-        ''', updates)
-
-        cursor.executemany(f'''
-            INSERT INTO miner_scores (miner_hotkey, lifetime_score, total_predictions, last_update_timestamp)
-            VALUES (?, ?, ?, '{now}')
-        ''', inserts)
-
-    def _mark_predictions_as_scored(self, cursor, predictions_to_mark: List[Tuple]) -> None:
-        now = datetime.now(timezone.utc).strftime(ISO8601)
-        cursor.executemany(f'''
-            UPDATE predictions
-            SET scored = 1, score_timestamp = '{now}'
-            WHERE property_id = ? AND miner_hotkey = ?
-        ''', predictions_to_mark)
+        return new_scores
 
     def calculate_score(self, actual_price: str, predicted_price: str, actual_date: str, predicted_date: str):
         # Convert date strings to datetime objects

@@ -9,10 +9,9 @@ from nextplace.validator.predictions.prediction_manager import PredictionManager
 from nextplace.validator.scoring.scoring import Scorer
 from nextplace.validator.synapse.synapse_manager import SynapseManager
 from nextplace.validator.setting_weights.weights import WeightSetter
+from nextplace.validator.utils.contants import build_miner_predictions_table_name
 from template.base.validator import BaseValidatorNeuron
-from nextplace.validator.outgoing_data.website_comms import WebsiteProcessor
 import threading
-from datetime import datetime, timezone, timedelta
 
 
 class RealEstateValidator(BaseValidatorNeuron):
@@ -24,10 +23,9 @@ class RealEstateValidator(BaseValidatorNeuron):
         self.table_initializer = TableInitializer(self.database_manager)
         self.table_initializer.create_tables()  # Create database tables
         self.market_manager = MarketManager(self.database_manager, self.markets)
-        self.scorer = Scorer(self.database_manager, self.markets)
+        self.scorer = Scorer(self.database_manager, self.markets, self.metagraph)
         self.synapse_manager = SynapseManager(self.database_manager)
         self.prediction_manager = PredictionManager(self.database_manager, self.metagraph)
-        self.website_processor = WebsiteProcessor(self.database_manager)
         self.netuid = self.config.netuid
         self.should_step = True
         self.current_thread = threading.current_thread().name
@@ -55,16 +53,16 @@ class RealEstateValidator(BaseValidatorNeuron):
             None
         """
         current_thread = threading.current_thread().name
-        bt.logging.trace(f"| {current_thread} | Managing active miners")
 
         # Build sets
         metagraph_hotkeys = set(self.metagraph.hotkeys)  # Get hotkeys in metagraph
         with self.database_manager.lock:
             stored_hotkeys = set(row[0] for row in self.database_manager.query("SELECT miner_hotkey FROM active_miners"))  # Get stored hotkeys
 
-        # Set operations
+        bt.logging.trace(f"| {current_thread} | Managing active miners. Found {len(stored_hotkeys)} tracked miners and {len(metagraph_hotkeys)} metagraph hotkeys")
+
+        # Set operation
         deregistered_hotkeys = list(stored_hotkeys.difference(metagraph_hotkeys))  # Deregistered hotkeys are stored, but not in the metagraph
-        new_hotkeys = list(metagraph_hotkeys.difference(stored_hotkeys))  # New hotkeys are in the metagraph, but not stored
 
         # If we have recently deregistered miners
         if len(deregistered_hotkeys) > 0:
@@ -72,19 +70,31 @@ class RealEstateValidator(BaseValidatorNeuron):
             # For all deregistered miners, clear out their predictions & scores. Remove from active_miners table
             tuples = [(x,) for x in deregistered_hotkeys]
             with self.database_manager.lock:
-                self.database_manager.query_and_commit_many("DELETE FROM predictions WHERE miner_hotkey = ?", tuples)
+                # Drop predictions tables for deregistered miners
+                for hotkey in deregistered_hotkeys:
+                    table_name = build_miner_predictions_table_name(hotkey)
+                    self.database_manager.query_and_commit(f"DROP TABLE IF EXISTS '{table_name}'")
                 self.database_manager.query_and_commit_many("DELETE FROM miner_scores WHERE miner_hotkey = ?", tuples)
                 self.database_manager.query_and_commit_many("DELETE FROM active_miners WHERE miner_hotkey = ?", tuples)
 
-        # If we have recently registered miners
-        if len(new_hotkeys) > 0:
-            bt.logging.trace(f"| {current_thread} | ♻️ Found {len(new_hotkeys)} newly registered hotkeys. Tracking.")
-            # Add newly registered miners to active_miners table
-            tuples = [(x,) for x in new_hotkeys]
-            with self.database_manager.lock:
-                self.database_manager.query_and_commit_many("INSERT OR IGNORE INTO active_miners (miner_hotkey) VALUES (?)", tuples)
-
         bt.logging.trace(f"| {current_thread} | Thread terminating")
+
+    def print_total_number_of_predictions(self) -> None:
+        """
+        RUN IN THREAD
+        Prints total number of predictions across all miners
+        Returns:
+            None
+        """
+        current_thread = threading.current_thread().name
+        all_table_query = "SELECT name FROM sqlite_master WHERE type='table'"
+        all_tables = [x[0] for x in self.database_manager.query(all_table_query)]  # Get all tables in database
+        predictions_tables = [s for s in all_tables if s.startswith("predictions_")]
+        count = 0
+        for predictions_table in predictions_tables:
+            with self.database_manager.lock:
+                count += self.database_manager.get_size_of_table(predictions_table)
+        bt.logging.info(f"| {current_thread} | ✨ Database currently has {count} predictions")
 
     def check_timer_set_weights(self) -> None:
         """
@@ -101,13 +111,6 @@ class RealEstateValidator(BaseValidatorNeuron):
                 self.weight_setter.check_timer_set_weights()
             finally:
                 self.database_manager.lock.release()
-
-    def process_and_send_predictions(self) -> None:
-        """
-        Process scored predictions and send them to the website.
-        """
-        bt.logging.info(f"| {self.current_thread} | 🔄 Processing and sending predictions to the website.")
-        self.website_processor.send_data()
 
     def is_thread_running(self, thread_name: str):
         for thread in threading.enumerate():  # Get a list of all active threads

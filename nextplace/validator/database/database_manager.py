@@ -20,7 +20,7 @@ class DatabaseManager:
         if not os.path.exists(db_dir):
             os.makedirs(db_dir)  # Create db dir
 
-    def query(self, query: str) -> list:
+    def query(self, query: str) -> list[tuple]:
         """
         Get all results of a query from the database
         Args:
@@ -39,7 +39,7 @@ class DatabaseManager:
             db_connection.close()
             return rows
 
-    def query_with_values(self, query: str, values: tuple) -> list:
+    def query_with_values(self, query: str, values: tuple) -> list[tuple]:
         """
         Get all results of a query from the database
         Args:
@@ -150,3 +150,7 @@ class DatabaseManager:
         query_str = f"SELECT COUNT(*) FROM {table_name}"
         result = self.query(query_str)
         return result[0][0]
+
+    def table_exists(self, table_name: str) -> bool:
+        result = self.query(f"""SELECT name FROM sqlite_master WHERE type='table' AND name='{table_name}'""")
+        return result is not None

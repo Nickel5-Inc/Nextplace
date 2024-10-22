@@ -22,16 +22,14 @@ class SoldHomesAPI(ApiBase):
         """
         current_thread = threading.current_thread().name
         num_markets = len(self.markets)
-        with self.database_manager.lock:
-            oldest_prediction = self._get_oldest_prediction()
-        bt.logging.trace(f"| {current_thread} | 🕵🏻 Looking for homes sold since oldest unscored prediction: '{oldest_prediction}'")
+        bt.logging.trace(f"| {current_thread} | 🕵🏻 Looking for recently sold homes'")
         for idx, market in enumerate(self.markets):
             bt.logging.trace(f"| {current_thread} | 🔍 Getting sold homes in {market['name']}")
-            self._process_region_sold_homes(market, oldest_prediction)
+            self._process_region_sold_homes(market)
             percent_done = round(((idx + 1) / num_markets) * 100, 2)
             bt.logging.trace(f"| {current_thread} | {percent_done}% of markets processed")
 
-    def _process_region_sold_homes(self, market: dict, oldest_prediction: str) -> None:
+    def _process_region_sold_homes(self, market: dict) -> None:
         """
         Iteratively hit API for sold homes in market, store valid homes in memory, ingest
         Args:
@@ -52,7 +50,7 @@ class SoldHomesAPI(ApiBase):
             # Build the query string for this page
             querystring = {
                 "regionId": region_id,
-                "soldWithin": 31,
+                "soldWithin": 21,
                 "limit": self.max_results_per_page,
                 "page": page
             }
@@ -74,7 +72,7 @@ class SoldHomesAPI(ApiBase):
 
             # Iterate all homes
             for home in homes:
-                self._process_home(home, oldest_prediction, valid_results)
+                self._process_home(home, valid_results)
 
             if len(homes) < self.max_results_per_page:  # Last page
                 break
@@ -83,7 +81,7 @@ class SoldHomesAPI(ApiBase):
 
         self._ingest_valid_homes(valid_results)
 
-    def _process_home(self, home: any, oldest_prediction: str, result_tuples: list[tuple]) -> None:
+    def _process_home(self, home: any, result_tuples: list[tuple]) -> None:
         home_data = home['homeData']
         property_id = home_data.get('propertyId')  # Extract property id
         sale_price = self._get_nested(home_data, 'priceInfo', 'amount')  # Extract sale price
@@ -91,7 +89,7 @@ class SoldHomesAPI(ApiBase):
         address = self._get_nested(home_data, 'addressInfo', 'formattedStreetLine')
         zip_code = self._get_nested(home_data, 'addressInfo', 'zip')
         nextplace_id = self.get_hash(address, zip_code)
-        if address and zip_code and property_id and sale_price and sale_date and sale_date > oldest_prediction:
+        if address and zip_code and property_id and sale_price and sale_date:
             result_tuples.append((nextplace_id, property_id, sale_price, sale_date))
 
     def _ingest_valid_homes(self, result_tuples: list[tuple]) -> None:
@@ -109,18 +107,3 @@ class SoldHomesAPI(ApiBase):
                 VALUES (?, ?, ?, ?)
             """
             self.database_manager.query_and_commit_many(query_str, result_tuples)
-
-    def _get_oldest_prediction(self) -> str:
-        """
-        Query predictions table for oldest prediction
-        Returns:
-            the oldest prediction_timestamp
-        """
-        query = """
-            SELECT MIN(prediction_timestamp) 
-            FROM predictions 
-            WHERE prediction_timestamp IS NOT NULL 
-            AND (scored IS FALSE OR scored IS NULL)
-        """
-        query_result = self.database_manager.query(query)
-        return query_result[0][0]
