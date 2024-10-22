@@ -4,7 +4,6 @@ import traceback
 import threading
 from datetime import datetime, timezone, timedelta
 from nextplace.validator.utils.system import timeout_with_multiprocess
-from nextplace.validator.utils.contants import ISO8601
 
 
 class WeightSetter:
@@ -24,7 +23,7 @@ class WeightSetter:
         """
         now = datetime.now(timezone.utc)
         time_diff = now - self.timer
-        return time_diff >= timedelta(hours=3)
+        return time_diff >= timedelta(hours=1)
 
     def check_timer_set_weights(self) -> None:
         """
