@@ -124,12 +124,13 @@ class Scorer:
         thread_name = threading.current_thread().name
         bt.logging.trace(f"| {thread_name} | 🎢 Attempting to send {len(scored_predictions)} scored predictions to NextPlace website")
 
-        formatted_predictions = [(x[0], x[1], None, x[4], x[2], x[3]) for x in scored_predictions]
+        formatted_predictions = [(x[0], x[1], None, x[4], x[2], x[3], x[6], x[7]) for x in scored_predictions]
         data_to_send = []
 
         for prediction in formatted_predictions:
 
-            nextplace_id, miner_hotkey, miner_coldkey, prediction_date, predicted_sale_price, predicted_sale_date = prediction
+            nextplace_id, miner_hotkey, miner_coldkey, prediction_date, predicted_sale_price, predicted_sale_date, sale_price, sale_date = prediction
+            score = self.scoring_calculator.calculate_score(sale_price, predicted_sale_price, sale_date, predicted_sale_date)
             prediction_date_parsed = self.parse_iso_datetime(prediction_date) if isinstance(prediction_date, str) else prediction_date
             predicted_sale_date_parsed = self.parse_iso_datetime(predicted_sale_date) if isinstance(predicted_sale_date, str) else predicted_sale_date
 
@@ -146,7 +147,8 @@ class Scorer:
                 "minerColdKey": miner_coldkey if miner_coldkey else "DummyColdkey",
                 "predictionDate": prediction_date_iso,
                 "predictedSalePrice": predicted_sale_price,
-                "predictedSaleDate": predicted_sale_date_iso
+                "predictedSaleDate": predicted_sale_date_iso,
+                "score": score
             }
             data_to_send.append(data_dict)
 
