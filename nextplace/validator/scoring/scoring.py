@@ -9,6 +9,8 @@ from nextplace.validator.database.database_manager import DatabaseManager
 from nextplace.validator.utils.contants import ISO8601, build_miner_predictions_table_name
 import requests
 
+from nextplace.validator.website_data.website_communicator import WebsiteCommunicator
+
 """
 Helper class manages scoring Miner predictions
 """
@@ -156,26 +158,8 @@ class Scorer:
             bt.logging.trace(f"| {thread_name} | Ø No valid predictions to send to Nextplace site after parsing.")
             return
 
-        headers = {
-            'Accept': '*/*',
-            'Content-Type': 'application/json'
-        }
-
-        try:
-            response = requests.post(
-                "https://dev-nextplace-api.azurewebsites.net/Predictions",
-                json=data_to_send,
-                headers=headers
-            )
-            response.raise_for_status()
-            bt.logging.info(f"| {thread_name} | ✅ Data sent to Nextplace site successfully.")
-
-        except requests.exceptions.HTTPError as e:
-            bt.logging.warning(f"| {thread_name} | ❗ HTTP error occurred: {e}. No data was sent to the Nextplace site.")
-            if e.response is not None:
-                bt.logging.warning(f"| {thread_name} | ❗ Error sending data to site. Response content: {e.response.text}")
-        except requests.exceptions.RequestException as e:
-            bt.logging.warning(f"| {thread_name} | ❗ Error sending data to site. An error occurred while sending data: {e}. No data was sent to the Nextplace site.")
+        website_communicator = WebsiteCommunicator("Predictions")
+        website_communicator.send_data(data=data_to_send)
 
     def _move_predictions_to_scored(self, scored_predictions: list[tuple]) -> None:
         """
