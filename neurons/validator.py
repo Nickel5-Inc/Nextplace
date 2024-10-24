@@ -4,7 +4,7 @@ import bittensor as bt
 import threading
 import traceback
 
-from nextplace.validator.miner_manager.MinerManager import MinerManager
+from nextplace.validator.miner_manager.miner_manager import MinerManager
 from nextplace.validator.nextplace_validator import RealEstateValidator
 from nextplace.validator.utils.contants import build_miner_predictions_table_name
 
