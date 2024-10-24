@@ -148,7 +148,7 @@ class Scorer:
                 "predictionDate": prediction_date_iso,
                 "predictedSalePrice": predicted_sale_price,
                 "predictedSaleDate": predicted_sale_date_iso,
-                "score": score
+                "PredictionScore": score
             }
             data_to_send.append(data_dict)
 
