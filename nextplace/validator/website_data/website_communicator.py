@@ -9,10 +9,6 @@ class WebsiteCommunicator:
     def __init__(self, endpoint: str):
         api_base = "https://dev-nextplace-api.azurewebsites.net"
         self.endpoint = f"{api_base}/{endpoint}"
-        self.headers = {
-            'Accept': '*/*',
-            'Content-Type': 'application/json'
-        }
 
     def send_data(self, data: list[dict[str, Any]]) -> None:
         """
@@ -28,7 +24,10 @@ class WebsiteCommunicator:
             response = requests.post(
                 self.endpoint,
                 json=data,
-                headers=self.headers
+                headers={
+                    'Accept': '*/*',
+                    'Content-Type': 'application/json'
+                }
             )
             response.raise_for_status()
             bt.logging.info(f"| {current_thread} | ✅ Data sent to Nextplace site successfully.")

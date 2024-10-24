@@ -5,15 +5,15 @@ from nextplace.validator.database.database_manager import DatabaseManager
 from nextplace.validator.database.table_initializer import TableInitializer
 from nextplace.validator.market.market_manager import MarketManager
 from nextplace.validator.market.markets import real_estate_markets
+from nextplace.validator.miner_manager.MinerManager import MinerManager
 from nextplace.validator.predictions.prediction_manager import PredictionManager
 from nextplace.validator.scoring.scoring import Scorer
 from nextplace.validator.synapse.synapse_manager import SynapseManager
 from nextplace.validator.setting_weights.weights import WeightSetter
-from nextplace.validator.utils.contants import build_miner_predictions_table_name
+from nextplace.validator.website_data.miner_score_sender import MinerScoreSender
 from nextplace.validator.website_data.website_communicator import WebsiteCommunicator
 from template.base.validator import BaseValidatorNeuron
 import threading
-import requests
 
 
 class RealEstateValidator(BaseValidatorNeuron):
@@ -31,6 +31,8 @@ class RealEstateValidator(BaseValidatorNeuron):
         self.netuid = self.config.netuid
         self.should_step = True
         self.current_thread = threading.current_thread().name
+        self.miner_manager = MinerManager(self.database_manager, self.metagraph)
+        self.miner_score_sender = MinerScoreSender(self.database_manager)
 
         self.weight_setter = WeightSetter(
             metagraph=self.metagraph,
@@ -45,70 +47,6 @@ class RealEstateValidator(BaseValidatorNeuron):
         bt.logging.info(f"| {self.current_thread} | 🔗 Syncing metagraph")
         self.metagraph.sync(subtensor=self.subtensor)
         bt.logging.trace(f"| {self.current_thread} | 📈 Metagraph has {len(self.metagraph.hotkeys)} hotkeys")
-
-    def manage_miner_data(self) -> None:
-        """
-        RUN IN THREAD
-        Remove miner data if miner has deregistered
-        Store hotkey if miner has registered
-        Returns:
-            None
-        """
-        current_thread = threading.current_thread().name
-
-        # Build sets
-        metagraph_hotkeys = set(self.metagraph.hotkeys)  # Get hotkeys in metagraph
-        with self.database_manager.lock:
-            stored_hotkeys = set(row[0] for row in self.database_manager.query("SELECT miner_hotkey FROM active_miners"))  # Get stored hotkeys
-
-        bt.logging.trace(f"| {current_thread} | Managing active miners. Found {len(stored_hotkeys)} tracked miners and {len(metagraph_hotkeys)} metagraph hotkeys")
-
-        # Set operation
-        deregistered_hotkeys = list(stored_hotkeys.difference(metagraph_hotkeys))  # Deregistered hotkeys are stored, but not in the metagraph
-
-        # If we have recently deregistered miners
-        if len(deregistered_hotkeys) > 0:
-            bt.logging.trace(f"| {current_thread} | 🚨 Found {len(deregistered_hotkeys)} deregistered hotkeys. Cleaning out their data.")
-            # For all deregistered miners, clear out their predictions & scores. Remove from active_miners table
-            tuples = [(x,) for x in deregistered_hotkeys]
-            with self.database_manager.lock:
-                # Drop predictions tables for deregistered miners
-                for hotkey in deregistered_hotkeys:
-                    table_name = build_miner_predictions_table_name(hotkey)
-                    self.database_manager.query_and_commit(f"DROP TABLE IF EXISTS '{table_name}'")
-                self.database_manager.query_and_commit_many("DELETE FROM miner_scores WHERE miner_hotkey = ?", tuples)
-                self.database_manager.query_and_commit_many("DELETE FROM active_miners WHERE miner_hotkey = ?", tuples)
-
-        bt.logging.trace(f"| {current_thread} | Thread terminating")
-
-    def send_miner_scores_to_website(self) -> None:
-        """
-        RUN IN THREAD
-        Send miner scores to website
-        Returns:
-            None
-        """
-        current_thread = threading.current_thread().name
-        with self.database_manager.lock:
-            miner_scores = self.database_manager.query("SELECT miner_hotkey, lifetime_score, total_predictions, last_update_timestamp FROM miner_scores")
-        if len(miner_scores) == 0:
-            bt.logging.info(f"| {current_thread} | 🔔 No miner scores to send to website")
-
-        # ToDo Update obj
-        data_to_send = [
-            {
-                "hotkey": x[0],
-                "score": x[1],
-                "numPredictions": x[2],
-                "lastUpdateTimestamp": x[3]
-            }
-            for x in miner_scores
-        ]
-
-        bt.logging.info(f"| {current_thread} | ⛵ Sending {len(miner_scores)} miner scores to website")
-        website_communicator = WebsiteCommunicator("")  # ToDo Update endpoint
-        website_communicator.send_data(data=data_to_send)
-
 
     def print_total_number_of_predictions(self) -> None:
         """

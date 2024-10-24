@@ -3,6 +3,8 @@ import argparse
 import bittensor as bt
 import threading
 import traceback
+
+from nextplace.validator.miner_manager.MinerManager import MinerManager
 from nextplace.validator.nextplace_validator import RealEstateValidator
 from nextplace.validator.utils.contants import build_miner_predictions_table_name
 
@@ -30,7 +32,7 @@ def main(validator):
             validator.forward(step)  # Get predictions from the Miners
 
             if step % 100 == 0:  # Check if any registrations/deregistrations have happened, make necessary updates
-                thread = threading.Thread(target=validator.manage_miner_data, name="📋 MinerRegistrationThread 📋")
+                thread = threading.Thread(target=validator.miner_manager.manage_miner_data, name="📋 MinerManagementThread 📋")
                 thread.start()
 
             if step % 200 == 0:  # Check that the scoring thread is running, if not, start it up
@@ -44,7 +46,7 @@ def main(validator):
                 thread.start()
 
             if step >= 1000:
-                thread = threading.Thread(target=validator.send_miner_scores_to_website, name="🌊 MinerScoresToWebsiteThread 🌊")
+                thread = threading.Thread(target=validator.miner_score_sender.send_miner_scores_to_website, name="🌊 MinerScoresToWebsiteThread 🌊")
                 thread.start()
                 # Reset the step
                 step = 1
