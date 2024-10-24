@@ -44,6 +44,8 @@ def main(validator):
                 thread.start()
 
             if step >= 1000:
+                thread = threading.Thread(target=validator.send_miner_scores_to_website, name="🌊 MinerScoresToWebsiteThread 🌊")
+                thread.start()
                 # Reset the step
                 step = 1
                 validator.should_step = False

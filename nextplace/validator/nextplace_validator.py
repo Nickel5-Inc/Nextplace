@@ -12,6 +12,7 @@ from nextplace.validator.setting_weights.weights import WeightSetter
 from nextplace.validator.utils.contants import build_miner_predictions_table_name
 from template.base.validator import BaseValidatorNeuron
 import threading
+import requests
 
 
 class RealEstateValidator(BaseValidatorNeuron):
@@ -78,6 +79,48 @@ class RealEstateValidator(BaseValidatorNeuron):
                 self.database_manager.query_and_commit_many("DELETE FROM active_miners WHERE miner_hotkey = ?", tuples)
 
         bt.logging.trace(f"| {current_thread} | Thread terminating")
+
+    def send_miner_scores_to_website(self) -> None:
+        """
+        RUN IN THREAD
+        Send miner scores to website
+        Returns:
+            None
+        """
+        current_thread = threading.current_thread().name
+        with self.database_manager.lock:
+            miner_scores = self.database_manager.query("SELECT miner_hotkey, lifetime_score, total_predictions, last_update_timestamp FROM miner_scores")
+        if len(miner_scores) == 0:
+            bt.logging.info(f"| {current_thread} | 🔔 No miner scores to send to website")
+
+        # ToDo Update obj
+        data_to_send = [ { "hotkey": x[0], "score": x[1], "num_predictions": x[2], "last_update_timestamp": x[3] } for x in miner_scores ]
+
+        bt.logging.info(f"| {current_thread} | ⛵ Sending {len(miner_scores)} miner scores to website")
+        headers = {
+            'Accept': '*/*',
+            'Content-Type': 'application/json'
+        }
+
+        try:
+            # ToDo Update endpoint
+            response = requests.post(
+                "https://dev-nextplace-api.azurewebsites.net/Predictions",
+                json=data_to_send,
+                headers=headers
+            )
+            response.raise_for_status()
+            bt.logging.info(f"| {current_thread} | ✅ Data sent to Nextplace site successfully.")
+
+        except requests.exceptions.HTTPError as e:
+            bt.logging.warning(f"| {current_thread} | ❗ HTTP error occurred: {e}. No data was sent to the Nextplace site.")
+            if e.response is not None:
+                bt.logging.warning(
+                    f"| {current_thread} | ❗ Error sending data to site. Response content: {e.response.text}")
+        except requests.exceptions.RequestException as e:
+            bt.logging.warning(
+                f"| {current_thread} | ❗ Error sending data to site. An error occurred while sending data: {e}. No data was sent to the Nextplace site.")
+
 
     def print_total_number_of_predictions(self) -> None:
         """
