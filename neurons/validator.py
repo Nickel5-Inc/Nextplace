@@ -3,15 +3,14 @@ import argparse
 import bittensor as bt
 import threading
 import traceback
-
-from nextplace.validator.miner_manager.miner_manager import MinerManager
 from nextplace.validator.nextplace_validator import RealEstateValidator
 from nextplace.validator.utils.contants import build_miner_predictions_table_name
 
-SCORE_THREAD_NAME = "🏋🏻ScoreThread 🏋🏻"
+SCORE_THREAD_NAME = "🏋🏻ScoreThread 🏋"
+
 
 def main(validator):
-    step = 1  # Initialize step
+    step = 999  # Initialize step
     current_thread = threading.current_thread().name
 
     check_and_migrate_predictions(validator)
