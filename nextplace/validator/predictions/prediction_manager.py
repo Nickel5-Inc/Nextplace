@@ -87,7 +87,9 @@ class PredictionManager:
         self._track_miners(valid_hotkeys)
 
     def _track_miners(self, valid_hotkeys: set[str]) -> None:
-        formatted = [(x[0],) for x in valid_hotkeys]
+        bt.logging.debug(f"DEBUG VALID_HOTKEYS: {valid_hotkeys}")
+        formatted = [(x,) for x in valid_hotkeys]
+        bt.logging.debug(f"DEBUG FORMATTED_HOTKEYS: {formatted}")
         query_str = """
             INSERT OR IGNORE INTO active_miners
             (miner_hotkey)

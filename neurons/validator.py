@@ -10,7 +10,7 @@ SCORE_THREAD_NAME = "🏋🏻ScoreThread 🏋"
 
 
 def main(validator):
-    step = 999  # Initialize step
+    step = 90  # Initialize step
     current_thread = threading.current_thread().name
 
     check_and_migrate_predictions(validator)
