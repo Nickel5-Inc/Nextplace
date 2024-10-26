@@ -8,7 +8,7 @@ from nextplace.validator.miner_manager.miner_manager import MinerManager
 from nextplace.validator.nextplace_validator import RealEstateValidator
 from nextplace.validator.utils.contants import build_miner_predictions_table_name
 
-SCORE_THREAD_NAME = "🏋🏻 ScoreThread 🏋🏻"
+SCORE_THREAD_NAME = "🏋🏻ScoreThread 🏋🏻"
 
 def main(validator):
     step = 1  # Initialize step
@@ -38,6 +38,7 @@ def main(validator):
             if step % 200 == 0:  # Check that the scoring thread is running, if not, start it up
                 scoring_thread_is_alive = validator.is_thread_running(SCORE_THREAD_NAME)
                 if not scoring_thread_is_alive:
+                    bt.logging.info(f"| {current_thread} | ☢️ ScoreThread was found not running, restarting it...")
                     scoring_thread = threading.Thread(target=validator.scorer.run_score_thread, name=SCORE_THREAD_NAME)
                     scoring_thread.start()
 
