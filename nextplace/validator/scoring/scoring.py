@@ -7,8 +7,6 @@ from nextplace.validator.scoring.scoring_calculator import ScoringCalculator
 from nextplace.validator.api.sold_homes_api import SoldHomesAPI
 from nextplace.validator.database.database_manager import DatabaseManager
 from nextplace.validator.utils.contants import ISO8601, build_miner_predictions_table_name
-import requests
-
 from nextplace.validator.website_data.website_communicator import WebsiteCommunicator
 
 """

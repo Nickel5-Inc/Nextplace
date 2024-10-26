@@ -25,10 +25,11 @@ class MinerScoreSender:
         # ToDo Update obj
         data_to_send = [
             {
-                "hotkey": x[0],
-                "score": x[1],
+                "minerHotKey": x[0],
+                "minerColdKey": "",
+                "minerScore": x[1],
                 "numPredictions": x[2],
-                "lastUpdateTimestamp": x[3]
+                "scoreGenerationDate": x[3]
             }
             for x in miner_scores
         ]
