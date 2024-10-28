@@ -7,7 +7,7 @@ from nextplace.validator.scoring.scoring_calculator import ScoringCalculator
 from nextplace.validator.api.sold_homes_api import SoldHomesAPI
 from nextplace.validator.database.database_manager import DatabaseManager
 from nextplace.validator.utils.contants import ISO8601, build_miner_predictions_table_name
-import requests
+from nextplace.validator.website_data.website_communicator import WebsiteCommunicator
 
 """
 Helper class manages scoring Miner predictions
@@ -124,12 +124,13 @@ class Scorer:
         thread_name = threading.current_thread().name
         bt.logging.trace(f"| {thread_name} | 🎢 Attempting to send {len(scored_predictions)} scored predictions to NextPlace website")
 
-        formatted_predictions = [(x[0], x[1], None, x[4], x[2], x[3]) for x in scored_predictions]
+        formatted_predictions = [(x[0], x[1], None, x[4], x[2], x[3], x[6], x[7]) for x in scored_predictions]
         data_to_send = []
 
         for prediction in formatted_predictions:
 
-            nextplace_id, miner_hotkey, miner_coldkey, prediction_date, predicted_sale_price, predicted_sale_date = prediction
+            nextplace_id, miner_hotkey, miner_coldkey, prediction_date, predicted_sale_price, predicted_sale_date, sale_price, sale_date = prediction
+            score = self.scoring_calculator.calculate_score(sale_price, predicted_sale_price, sale_date, predicted_sale_date)
             prediction_date_parsed = self.parse_iso_datetime(prediction_date) if isinstance(prediction_date, str) else prediction_date
             predicted_sale_date_parsed = self.parse_iso_datetime(predicted_sale_date) if isinstance(predicted_sale_date, str) else predicted_sale_date
 
@@ -146,7 +147,8 @@ class Scorer:
                 "minerColdKey": miner_coldkey if miner_coldkey else "DummyColdkey",
                 "predictionDate": prediction_date_iso,
                 "predictedSalePrice": predicted_sale_price,
-                "predictedSaleDate": predicted_sale_date_iso
+                "predictedSaleDate": predicted_sale_date_iso,
+                "PredictionScore": score
             }
             data_to_send.append(data_dict)
 
@@ -154,26 +156,8 @@ class Scorer:
             bt.logging.trace(f"| {thread_name} | Ø No valid predictions to send to Nextplace site after parsing.")
             return
 
-        headers = {
-            'Accept': '*/*',
-            'Content-Type': 'application/json'
-        }
-
-        try:
-            response = requests.post(
-                "https://dev-nextplace-api.azurewebsites.net/Predictions",
-                json=data_to_send,
-                headers=headers
-            )
-            response.raise_for_status()
-            bt.logging.info(f"| {thread_name} | ✅ Data sent to Nextplace site successfully.")
-
-        except requests.exceptions.HTTPError as e:
-            bt.logging.warning(f"| {thread_name} | ❗ HTTP error occurred: {e}. No data was sent to the Nextplace site.")
-            if e.response is not None:
-                bt.logging.warning(f"| {thread_name} | ❗ Error sending data to site. Response content: {e.response.text}")
-        except requests.exceptions.RequestException as e:
-            bt.logging.warning(f"| {thread_name} | ❗ Error sending data to site. An error occurred while sending data: {e}. No data was sent to the Nextplace site.")
+        website_communicator = WebsiteCommunicator("Predictions")
+        website_communicator.send_data(data=data_to_send)
 
     def _move_predictions_to_scored(self, scored_predictions: list[tuple]) -> None:
         """
