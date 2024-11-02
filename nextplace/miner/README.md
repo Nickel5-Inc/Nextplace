@@ -108,7 +108,7 @@ class BaseModel:
         This example just uses the listing price as the predicted sale price, and the national average for the predicted sale date.
         Predict the sale price and sale date for the house represented by `input_data`
         :param input_data: a formatted Synapse from the validator, representing a currently listed house
-        :return: the predicted sale price and predicted sale date for this home
+        :return: the predicted sale price (float) and predicted sale date (string, format `yyyy-mm-dd`) for this home.
         """
         predicted_sale_price = float(input_data['price']) if ('price' in input_data) else 1.0
         predicted_sale_date = self._sale_date_predictor(input_data['days_on_market']) if ('days_on_market' in input_data) else datetime.date.today() + datetime.timedelta(days=1)
