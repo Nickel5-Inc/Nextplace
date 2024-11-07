@@ -85,10 +85,11 @@ class Scorer:
         scorable_predictions = self._get_scorable_predictions(table_name)
         if len(scorable_predictions) > 0:
             current_thread = threading.current_thread().name
+            total_predictions = self.database_manager.get_size_of_table(table_name)
             bt.logging.trace(f"| {current_thread} | 🏅 Found {len(scorable_predictions)} predictions to score")
             scoring_data = [(x[1], x[2], x[3], x[6], x[7]) for x in scorable_predictions]
             self.scoring_calculator.process_scorable_predictions(scoring_data, miner_hotkey)  # Score predictions for this home
-            self._send_data_to_website(scorable_predictions)  # Send data to website
+            self._send_data_to_website(scorable_predictions, total_predictions)  # Send data to website
             self._move_predictions_to_scored(scorable_predictions)  # Move scored predictions to scored_predictions table
             self._remove_scored_predictions_from_miner_predictions_table(table_name, scorable_predictions)  # Drop scored predictions from miner predictions table
 
@@ -112,7 +113,7 @@ class Scorer:
             scorable_predictions = self.database_manager.query(query_str)  # Get scorable predictions for this home
         return scorable_predictions
 
-    def _send_data_to_website(self, scored_predictions: list[tuple]) -> None:
+    def _send_data_to_website(self, scored_predictions: list[tuple], total_predictions: int) -> None:
         """
         Send scored prediction data to the NextPlace website
         Args:
@@ -145,10 +146,11 @@ class Scorer:
                 "nextplaceId": nextplace_id,
                 "minerHotKey": miner_hotkey,
                 "minerColdKey": miner_coldkey if miner_coldkey else "DummyColdkey",
+                "predictionScore": score,
                 "predictionDate": prediction_date_iso,
                 "predictedSalePrice": predicted_sale_price,
                 "predictedSaleDate": predicted_sale_date_iso,
-                "PredictionScore": score
+                "totalPredictions": total_predictions
             }
             data_to_send.append(data_dict)
 
