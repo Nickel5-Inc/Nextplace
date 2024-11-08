@@ -153,4 +153,4 @@ class DatabaseManager:
 
     def table_exists(self, table_name: str) -> bool:
         result = self.query(f"""SELECT name FROM sqlite_master WHERE type='table' AND name='{table_name}'""")
-        return result is not None
+        return len(result) > 0
