@@ -450,5 +450,73 @@ real_estate_markets = [
     {
         "name": "Asheville",
         "id": "6_555"
+    },
+    {
+        "name": "Bethesda",
+        "id": "6_21534"
+    },
+    {
+        "name": "Nampa",
+        "id": "6_14562"
+    },
+    {
+        "name": "Salem",
+        "id": "6_30778"
+    },
+    {
+        "name": "Anchorage",
+        "id": "6_781"
+    },
+    {
+        "name": "Meridian",
+        "id": "6_13444"
+    },
+    {
+        "name": "Alpharetta",
+        "id": "6_438"
+    },
+    {
+        "name": "Cheyenne",
+        "id": "6_3616"
+    },
+    {
+        "name": "Caldwell",
+        "id": "6_3170"
+    },
+    {
+        "name": "Bismarck",
+        "id": "6_1876"
+    },
+    {
+        "name": "Boulder",
+        "id": "6_2025"
+    },
+    {
+        "name": "Eugene",
+        "id": "6_6142"
+    },
+    {
+        "name": "Franklin",
+        "id": "6_7080"
+    },
+    {
+        "name": "Grand Rapids",
+        "id": "6_8694"
+    },
+    {
+        "name": "Biloxi",
+        "id": "6_1643"
+    },
+    {
+        "name": "Idaho Falls",
+        "id": "6_10107"
+    },
+    {
+        "name": "Rapid City",
+        "id": "6_13643"
+    },
+    {
+        "name": "Sparks",
+        "id": "6_17527"
     }
 ]
