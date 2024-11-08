@@ -5,7 +5,7 @@ import threading
 import traceback
 from nextplace.validator.nextplace_validator import RealEstateValidator
 
-SCORE_THREAD_NAME = "🏋🏻ScoreThread 🏋"
+SCORE_THREAD_NAME = "🏋🏻 ScoreThread 🏋"
 
 
 def main(validator):
