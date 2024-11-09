@@ -110,15 +110,22 @@ class ScoringCalculator:
             miner_hotkey, predicted_price, predicted_date, actual_price, actual_date = prediction
             score = self.calculate_score(actual_price, predicted_price, actual_date, predicted_date)
 
-            new_scores['total_score'] += score
-            new_scores['new_predictions'] += 1
+            if score is not None:
+                new_scores['total_score'] += score
+                new_scores['new_predictions'] += 1
 
         return new_scores
 
     def calculate_score(self, actual_price: str, predicted_price: str, actual_date: str, predicted_date: str):
         # Convert date strings to datetime objects
         actual_date = datetime.strptime(actual_date, ISO8601).date()
-        predicted_date = datetime.strptime(predicted_date, "%Y-%m-%d").date()
+        current_thread = threading.current_thread().name
+
+        try:
+            predicted_date = datetime.strptime(predicted_date, "%Y-%m-%d").date()
+        except ValueError:
+            bt.logging.trace(f"| {current_thread} | Received invalid date format from a miner. Ignoring prediction.")
+            return None
 
         # Calculate the absolute difference in days
         date_difference = abs((actual_date - predicted_date).days)
