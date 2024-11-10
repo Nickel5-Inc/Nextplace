@@ -35,7 +35,6 @@ class MinerScoreSender:
                 for x in miner_scores
             ]
 
-        bt.logging.info(f"| {current_thread} | ⛵ DATA FOR WEBSITE: {data_to_send}")
         bt.logging.info(f"| {current_thread} | ⛵ Sending {len(miner_scores)} miner scores to website")
         website_communicator = WebsiteCommunicator("/Miner/Scores")
         website_communicator.send_data(data=data_to_send)
