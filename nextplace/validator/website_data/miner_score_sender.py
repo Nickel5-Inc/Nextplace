@@ -22,17 +22,20 @@ class MinerScoreSender:
         if len(miner_scores) == 0:
             bt.logging.info(f"| {current_thread} | 🔔 No miner scores to send to website")
 
-        data_to_send = [
-            {
-                "minerHotKey": x[0],
-                "minerColdKey": "N/A",
-                "minerScore": x[1],
-                "numPredictions": x[2],
-                "scoreGenerationDate": x[3]
-            }
-            for x in miner_scores
-        ]
+        with self.database_manager.lock:
+            data_to_send = [
+                {
+                    "minerHotKey": x[0],
+                    "minerColdKey": "N/A",
+                    "minerScore": x[1],
+                    "numPredictions": x[2],
+                    "scoreGenerationDate": x[3],
+                    "totalPredictions": self.database_manager.get_size_of_table(f"predictions_{x[0]}")
+                }
+                for x in miner_scores
+            ]
 
+        bt.logging.info(f"| {current_thread} | ⛵ DATA FOR WEBSITE: {data_to_send}")
         bt.logging.info(f"| {current_thread} | ⛵ Sending {len(miner_scores)} miner scores to website")
         website_communicator = WebsiteCommunicator("/Miner/Scores")
         website_communicator.send_data(data=data_to_send)
