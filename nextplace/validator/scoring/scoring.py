@@ -128,8 +128,8 @@ class Scorer:
                 avg_score = data[0]["miner"]["avgScore"]
                 bt.logging.trace(f"| {current_thread} | 📌 Found score consensus from other valis: {avg_score}")
                 return avg_score
-            except (KeyError, TypeError):
-                bt.logging.trace(f"| {current_thread} | ❗ Failed to parse response: {data}")
+            except (KeyError, TypeError, IndexError) as e:
+                bt.logging.trace(f"| {current_thread} | ❗ Failed to parse response: {data}\nError: {e}")
                 return 0
         else:
             bt.logging.trace(f"| {current_thread} | ❗ Failed to retrieve data. Status code: {response.status_code}")
