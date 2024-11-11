@@ -122,11 +122,12 @@ class Scorer:
 
         if response.status_code == 200:
             data = response.json()
+            bt.logging.trace(f"| {current_thread} | 📌 FOUND DATA: {data}")
             try:
                 avg_score = data["miner"]["avgScore"]
                 bt.logging.trace(f"| {current_thread} | 📌 Found score consensus from other valis: {avg_score}")
                 return avg_score
-            except KeyError:
+            except KeyError or TypeError:
                 bt.logging.trace(f"| {current_thread} | ❗ Failed to parse response: {data}")
                 return 0
         else:
