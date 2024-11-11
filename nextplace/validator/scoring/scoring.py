@@ -122,8 +122,8 @@ class Scorer:
 
         if response.status_code == 200:
             data = response.json()
-            # if len(data) == 0:
-            #     return 0
+            if len(data) == 0:  # No validator has data for this miner
+                return 0
             try:
                 avg_score = data["miner"]["avgScore"]
                 bt.logging.trace(f"| {current_thread} | 📌 Found score consensus from other valis: {avg_score}")
