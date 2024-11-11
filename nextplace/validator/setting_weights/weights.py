@@ -36,34 +36,6 @@ class WeightSetter:
         bt.logging.trace("📸 Time to set weights, resetting timer and setting weights.")
         self.timer = datetime.now(timezone.utc)  # Reset the timer
         self.set_weights()  # Set weights
-    
-    def adjust_scores_based_on_recent_activity(self, scores, hotkey_to_uid):
-        """
-        Adjust scores to zero for miners with fewer than 10 predictions in the last 5 days.
-        """
-        # !!! IMPORTANT !!!
-        # If we go back to using this idea, need to get data for each miner at a time, from that miner's predictions table
-
-        # # Get the recent date threshold
-        # recent_date = (datetime.now(timezone.utc) - timedelta(days=5)).strftime(ISO8601)
-        #
-        # # Query to get the count of recent predictions for each miner
-        # query = f'''
-        #     SELECT miner_hotkey, COUNT(*) as recent_count
-        #     FROM predictions
-        #     WHERE score_timestamp > '{recent_date}'
-        #     GROUP BY miner_hotkey
-        # '''
-        # recent_counts = self.database_manager.query(query)
-        #
-        # # Build a dictionary of miner_hotkey to recent_count
-        # recent_counts_dict = {miner_hotkey: recent_count for miner_hotkey, recent_count in recent_counts}
-        #
-        # # Set scores to 0 for miners with less than 10 recent predictions
-        # for miner_hotkey, uid in hotkey_to_uid.items():
-        #     recent_count = recent_counts_dict.get(miner_hotkey, 0)
-        #     if recent_count < 8:
-        #         scores[uid] = 0
 
     def calculate_miner_scores(self):
         current_thread = threading.current_thread().name
@@ -97,9 +69,6 @@ class WeightSetter:
                     uid = hotkey_to_uid[miner_hotkey]
                     scores[uid] = lifetime_score
                 
-            # Adjust scores based on recent activity - tune these hyperparameters
-            # self.adjust_scores_based_on_recent_activity(scores, hotkey_to_uid)
-
             return scores
 
         except Exception as e:
