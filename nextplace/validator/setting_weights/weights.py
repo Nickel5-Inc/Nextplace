@@ -66,6 +66,7 @@ class WeightSetter:
         #         scores[uid] = 0
 
     def calculate_miner_scores(self):
+        current_thread = threading.current_thread().name
         try:  # database_manager lock is already acquire at this point
             results = self.database_manager.query("SELECT miner_hotkey, lifetime_score, last_update_timestamp, total_predictions FROM miner_scores")
 
@@ -82,12 +83,15 @@ class WeightSetter:
                     # -------------
                     # We do this so people don't get a few lucky predictions, then turn off their miner
                     # If a miner hasn't predicted in 5 days or has less than 5 predictions, we scale their score back
+
                     # If last update was over 5 days ago, scale their score back by 50%
                     if time_diff > timedelta(days=5):
+                        bt.logging.trace(f"| {current_thread} | 🚩 Miner '{miner_hotkey}' has not predicted in 5 days. Scaling their score.")
                         lifetime_score = lifetime_score * 0.5
 
                     # If miner has < 5 predictions, scale their score back by 50%
                     if total_predictions < 5:
+                        bt.logging.trace(f"| {current_thread} | 🚩 Miner '{miner_hotkey}' has less than 5 predictions. Scaling their score.")
                         lifetime_score = lifetime_score * 0.5
 
                     uid = hotkey_to_uid[miner_hotkey]
