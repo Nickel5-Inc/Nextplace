@@ -3,6 +3,8 @@ import bittensor as bt
 import traceback
 import threading
 from datetime import datetime, timezone, timedelta
+
+from nextplace.validator.utils.contants import ISO8601
 from nextplace.validator.utils.system import timeout_with_multiprocess
 
 
@@ -65,13 +67,29 @@ class WeightSetter:
 
     def calculate_miner_scores(self):
         try:  # database_manager lock is already acquire at this point
-            results = self.database_manager.query("SELECT miner_hotkey, lifetime_score FROM miner_scores")
+            results = self.database_manager.query("SELECT miner_hotkey, lifetime_score, last_update_timestamp, total_predictions FROM miner_scores")
 
             scores = torch.zeros(len(self.metagraph.hotkeys))
             hotkey_to_uid = {hk: uid for uid, hk in enumerate(self.metagraph.hotkeys)}
+            now = datetime.now(timezone.utc)
 
-            for miner_hotkey, lifetime_score in results:
+            for miner_hotkey, lifetime_score, last_update_timestamp, total_predictions in results:
                 if miner_hotkey in hotkey_to_uid:
+                    last_update_dt = datetime.fromisoformat(last_update_timestamp)  # Convert last_update_timestamp to datetime object
+                    time_diff = now - last_update_dt  # Calculate difference between now and last update
+
+                    # Score Scaling
+                    # -------------
+                    # We do this so people don't get a few lucky predictions, then turn off their miner
+                    # If a miner hasn't predicted in 5 days or has less than 5 predictions, we scale their score back
+                    # If last update was over 5 days ago, scale their score back by 50%
+                    if time_diff > timedelta(days=5):
+                        lifetime_score = lifetime_score * 0.5
+
+                    # If miner has < 5 predictions, scale their score back by 50%
+                    if total_predictions < 5:
+                        lifetime_score = lifetime_score * 0.5
+
                     uid = hotkey_to_uid[miner_hotkey]
                     scores[uid] = lifetime_score
                 
