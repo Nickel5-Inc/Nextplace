@@ -8,6 +8,7 @@ from nextplace.validator.api.sold_homes_api import SoldHomesAPI
 from nextplace.validator.database.database_manager import DatabaseManager
 from nextplace.validator.utils.contants import ISO8601, build_miner_predictions_table_name
 from nextplace.validator.website_data.website_communicator import WebsiteCommunicator
+import requests
 
 """
 Helper class manages scoring Miner predictions
@@ -82,15 +83,56 @@ class Scorer:
         Returns:
             list of query results
         """
+        current_thread = threading.current_thread().name
         scorable_predictions = self._get_scorable_predictions(table_name)
         if len(scorable_predictions) > 0:
-            current_thread = threading.current_thread().name
             bt.logging.trace(f"| {current_thread} | 🏅 Found {len(scorable_predictions)} predictions to score")
             scoring_data = [(x[1], x[2], x[3], x[6], x[7]) for x in scorable_predictions]
             self.scoring_calculator.process_scorable_predictions(scoring_data, miner_hotkey)  # Score predictions for this home
             self._send_data_to_website(scorable_predictions)  # Send data to website
             self._move_predictions_to_scored(scorable_predictions)  # Move scored predictions to scored_predictions table
             self._remove_scored_predictions_from_miner_predictions_table(table_name, scorable_predictions)  # Drop scored predictions from miner predictions table
+
+        # Check if they have any scored predictions. If not, check if *any* validator has scored predictions for them.
+        else:
+            with self.database_manager.lock:
+                miner_score_result = self.database_manager.query(f"SELECT * FROM miner_scores WHERE miner_hotkey='{miner_hotkey}'")
+            if len(miner_score_result) == 0:  # This miner has no scored predictions in our db (their scores is 0)
+                bt.logging.trace(f"| {current_thread} | 🔊 Miner '{miner_hotkey}' has no scored predictions. Checking if another validator has any scored predictions for them.")
+                avg_score_from_other_valis = self._get_miner_score_data_from_webserver(miner_hotkey)
+                if avg_score_from_other_valis > 0:  # Other validators have scores for this miner
+                    # Insert consensus score from other valis into our db for ONE SINGLE score
+                    now = datetime.now(timezone.utc).strftime(ISO8601)
+                    query_str = f"""
+                        INSERT INTO miner_scores (miner_hotkey, lifetime_score, total_predictions, last_update_timestamp)
+                        VALUES (?, ?, ?, ?)
+                    """
+                    values = (miner_hotkey, avg_score_from_other_valis, 1, now)
+                    with self.database_manager.lock:
+                        self.database_manager.query_and_commit_with_values(query_str, values)
+
+    def _get_miner_score_data_from_webserver(self, miner_hotkey: str) -> int:
+        current_thread = threading.current_thread().name
+        url = "https://dev-nextplace-api.azurewebsites.net/Miner/Stats"
+        params = {
+            "MinerHotKey": miner_hotkey
+        }
+
+        response = requests.get(url, params=params)
+
+        if response.status_code == 200:
+            data = response.json()
+            try:
+                avg_score = data["miner"]["avgScore"]
+                bt.logging.trace(f"| {current_thread} | 📌 Found score consensus from other valis: {avg_score}")
+                return avg_score
+            except KeyError:
+                bt.logging.trace(f"| {current_thread} | ❗ Failed to parse response: {data}")
+                return 0
+        else:
+            bt.logging.trace(f"| {current_thread} | ❗ Failed to retrieve data. Status code: {response.status_code}")
+            bt.logging.trace(f"| {current_thread} | ❗ Response:", response.text)
+            return 0
 
     def _get_scorable_predictions(self, table_name: str) -> list[tuple]:
         """
