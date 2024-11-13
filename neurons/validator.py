@@ -9,7 +9,7 @@ SCORE_THREAD_NAME = "🏋🏻 ScoreThread 🏋"
 
 
 def main(validator):
-    step = 999  # Initialize step
+    step = 1  # Initialize step
     current_thread = threading.current_thread().name
 
     # Start the scoring thread
@@ -38,7 +38,7 @@ def main(validator):
                     scoring_thread = threading.Thread(target=validator.scorer.run_score_thread, name=SCORE_THREAD_NAME)
                     scoring_thread.start()
 
-            if step % 500 == 0:  # Send miner scores data to website
+            if step % 250 == 0:  # Send score data to website
                 thread = threading.Thread(target=validator.miner_score_sender.send_miner_scores_to_website, name="🌊 MinerScoresToWebsiteThread 🌊")
                 thread.start()
 
