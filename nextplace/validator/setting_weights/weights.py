@@ -46,7 +46,7 @@ class WeightSetter:
 
             for miner_hotkey, lifetime_score, last_update_timestamp, total_predictions in results:
                 if miner_hotkey in hotkey_to_uid:
-                    last_update_dt = datetime.fromisoformat(last_update_timestamp)
+                    last_update_dt = datetime.strptime(last_update_timestamp, "%Y-%m-%dT%H:%M:%SZ")
                     time_diff = now - last_update_dt  # Calculate difference between now and last update
 
                     # Score Scaling
@@ -85,7 +85,7 @@ class WeightSetter:
             return scores
 
         except Exception as e:
-            bt.logging.error(f"❗Error fetching miner scores: {str(e)}")
+            bt.logging.error(f" | {current_thread} |❗Error fetching miner scores: {str(e)}")
             return torch.zeros(len(self.metagraph.hotkeys))
 
     def calculate_weights(self, scores):
