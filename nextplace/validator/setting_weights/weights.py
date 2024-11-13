@@ -50,6 +50,8 @@ class WeightSetter:
                     last_update_dt = datetime.strptime(last_update_timestamp, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
                     time_diff = now - last_update_dt  # Calculate difference between now and last update
 
+                    bt.logging.debug(f"| {current_thread} | Score Before: {lifetime_score}")
+
                     # Score Scaling
                     # -------------
                     # We do this so people don't get a few lucky predictions, then turn off their miner
@@ -79,6 +81,8 @@ class WeightSetter:
                     elif total_predictions < 20:
                         bt.logging.trace(f"| {current_thread} | 🚩 Miner '{miner_hotkey}' has less than 20 predictions. Scaling their score.")
                         lifetime_score = lifetime_score * 0.95
+
+                    bt.logging.debug(f"| {current_thread} | Score After: {lifetime_score}")
 
                     uid = hotkey_to_uid[miner_hotkey]
                     scores[uid] = lifetime_score
