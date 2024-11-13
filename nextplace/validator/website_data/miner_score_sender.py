@@ -2,6 +2,8 @@ from nextplace.validator.database.database_manager import DatabaseManager
 import threading
 import bittensor as bt
 from nextplace.validator.website_data.website_communicator import WebsiteCommunicator
+import configparser
+import os
 
 
 class MinerScoreSender:
@@ -17,6 +19,13 @@ class MinerScoreSender:
             None
         """
         current_thread = threading.current_thread().name
+        config_file_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'setup.cfg')
+        config = configparser.ConfigParser()
+        config.read(config_file_path)
+        version = config.get('metadata', 'version', fallback=None)
+
+        bt.logging.trace(f"| {current_thread} | 📂 Using validator version {version}")
+
         with self.database_manager.lock:
             miner_scores = self.database_manager.query("SELECT miner_hotkey, lifetime_score, total_predictions, last_update_timestamp FROM miner_scores")
         if len(miner_scores) == 0:
@@ -30,7 +39,8 @@ class MinerScoreSender:
                     "minerScore": x[1],
                     "numPredictions": x[2],
                     "scoreGenerationDate": x[3],
-                    "totalPredictions": self.database_manager.get_size_of_table(f"predictions_{x[0]}")
+                    "totalPredictions": self.database_manager.get_size_of_table(f"predictions_{x[0]}"),
+                    "validatorVersion": version
                 }
                 for x in miner_scores
             ]

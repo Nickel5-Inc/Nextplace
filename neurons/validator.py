@@ -38,14 +38,11 @@ def main(validator):
                     scoring_thread = threading.Thread(target=validator.scorer.run_score_thread, name=SCORE_THREAD_NAME)
                     scoring_thread.start()
 
-            if step % 250 == 0:  # Print total predictions across all miners
-                thread = threading.Thread(target=validator.print_total_number_of_predictions, name="🔮 PredictionCountingThread 🔮")
-                thread.start()
-
-            if step >= 1000:
+            if step % 500 == 0:  # Send miner scores data to website
                 thread = threading.Thread(target=validator.miner_score_sender.send_miner_scores_to_website, name="🌊 MinerScoresToWebsiteThread 🌊")
                 thread.start()
-                # Reset the step
+
+            if step >= 1000:  # Reset the step
                 step = 1
                 validator.should_step = False
 

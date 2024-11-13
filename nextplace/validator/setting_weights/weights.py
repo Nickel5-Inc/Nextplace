@@ -3,8 +3,6 @@ import bittensor as bt
 import traceback
 import threading
 from datetime import datetime, timezone, timedelta
-
-from nextplace.validator.utils.contants import ISO8601
 from nextplace.validator.utils.system import timeout_with_multiprocess
 
 
@@ -61,10 +59,25 @@ class WeightSetter:
                         bt.logging.trace(f"| {current_thread} | 🚩 Miner '{miner_hotkey}' has not predicted in 5 days. Scaling their score.")
                         lifetime_score = lifetime_score * 0.5
 
-                    # If miner has < 5 predictions, scale their score back by 50%
+                    '''
+                    Handle low scored prediction volume, only applies to miners who just registered.
+                    We don't want miners getting outsized rewards for a few lucky predictions.
+                    '''
                     if total_predictions < 5:
                         bt.logging.trace(f"| {current_thread} | 🚩 Miner '{miner_hotkey}' has less than 5 predictions. Scaling their score.")
                         lifetime_score = lifetime_score * 0.5
+
+                    elif total_predictions < 10:
+                        bt.logging.trace(f"| {current_thread} | 🚩 Miner '{miner_hotkey}' has less than 10 predictions. Scaling their score.")
+                        lifetime_score = lifetime_score * 0.85
+
+                    elif total_predictions < 15:
+                        bt.logging.trace(f"| {current_thread} | 🚩 Miner '{miner_hotkey}' has less than 15 predictions. Scaling their score.")
+                        lifetime_score = lifetime_score * 0.95
+
+                    elif total_predictions < 20:
+                        bt.logging.trace(f"| {current_thread} | 🚩 Miner '{miner_hotkey}' has less than 20 predictions. Scaling their score.")
+                        lifetime_score = lifetime_score * 0.98
 
                     uid = hotkey_to_uid[miner_hotkey]
                     scores[uid] = lifetime_score
