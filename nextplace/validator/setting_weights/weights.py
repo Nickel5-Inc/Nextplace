@@ -58,8 +58,7 @@ class WeightSetter:
 
                     # If last update was over 5 days ago, scale their score back by 50%
                     if time_diff > timedelta(days=5):
-                        bt.logging.trace(
-                            f"| {current_thread} | 🚩 Miner '{miner_hotkey}' has not predicted in 5 days. Scaling their score.")
+                        bt.logging.trace(f"| {current_thread} | 🚩 Miner '{miner_hotkey}' has not predicted in 5 days. Scaling their score.")
                         lifetime_score = lifetime_score * 0.5
 
                     '''
@@ -67,23 +66,19 @@ class WeightSetter:
                     We don't want miners getting outsized rewards for a few lucky predictions.
                     '''
                     if total_predictions < 5:
-                        bt.logging.trace(
-                            f"| {current_thread} | 🚩 Miner '{miner_hotkey}' has less than 5 predictions. Scaling their score.")
+                        bt.logging.trace(f"| {current_thread} | 🚩 Miner '{miner_hotkey}' has less than 5 predictions. Scaling their score.")
                         lifetime_score = lifetime_score * 0.5
 
                     elif total_predictions < 10:
-                        bt.logging.trace(
-                            f"| {current_thread} | 🚩 Miner '{miner_hotkey}' has less than 10 predictions. Scaling their score.")
+                        bt.logging.trace(f"| {current_thread} | 🚩 Miner '{miner_hotkey}' has less than 10 predictions. Scaling their score.")
                         lifetime_score = lifetime_score * 0.85
 
                     elif total_predictions < 15:
-                        bt.logging.trace(
-                            f"| {current_thread} | 🚩 Miner '{miner_hotkey}' has less than 15 predictions. Scaling their score.")
+                        bt.logging.trace(f"| {current_thread} | 🚩 Miner '{miner_hotkey}' has less than 15 predictions. Scaling their score.")
                         lifetime_score = lifetime_score * 0.95
 
                     elif total_predictions < 20:
-                        bt.logging.trace(
-                            f"| {current_thread} | 🚩 Miner '{miner_hotkey}' has less than 20 predictions. Scaling their score.")
+                        bt.logging.trace(f"| {current_thread} | 🚩 Miner '{miner_hotkey}' has less than 20 predictions. Scaling their score.")
                         lifetime_score = lifetime_score * 0.98
 
                     uid = hotkey_to_uid[miner_hotkey]
