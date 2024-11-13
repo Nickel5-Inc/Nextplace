@@ -38,8 +38,7 @@ class WeightSetter:
     def calculate_miner_scores(self):
         current_thread = threading.current_thread().name
         try:  # database_manager lock is already acquire at this point
-            results = self.database_manager.query(
-                "SELECT miner_hotkey, lifetime_score, last_update_timestamp, total_predictions FROM miner_scores")
+            results = self.database_manager.query("SELECT miner_hotkey, lifetime_score, last_update_timestamp, total_predictions FROM miner_scores")
 
             scores = torch.zeros(len(self.metagraph.hotkeys))
             hotkey_to_uid = {hk: uid for uid, hk in enumerate(self.metagraph.hotkeys)}
