@@ -6,4 +6,4 @@ if __name__ == "__main__":
     config = configparser.ConfigParser()
     config.read(config_file_path)
     version = config.get('metadata', 'version', fallback=None)
-    print(f"Found version: {version}")
+    print(f"Found version: {version}, {type(version)}")
