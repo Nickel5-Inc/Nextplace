@@ -46,8 +46,7 @@ class WeightSetter:
 
             for miner_hotkey, lifetime_score, last_update_timestamp, total_predictions in results:
                 if miner_hotkey in hotkey_to_uid:
-                    last_update_dt = datetime.fromisoformat(
-                        last_update_timestamp)  # Convert last_update_timestamp to datetime object
+                    last_update_dt = datetime.fromisoformat(last_update_timestamp)
                     time_diff = now - last_update_dt  # Calculate difference between now and last update
 
                     # Score Scaling
