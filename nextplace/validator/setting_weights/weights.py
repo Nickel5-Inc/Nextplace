@@ -34,67 +34,71 @@ class WeightSetter:
         bt.logging.trace("📸 Time to set weights, resetting timer and setting weights.")
         self.timer = datetime.now(timezone.utc)  # Reset the timer
         self.set_weights()  # Set weights
-    
-    def adjust_scores_based_on_recent_activity(self, scores, hotkey_to_uid):
-        """
-        Adjust scores to zero for miners with fewer than 10 predictions in the last 5 days.
-        """
-        # !!! IMPORTANT !!!
-        # If we go back to using this idea, need to get data for each miner at a time, from that miner's predictions table
-
-        # # Get the recent date threshold
-        # recent_date = (datetime.now(timezone.utc) - timedelta(days=5)).strftime(ISO8601)
-        #
-        # # Query to get the count of recent predictions for each miner
-        # query = f'''
-        #     SELECT miner_hotkey, COUNT(*) as recent_count
-        #     FROM predictions
-        #     WHERE score_timestamp > '{recent_date}'
-        #     GROUP BY miner_hotkey
-        # '''
-        # recent_counts = self.database_manager.query(query)
-        #
-        # # Build a dictionary of miner_hotkey to recent_count
-        # recent_counts_dict = {miner_hotkey: recent_count for miner_hotkey, recent_count in recent_counts}
-        #
-        # # Set scores to 0 for miners with less than 10 recent predictions
-        # for miner_hotkey, uid in hotkey_to_uid.items():
-        #     recent_count = recent_counts_dict.get(miner_hotkey, 0)
-        #     if recent_count < 8:
-        #         scores[uid] = 0
 
     def calculate_miner_scores(self):
+        current_thread = threading.current_thread().name
         try:  # database_manager lock is already acquire at this point
-            results = self.database_manager.query("SELECT miner_hotkey, lifetime_score FROM miner_scores")
+            results = self.database_manager.query("SELECT miner_hotkey, lifetime_score, last_update_timestamp, total_predictions FROM miner_scores")
 
             scores = torch.zeros(len(self.metagraph.hotkeys))
             hotkey_to_uid = {hk: uid for uid, hk in enumerate(self.metagraph.hotkeys)}
+            now = datetime.now(timezone.utc)
 
-            for miner_hotkey, lifetime_score in results:
+            for miner_hotkey, lifetime_score, last_update_timestamp, total_predictions in results:
                 if miner_hotkey in hotkey_to_uid:
+                    last_update_dt = datetime.strptime(last_update_timestamp, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
+                    time_diff = now - last_update_dt  # Calculate difference between now and last update
+
+                    # Score Scaling
+                    # -------------
+                    # We do this so people don't get a few lucky predictions, then turn off their miner
+                    # If a miner hasn't predicted in 5 days or has less than 5 predictions, we scale their score back
+
+                    # If last update was over 5 days ago, scale their score back by 50%
+                    if time_diff > timedelta(days=5):
+                        bt.logging.trace(f"| {current_thread} | 🚩 Miner '{miner_hotkey}' has not predicted in 5 days. Scaling their score.")
+                        lifetime_score = lifetime_score * 0.5
+
+                    '''
+                    Handle low scored prediction volume, only applies to miners who just registered.
+                    We don't want miners getting outsized rewards for a few lucky predictions.
+                    '''
+                    if total_predictions < 5:
+                        bt.logging.trace(f"| {current_thread} | 🚩 Miner '{miner_hotkey}' has less than 5 predictions. Scaling their score.")
+                        lifetime_score = lifetime_score * 0.75
+
+                    elif total_predictions < 10:
+                        bt.logging.trace(f"| {current_thread} | 🚩 Miner '{miner_hotkey}' has less than 10 predictions. Scaling their score.")
+                        lifetime_score = lifetime_score * 0.85
+
+                    elif total_predictions < 15:
+                        bt.logging.trace(f"| {current_thread} | 🚩 Miner '{miner_hotkey}' has less than 15 predictions. Scaling their score.")
+                        lifetime_score = lifetime_score * 0.92
+
+                    elif total_predictions < 20:
+                        bt.logging.trace(f"| {current_thread} | 🚩 Miner '{miner_hotkey}' has less than 20 predictions. Scaling their score.")
+                        lifetime_score = lifetime_score * 0.95
+
                     uid = hotkey_to_uid[miner_hotkey]
                     scores[uid] = lifetime_score
-                
-            # Adjust scores based on recent activity - tune these hyperparameters
-            # self.adjust_scores_based_on_recent_activity(scores, hotkey_to_uid)
 
             return scores
 
         except Exception as e:
-            bt.logging.error(f"❗Error fetching miner scores: {str(e)}")
+            bt.logging.error(f" | {current_thread} |❗Error fetching miner scores: {str(e)}")
             return torch.zeros(len(self.metagraph.hotkeys))
 
     def calculate_weights(self, scores):
         n_miners = len(scores)
         sorted_indices = torch.argsort(scores, descending=True)
         weights = torch.zeros(n_miners)
-        
+
         top_indices, next_indices, bottom_indices = self.get_tier_indices(sorted_indices, n_miners)
-        
+
         for indices, weight in [(top_indices, 0.7), (next_indices, 0.2), (bottom_indices, 0.1)]:
             tier_scores = self.apply_quadratic_scaling(scores[indices])
             weights[indices] = self.calculate_tier_weights(tier_scores, weight)
-        
+
         weights /= weights.sum()  # Normalize weights to sum to 1.0
         return weights
 
@@ -102,8 +106,8 @@ class WeightSetter:
         top_10_pct = max(1, int(0.1 * n_miners))
         next_40_pct = max(1, int(0.4 * n_miners))
         top_indices = sorted_indices[:top_10_pct]
-        next_indices = sorted_indices[top_10_pct:top_10_pct+next_40_pct]
-        bottom_indices = sorted_indices[top_10_pct+next_40_pct:]
+        next_indices = sorted_indices[top_10_pct:top_10_pct + next_40_pct]
+        bottom_indices = sorted_indices[top_10_pct + next_40_pct:]
         return top_indices, next_indices, bottom_indices
 
     def apply_quadratic_scaling(self, scores):
