@@ -47,7 +47,7 @@ class WeightSetter:
 
             for miner_hotkey, lifetime_score, last_update_timestamp, total_predictions in results:
                 if miner_hotkey in hotkey_to_uid:
-                    last_update_dt = datetime.strptime(last_update_timestamp, "%Y-%m-%dT%H:%M:%SZ")
+                    last_update_dt = datetime.strptime(last_update_timestamp, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
                     time_diff = now - last_update_dt  # Calculate difference between now and last update
 
                     # Score Scaling
