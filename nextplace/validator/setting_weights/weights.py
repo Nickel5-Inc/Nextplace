@@ -46,7 +46,7 @@ class WeightSetter:
 
             for miner_hotkey, lifetime_score, last_update_timestamp, total_predictions in results:
                 if miner_hotkey in hotkey_to_uid:
-                    last_update_dt = datetime.fromisoformat(last_update_timestamp)  # Convert last_update_timestamp to datetime object
+                    last_update_dt = datetime.fromisoformat(last_update_timestamp)
                     time_diff = now - last_update_dt  # Calculate difference between now and last update
 
                     # Score Scaling
@@ -73,15 +73,15 @@ class WeightSetter:
 
                     elif total_predictions < 15:
                         bt.logging.trace(f"| {current_thread} | 🚩 Miner '{miner_hotkey}' has less than 15 predictions. Scaling their score.")
-                        lifetime_score = lifetime_score * 0.95
+                        lifetime_score = lifetime_score * 0.92
 
                     elif total_predictions < 20:
                         bt.logging.trace(f"| {current_thread} | 🚩 Miner '{miner_hotkey}' has less than 20 predictions. Scaling their score.")
-                        lifetime_score = lifetime_score * 0.98
+                        lifetime_score = lifetime_score * 0.95
 
                     uid = hotkey_to_uid[miner_hotkey]
                     scores[uid] = lifetime_score
-                
+
             return scores
 
         except Exception as e:
@@ -92,13 +92,13 @@ class WeightSetter:
         n_miners = len(scores)
         sorted_indices = torch.argsort(scores, descending=True)
         weights = torch.zeros(n_miners)
-        
+
         top_indices, next_indices, bottom_indices = self.get_tier_indices(sorted_indices, n_miners)
-        
+
         for indices, weight in [(top_indices, 0.7), (next_indices, 0.2), (bottom_indices, 0.1)]:
             tier_scores = self.apply_quadratic_scaling(scores[indices])
             weights[indices] = self.calculate_tier_weights(tier_scores, weight)
-        
+
         weights /= weights.sum()  # Normalize weights to sum to 1.0
         return weights
 
@@ -106,8 +106,8 @@ class WeightSetter:
         top_10_pct = max(1, int(0.1 * n_miners))
         next_40_pct = max(1, int(0.4 * n_miners))
         top_indices = sorted_indices[:top_10_pct]
-        next_indices = sorted_indices[top_10_pct:top_10_pct+next_40_pct]
-        bottom_indices = sorted_indices[top_10_pct+next_40_pct:]
+        next_indices = sorted_indices[top_10_pct:top_10_pct + next_40_pct]
+        bottom_indices = sorted_indices[top_10_pct + next_40_pct:]
         return top_indices, next_indices, bottom_indices
 
     def apply_quadratic_scaling(self, scores):
