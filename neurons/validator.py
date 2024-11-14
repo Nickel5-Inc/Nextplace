@@ -68,12 +68,10 @@ def get_and_send_version():
     config.read(config_file_path)
     version = config.get('metadata', 'version', fallback=None)
     bt.logging.trace(f"| {current_thread} | 📂 Using validator version {version}")
-    data_to_send = [
-        {
-          "hotKey": "",
-          "version": version
-        }
-    ]
+    data_to_send = {
+      "hotKey": "",
+      "version": version
+    }
     website_communicator = WebsiteCommunicator("/Validator/Info")
     website_communicator.send_data(data=data_to_send)
 
