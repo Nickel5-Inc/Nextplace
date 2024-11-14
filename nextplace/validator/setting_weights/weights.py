@@ -69,17 +69,25 @@ class WeightSetter:
 
                     elif total_predictions < 10:
                         bt.logging.trace(f"| {current_thread} | 🚩 Miner '{miner_hotkey}' has less than 10 predictions. Scaling their score.")
-                        lifetime_score = lifetime_score * 0.75
+                        lifetime_score = lifetime_score * 0.725
 
                     elif total_predictions < 15:
                         bt.logging.trace(f"| {current_thread} | 🚩 Miner '{miner_hotkey}' has less than 15 predictions. Scaling their score.")
-                        lifetime_score = lifetime_score * 0.8
+                        lifetime_score = lifetime_score * 0.75
 
                     elif total_predictions < 20:
                         bt.logging.trace(f"| {current_thread} | 🚩 Miner '{miner_hotkey}' has less than 20 predictions. Scaling their score.")
-                        lifetime_score = lifetime_score * 0.85
+                        lifetime_score = lifetime_score * 0.775
 
                     elif total_predictions < 25:
+                        bt.logging.trace(f"| {current_thread} | 🚩 Miner '{miner_hotkey}' has less than 20 predictions. Scaling their score.")
+                        lifetime_score = lifetime_score * 0.8
+
+                    elif total_predictions < 30:
+                        bt.logging.trace(f"| {current_thread} | 🚩 Miner '{miner_hotkey}' has less than 20 predictions. Scaling their score.")
+                        lifetime_score = lifetime_score * 0.85
+
+                    elif total_predictions < 35:
                         bt.logging.trace(f"| {current_thread} | 🚩 Miner '{miner_hotkey}' has less than 20 predictions. Scaling their score.")
                         lifetime_score = lifetime_score * 0.9
 
