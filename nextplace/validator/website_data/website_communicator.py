@@ -33,7 +33,7 @@ class WebsiteCommunicator:
             bt.logging.info(f"| {current_thread} | ✅ Data sent to Nextplace site successfully.")
 
         except requests.exceptions.HTTPError as e:
-            bt.logging.warning(f"| {current_thread} | ❗ HTTP error occurred: {e}. No data was sent to the Nextplace site.")
+            bt.logging.warning(f"| {current_thread} | ❗ HTTP error occurred: {e}. Data: {data}.")
             if e.response is not None:
                 bt.logging.warning(
                     f"| {current_thread} | ❗ Error sending data to site. Response content: {e.response.text}")
