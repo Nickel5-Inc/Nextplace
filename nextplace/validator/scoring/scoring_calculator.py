@@ -15,13 +15,16 @@ class ScoringCalculator:
         """
         Score miner predictions in bulk
         """
+        current_thread = threading.current_thread().name
         miner_score = self._fetch_current_miner_score(miner_hotkey)
         new_scores = self._calculate_new_scores(scorable_predictions)
+        if new_scores['new_predictions'] == 0:
+            bt.logging.info(f"| {current_thread} | 📰 Miner '{miner_hotkey}' had only invalid scores, likely due to invalid date formatting.")
+            return
         if miner_score is not None:
             self._update_miner_score(miner_score, new_scores, miner_hotkey)
         else:
             self._handle_new_miner_score(miner_hotkey, new_scores)
-        current_thread = threading.current_thread().name
         bt.logging.info(f"| {current_thread} | 🎯 Scored {len(scorable_predictions)} predictions for hotkey '{miner_hotkey}'")
 
     def _update_miner_score(self, miner_score: Dict[str, float], new_scores: Dict[str, float], miner_hotkey: str) -> None:
