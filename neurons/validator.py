@@ -72,7 +72,7 @@ def get_and_send_version():
       "hotKey": "",
       "version": version
     }
-    website_communicator = WebsiteCommunicator("/Validator/Info")
+    website_communicator = WebsiteCommunicator("Validator/Info")
     website_communicator.send_data(data=data_to_send)
 
 if __name__ == "__main__":
