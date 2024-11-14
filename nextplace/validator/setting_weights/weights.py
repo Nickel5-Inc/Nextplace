@@ -77,10 +77,6 @@ class WeightSetter:
 
                     elif total_predictions < 20:
                         bt.logging.trace(f"| {current_thread} | 🚩 Miner '{miner_hotkey}' has less than 20 predictions. Scaling their score.")
-                        lifetime_score = lifetime_score * 0.9
-
-                    elif total_predictions < 20:
-                        bt.logging.trace(f"| {current_thread} | 🚩 Miner '{miner_hotkey}' has less than 20 predictions. Scaling their score.")
                         lifetime_score = lifetime_score * 0.85
 
                     elif total_predictions < 25:
