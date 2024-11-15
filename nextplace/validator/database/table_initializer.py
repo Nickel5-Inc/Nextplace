@@ -72,6 +72,9 @@ class TableInitializer:
         cursor.execute('''
             CREATE INDEX IF NOT EXISTS idx_prediction_timestamp ON scored_predictions(prediction_timestamp)
         ''')
+        cursor.execute('''
+            CREATE INDEX IF NOT EXISTS idx_market ON scored_predictions(market)
+        ''')
 
     def _create_properties_table(self, cursor) -> None:
         """
