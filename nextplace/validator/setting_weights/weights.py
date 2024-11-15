@@ -25,8 +25,7 @@ class WeightSetter:
         """
         now = datetime.now(timezone.utc)
         time_diff = now - self.timer
-        # return time_diff >= timedelta(hours=1)
-        return time_diff >= timedelta(minutes=0)
+        return time_diff >= timedelta(hours=1)
 
     def check_timer_set_weights(self) -> None:
         """
@@ -43,7 +42,7 @@ class WeightSetter:
         try:  # database_manager lock is already acquire at this point
             results = self.database_manager.query("SELECT miner_hotkey, lifetime_score, last_update_timestamp, total_predictions FROM miner_scores")
             average_markets = self.get_average_markets_in_range()
-            markets_cutoff = int(average_markets * 0.75)
+            markets_cutoff = int(average_markets * 0.5)
             bt.logging.trace(f"| {current_thread} | ✂️ Using markets cutoff: {markets_cutoff}")
 
             scores = torch.zeros(len(self.metagraph.hotkeys))
@@ -110,6 +109,7 @@ class WeightSetter:
 
     def get_average_markets_in_range(self):
         current_thread = threading.current_thread().name
+        bt.logging.trace(f"| {current_thread} | 🧮 Calculating market cutoff...")
         all_table_query = "SELECT name FROM sqlite_master WHERE type='table'"
         all_tables = [x[0] for x in self.database_manager.query(all_table_query)]  # Get all tables in database
         predictions_tables = [s for s in all_tables if s.startswith("predictions_")]
