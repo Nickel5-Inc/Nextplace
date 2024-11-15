@@ -4,11 +4,15 @@ import bittensor as bt
 import threading
 import traceback
 from nextplace.validator.nextplace_validator import RealEstateValidator
+import configparser
+import os
+from nextplace.validator.website_data.website_communicator import WebsiteCommunicator
 
 SCORE_THREAD_NAME = "🏋🏻 ScoreThread 🏋"
 
 
 def main(validator):
+    get_and_send_version()
     step = 1  # Initialize step
     current_thread = threading.current_thread().name
 
@@ -57,6 +61,16 @@ def main(validator):
             bt.logging.error(f"| {current_thread} | Stack Trace: {stack_trace}")
             time.sleep(10)
 
+def get_and_send_version():
+    current_thread = threading.current_thread().name
+    config_file_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'setup.cfg')
+    config = configparser.ConfigParser()
+    config.read(config_file_path)
+    version = config.get('metadata', 'version', fallback=None)
+    bt.logging.trace(f"| {current_thread} | 📂 Using validator version {version}")
+    data_to_send = {"version": version}
+    website_communicator = WebsiteCommunicator("Validator/Info")
+    website_communicator.send_data(data=data_to_send)
 
 if __name__ == "__main__":
     # Parse command line arguments

@@ -116,8 +116,10 @@ class PredictionManager:
                     )
                 """
         idx_str = f"CREATE INDEX IF NOT EXISTS idx_prediction_timestamp ON {table_name}(prediction_timestamp)"
+        idx_str_market = f"CREATE INDEX IF NOT EXISTS idx_market ON {table_name}(market)"
         self.database_manager.query_and_commit(create_str)
         self.database_manager.query_and_commit(idx_str)
+        self.database_manager.query_and_commit(idx_str_market)
 
     def _handle_ingestion(self, conflict_policy: str, values: list[tuple], table_name: str) -> None:
         """

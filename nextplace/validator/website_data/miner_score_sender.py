@@ -17,6 +17,8 @@ class MinerScoreSender:
             None
         """
         current_thread = threading.current_thread().name
+
+
         with self.database_manager.lock:
             miner_scores = self.database_manager.query("SELECT miner_hotkey, lifetime_score, total_predictions, last_update_timestamp FROM miner_scores")
         if len(miner_scores) == 0:
@@ -30,7 +32,7 @@ class MinerScoreSender:
                     "minerScore": x[1],
                     "numPredictions": x[2],
                     "scoreGenerationDate": x[3],
-                    "totalPredictions": self.database_manager.get_size_of_table(f"predictions_{x[0]}")
+                    "totalPredictions": self.database_manager.get_size_of_table(f"predictions_{x[0]}"),
                 }
                 for x in miner_scores
             ]

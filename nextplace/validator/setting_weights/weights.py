@@ -3,6 +3,8 @@ import bittensor as bt
 import traceback
 import threading
 from datetime import datetime, timezone, timedelta
+
+from nextplace.validator.utils.contants import build_miner_predictions_table_name
 from nextplace.validator.utils.system import timeout_with_multiprocess
 
 
@@ -17,9 +19,9 @@ class WeightSetter:
 
     def is_time_to_set_weights(self) -> bool:
         """
-        Check if it has been 3 hours since the timer was last reset
+        Check if it has been 1 hour since the timer was last reset
         Returns:
-            True if it has been 3 hours, else False
+            True if it has been 1 hour, else False
         """
         now = datetime.now(timezone.utc)
         time_diff = now - self.timer
@@ -39,6 +41,9 @@ class WeightSetter:
         current_thread = threading.current_thread().name
         try:  # database_manager lock is already acquire at this point
             results = self.database_manager.query("SELECT miner_hotkey, lifetime_score, last_update_timestamp, total_predictions FROM miner_scores")
+            average_markets = self.get_average_markets_in_range()
+            markets_cutoff = int(average_markets * 0.5)
+            bt.logging.trace(f"| {current_thread} | ✂️ Using markets cutoff: {markets_cutoff}")
 
             scores = torch.zeros(len(self.metagraph.hotkeys))
             hotkey_to_uid = {hk: uid for uid, hk in enumerate(self.metagraph.hotkeys)}
@@ -54,6 +59,16 @@ class WeightSetter:
                     # We do this so people don't get a few lucky predictions, then turn off their miner
                     # If a miner hasn't predicted in 5 days or has less than 5 predictions, we scale their score back
 
+                    table_name = build_miner_predictions_table_name(miner_hotkey)
+                    # Handle the case where they're only targeting specific markets
+                    market_query = f"SELECT COUNT(DISTINCT(market)) FROM {table_name} WHERE prediction_timestamp >= datetime('now', '-5 days')"
+                    distinct_markets = self.database_manager.query(market_query)
+                    if len(distinct_markets) > 0:
+                        distinct_markets = distinct_markets[0][0]
+                        if distinct_markets < markets_cutoff:
+                            bt.logging.trace(f"| {current_thread} | 🚩 Miner '{miner_hotkey}' has less than {markets_cutoff} markets predicted on in the last 5 days. Scaling their score.")
+                            lifetime_score = lifetime_score * 0.5
+
                     # If last update was over 5 days ago, scale their score back by 50%
                     if time_diff > timedelta(days=5):
                         bt.logging.trace(f"| {current_thread} | 🚩 Miner '{miner_hotkey}' has not predicted in 5 days. Scaling their score.")
@@ -64,20 +79,24 @@ class WeightSetter:
                     We don't want miners getting outsized rewards for a few lucky predictions.
                     '''
                     if total_predictions < 5:
-                        bt.logging.trace(f"| {current_thread} | 🚩 Miner '{miner_hotkey}' has less than 5 predictions. Scaling their score.")
-                        lifetime_score = lifetime_score * 0.75
+                        bt.logging.trace(f"| {current_thread} | 🚩 Miner '{miner_hotkey}' has less than 5 scored predictions. Scaling their score.")
+                        lifetime_score = lifetime_score * 0.7
 
                     elif total_predictions < 10:
-                        bt.logging.trace(f"| {current_thread} | 🚩 Miner '{miner_hotkey}' has less than 10 predictions. Scaling their score.")
-                        lifetime_score = lifetime_score * 0.85
+                        bt.logging.trace(f"| {current_thread} | 🚩 Miner '{miner_hotkey}' has less than 10 scored predictions. Scaling their score.")
+                        lifetime_score = lifetime_score * 0.725
 
                     elif total_predictions < 15:
-                        bt.logging.trace(f"| {current_thread} | 🚩 Miner '{miner_hotkey}' has less than 15 predictions. Scaling their score.")
-                        lifetime_score = lifetime_score * 0.92
+                        bt.logging.trace(f"| {current_thread} | 🚩 Miner '{miner_hotkey}' has less than 15 scored predictions. Scaling their score.")
+                        lifetime_score = lifetime_score * 0.75
 
                     elif total_predictions < 20:
-                        bt.logging.trace(f"| {current_thread} | 🚩 Miner '{miner_hotkey}' has less than 20 predictions. Scaling their score.")
-                        lifetime_score = lifetime_score * 0.95
+                        bt.logging.trace(f"| {current_thread} | 🚩 Miner '{miner_hotkey}' has less than 20 scored predictions. Scaling their score.")
+                        lifetime_score = lifetime_score * 0.8
+
+                    elif total_predictions < 25:
+                        bt.logging.trace(f"| {current_thread} | 🚩 Miner '{miner_hotkey}' has less than 25 scored predictions. Scaling their score.")
+                        lifetime_score = lifetime_score * 0.85
 
                     uid = hotkey_to_uid[miner_hotkey]
                     scores[uid] = lifetime_score
@@ -87,6 +106,29 @@ class WeightSetter:
         except Exception as e:
             bt.logging.error(f" | {current_thread} |❗Error fetching miner scores: {str(e)}")
             return torch.zeros(len(self.metagraph.hotkeys))
+
+    def get_average_markets_in_range(self):
+        current_thread = threading.current_thread().name
+        bt.logging.trace(f"| {current_thread} | 🧮 Calculating market cutoff...")
+        all_table_query = "SELECT name FROM sqlite_master WHERE type='table'"
+        all_tables = [x[0] for x in self.database_manager.query(all_table_query)]  # Get all tables in database
+        predictions_tables = [s for s in all_tables if s.startswith("predictions_")]
+        total = 0
+        count = 0
+        for predictions_table in predictions_tables:
+            market_query = f"SELECT COUNT(DISTINCT(market)) FROM {predictions_table} WHERE prediction_timestamp >= datetime('now', '-5 days')"
+            with self.database_manager.lock:
+                results = self.database_manager.query(market_query)
+                if len(results) > 0:
+                    value = results[0][0]
+                    if value > 0:
+                        total += results[0][0]
+                        count += 1
+        if count == 0:
+            bt.logging.debug(f"| {current_thread} | ❗ ERROR Found no predictions tables!")
+        average = total / count
+        bt.logging.trace(f"| {current_thread} | 🛒 Found {average} as the average number of markets predicted on in the last 5 days")
+        return average
 
     def calculate_weights(self, scores):
         n_miners = len(scores)

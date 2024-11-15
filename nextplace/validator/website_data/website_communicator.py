@@ -10,7 +10,7 @@ class WebsiteCommunicator:
         api_base = "https://dev-nextplace-api.azurewebsites.net"
         self.endpoint = f"{api_base}/{endpoint}"
 
-    def send_data(self, data: list[dict[str, Any]]) -> None:
+    def send_data(self, data: list[dict[str, Any]] or dict[str, Any]) -> None:
         """
         Send data to the nextplace website server
         Args:
@@ -33,7 +33,7 @@ class WebsiteCommunicator:
             bt.logging.info(f"| {current_thread} | ✅ Data sent to Nextplace site successfully.")
 
         except requests.exceptions.HTTPError as e:
-            bt.logging.warning(f"| {current_thread} | ❗ HTTP error occurred: {e}. No data was sent to the Nextplace site.")
+            bt.logging.warning(f"| {current_thread} | ❗ HTTP error occurred: {e}. Data: {data}.")
             if e.response is not None:
                 bt.logging.warning(
                     f"| {current_thread} | ❗ Error sending data to site. Response content: {e.response.text}")
