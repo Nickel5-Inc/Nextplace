@@ -125,7 +125,7 @@ class Scorer:
             if len(data) == 0:  # No validator has data for this miner
                 return 0
             try:
-                avg_score = data[0]["miner"]["avgScore"]
+                avg_score = int(data[0]["miner"]["avgScore"])
                 bt.logging.trace(f"| {current_thread} | 📌 Found score consensus from other valis: {avg_score}")
                 return avg_score
             except (KeyError, TypeError, IndexError) as e:
