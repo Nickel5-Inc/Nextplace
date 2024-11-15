@@ -26,7 +26,7 @@ class WeightSetter:
         now = datetime.now(timezone.utc)
         time_diff = now - self.timer
         # return time_diff >= timedelta(hours=1)
-        return time_diff >= timedelta(minutes=1)
+        return time_diff >= timedelta(minutes=0)
 
     def check_timer_set_weights(self) -> None:
         """
@@ -62,9 +62,8 @@ class WeightSetter:
                     # Handle the case where they're only targeting specific markets
                     market_query = f"SELECT COUNT(DISTINCT(market)) FROM {table_name} WHERE prediction_timestamp >= datetime('now', '-5 days')"
                     distinct_markets = self.database_manager.query(market_query)
-                    bt.logging.debug(f"| {current_thread} | 🚩 Miner '{miner_hotkey}' number of distinct markets: {distinct_markets}.")
                     if len(distinct_markets) > 0:
-                        distinct_markets = distinct_markets[0]
+                        distinct_markets = distinct_markets[0][0]
                         if distinct_markets < 50:
                             bt.logging.trace(f"| {current_thread} | 🚩 Miner '{miner_hotkey}' has less than 50 markets predicted on in the last 5 days. Scaling their score.")
                             lifetime_score = lifetime_score * 0.5
