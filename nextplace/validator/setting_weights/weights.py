@@ -92,11 +92,11 @@ class WeightSetter:
 
                     elif total_predictions < 20:
                         bt.logging.trace(f"| {current_thread} | 🚩 Miner '{miner_hotkey}' has less than 20 scored predictions. Scaling their score.")
-                        lifetime_score = lifetime_score * 0.775
+                        lifetime_score = lifetime_score * 0.8
 
                     elif total_predictions < 25:
                         bt.logging.trace(f"| {current_thread} | 🚩 Miner '{miner_hotkey}' has less than 25 scored predictions. Scaling their score.")
-                        lifetime_score = lifetime_score * 0.8
+                        lifetime_score = lifetime_score * 0.85
 
                     uid = hotkey_to_uid[miner_hotkey]
                     scores[uid] = lifetime_score
