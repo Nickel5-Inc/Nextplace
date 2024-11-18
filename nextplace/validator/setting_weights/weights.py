@@ -42,7 +42,7 @@ class WeightSetter:
         try:  # database_manager lock is already acquire at this point
             results = self.database_manager.query("SELECT miner_hotkey, lifetime_score, last_update_timestamp, total_predictions FROM miner_scores")
             average_markets = self.get_average_markets_in_range()
-            markets_cutoff = int(average_markets * 0.5)
+            markets_cutoff = int(average_markets * 0.75)
             bt.logging.trace(f"| {current_thread} | ✂️ Using markets cutoff: {markets_cutoff}")
 
             scores = torch.zeros(len(self.metagraph.hotkeys))
