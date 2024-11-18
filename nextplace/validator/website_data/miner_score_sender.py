@@ -30,7 +30,6 @@ class MinerScoreSender:
 
         now = datetime.now(timezone.utc).strftime(ISO8601)
         for hotkey in active_miners:
-            bt.logging.debug(f"| {current_thread} | 🪲 PROCESSING HOTKEY {hotkey}")
             hotkey = hotkey[0]
             with self.database_manager.lock:
                 result = self.database_manager.query(f"SELECT lifetime_score, total_predictions, last_update_timestamp FROM miner_scores WHERE miner_hotkey='{hotkey}'")
@@ -50,7 +49,6 @@ class MinerScoreSender:
                     "totalPredictions": total_predictions,
                 })
 
-        bt.logging.debug(f"| {current_thread} | 🪲 OUTGOING DATA {data_to_send}")
         bt.logging.info(f"| {current_thread} | ⛵ Sending {len(data_to_send)} miner scores to website")
         website_communicator = WebsiteCommunicator("/Miner/Scores")
         website_communicator.send_data(data=data_to_send)
