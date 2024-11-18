@@ -1,4 +1,6 @@
 import threading
+from datetime import datetime
+
 import bittensor as bt
 import requests
 from nextplace.validator.api.api_base import ApiBase
@@ -39,10 +41,12 @@ class SoldHomesAPI(ApiBase):
         Returns:
             None
         """
+        current_thread = threading.current_thread().name
         region_id = market['id']
         url_sold = "https://redfin-com-data.p.rapidapi.com/properties/search-sold"  # URL for sold houses
         page = 1  # Page number for api results
 
+        invalid_results = {'date': 0, 'price': 0}
         valid_results = []
         # Iteratively call the API until we have no more results to read
         while True:
@@ -72,16 +76,17 @@ class SoldHomesAPI(ApiBase):
 
             # Iterate all homes
             for home in homes:
-                self._process_home(home, valid_results)
+                self._process_home(home, valid_results, invalid_results)
 
             if len(homes) < self.max_results_per_page:  # Last page
                 break
 
             page += 1  # Increment page
 
+        bt.logging.trace(f"| {current_thread} | 📣 Found {invalid_results['date']} homes with invalid dates and {invalid_results['price']} homes with invalid prices")
         self._ingest_valid_homes(valid_results)
 
-    def _process_home(self, home: any, result_tuples: list[tuple]) -> None:
+    def _process_home(self, home: any, result_tuples: list[tuple], invalid_results: dict[str, int]) -> None:
         home_data = home['homeData']
         property_id = home_data.get('propertyId')  # Extract property id
         sale_price = self._get_nested(home_data, 'priceInfo', 'amount')  # Extract sale price
@@ -90,6 +95,14 @@ class SoldHomesAPI(ApiBase):
         zip_code = self._get_nested(home_data, 'addressInfo', 'zip')
         nextplace_id = self.get_hash(address, zip_code)
         if address and zip_code and property_id and sale_price and sale_date:
+            sale_date_obj = datetime.strptime(sale_date, "%Y-%m-%dT%H:%M:%SZ").date()
+            today = datetime.utcnow().date()
+            if sale_price == 0:  # If sale price is 0, ignore
+                invalid_results['price'] += 1
+                return
+            if sale_date_obj > today:  # If sale date is in the future, ignore
+                invalid_results['date'] += 1
+                return
             result_tuples.append((nextplace_id, property_id, sale_price, sale_date))
 
     def _ingest_valid_homes(self, result_tuples: list[tuple]) -> None:
