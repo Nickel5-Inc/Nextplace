@@ -1,3 +1,5 @@
+from sqlite3 import OperationalError
+
 from nextplace.validator.database.database_manager import DatabaseManager
 import threading
 import bittensor as bt
@@ -18,25 +20,33 @@ class MinerScoreSender:
         """
         current_thread = threading.current_thread().name
 
-
         with self.database_manager.lock:
-            miner_scores = self.database_manager.query("SELECT miner_hotkey, lifetime_score, total_predictions, last_update_timestamp FROM miner_scores")
-        if len(miner_scores) == 0:
-            bt.logging.info(f"| {current_thread} | 🔔 No miner scores to send to website")
+            active_miners = self.database_manager.query(f"SELECT miner_hotkey FROM active_miners")
 
-        with self.database_manager.lock:
-            data_to_send = [
-                {
-                    "minerHotKey": x[0],
+        data_to_send = []
+
+        for hotkey in active_miners:
+            bt.logging.debug(f"| {current_thread} | 🪲 PROCESSING HOTKEY {hotkey}")
+            hotkey = hotkey[0]
+            with self.database_manager.lock:
+                result = self.database_manager.query(f"SELECT lifetime_score, total_predictions, last_update_timestamp FROM miner_scores WHERE miner_hotkey='{hotkey}'")
+                score = result[0][0] if len(result) == 1 else 0
+                num_predictions = result[0][1] if len(result) == 1 else 0
+                last_update_timestamp = result[0][2] if len(result) == 1 else "N/A"
+                try:
+                    total_predictions = self.database_manager.get_size_of_table(f"predictions_{hotkey}")
+                except OperationalError:
+                    total_predictions = 0
+                data_to_send.append({
+                    "minerHotKey": hotkey,
                     "minerColdKey": "N/A",
-                    "minerScore": x[1],
-                    "numPredictions": x[2],
-                    "scoreGenerationDate": x[3],
-                    "totalPredictions": self.database_manager.get_size_of_table(f"predictions_{x[0]}"),
-                }
-                for x in miner_scores
-            ]
+                    "minerScore": score,
+                    "numPredictions": num_predictions,
+                    "scoreGenerationDate": last_update_timestamp,
+                    "totalPredictions": total_predictions,
+                })
 
-        bt.logging.info(f"| {current_thread} | ⛵ Sending {len(miner_scores)} miner scores to website")
+        bt.logging.debug(f"| {current_thread} | 🪲 OUTGOING DATA {data_to_send}")
+        bt.logging.info(f"| {current_thread} | ⛵ Sending {len(data_to_send)} miner scores to website")
         website_communicator = WebsiteCommunicator("/Miner/Scores")
         website_communicator.send_data(data=data_to_send)
