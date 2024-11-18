@@ -32,7 +32,7 @@ class MinerScoreSender:
                 result = self.database_manager.query(f"SELECT lifetime_score, total_predictions, last_update_timestamp FROM miner_scores WHERE miner_hotkey='{hotkey}'")
                 score = result[0][0] if len(result) == 1 else 0
                 num_predictions = result[0][1] if len(result) == 1 else 0
-                last_update_timestamp = result[0][2] if len(result) == 1 else "N/A"
+                last_update_timestamp = result[0][2] if len(result) == 1 else None
                 try:
                     total_predictions = self.database_manager.get_size_of_table(f"predictions_{hotkey}")
                 except OperationalError:
