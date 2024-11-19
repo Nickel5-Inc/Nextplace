@@ -14,6 +14,7 @@ from nextplace.validator.website_data.miner_score_sender import MinerScoreSender
 from template.base.validator import BaseValidatorNeuron
 import threading
 
+PROPERTIES_THREAD_NAME = "🏠 PropertiesThread 🏠"
 
 class RealEstateValidator(BaseValidatorNeuron):
     def __init__(self, config=None):
@@ -99,10 +100,9 @@ class RealEstateValidator(BaseValidatorNeuron):
             try:
                 # If we don't have any properties AND we aren't getting them yet, start thread to get properties
                 number_of_properties = self.database_manager.get_size_of_table('properties')
-                properties_thread_name = "🏠 PropertiesThread 🏠"
-                properties_thread_is_running = self.is_thread_running(properties_thread_name)
+                properties_thread_is_running = self.is_thread_running(PROPERTIES_THREAD_NAME)
                 if number_of_properties == 0 and not properties_thread_is_running:
-                    thread = threading.Thread(target=self.market_manager.get_properties_for_market, name=properties_thread_name)  # Create thread
+                    thread = threading.Thread(target=self.market_manager.get_properties_for_market, name=PROPERTIES_THREAD_NAME)  # Create thread
                     thread.start()  # Start thread
                     return
 
