@@ -208,10 +208,6 @@ real_estate_markets = [
         "id": "6_30827"
     },
     {
-        "name": "Plano",
-        "id": "6_30868"
-    },
-    {
         "name": "St. Petersburg",
         "id": "6_16164"
     },

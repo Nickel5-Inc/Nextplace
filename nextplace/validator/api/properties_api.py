@@ -28,6 +28,7 @@ class PropertiesAPI(ApiBase):
         Returns:
             None
         """
+        current_thread = threading.current_thread().name
         url_for_sale = "https://redfin-com-data.p.rapidapi.com/properties/search-sale"  # Redfin URL
         page = 1  # Page number for api results
 
@@ -59,6 +60,7 @@ class PropertiesAPI(ApiBase):
             if len(homes) < self.max_results_per_page:  # Last page
                 break
 
+            bt.logging.trace(f"| {current_thread} | Ingested {len(homes)} homes on page {page}")
             page += 1
 
     def _ingest_properties(self, homes: list, market: str) -> None:
