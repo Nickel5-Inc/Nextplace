@@ -42,8 +42,6 @@ class WeightSetter:
         try:  # database_manager lock is already acquire at this point
             results = self.database_manager.query("SELECT miner_hotkey, lifetime_score, last_update_timestamp, total_predictions FROM miner_scores")
             average_markets = self.get_average_markets_in_range()
-            markets_cutoff = int(average_markets * 0.75)
-            bt.logging.trace(f"| {current_thread} | ✂️ Using markets cutoff: {markets_cutoff}")
 
             scores = torch.zeros(len(self.metagraph.hotkeys))
             hotkey_to_uid = {hk: uid for uid, hk in enumerate(self.metagraph.hotkeys)}
@@ -65,9 +63,15 @@ class WeightSetter:
                     distinct_markets = self.database_manager.query(market_query)
                     if len(distinct_markets) > 0:
                         distinct_markets = distinct_markets[0][0]
-                        if distinct_markets < markets_cutoff:
-                            bt.logging.trace(f"| {current_thread} | 🚩 Miner '{miner_hotkey}' has less than {markets_cutoff} markets predicted on in the last 5 days. Scaling their score.")
+                        if distinct_markets < 0.5:
+                            bt.logging.trace(f"| {current_thread} | 🚩 Miner '{miner_hotkey}' has less than {50}% markets predicted on in the last 5 days. Scaling their score.")
                             lifetime_score = lifetime_score * 0.5
+                        elif distinct_markets < 0.75:
+                            bt.logging.trace(f"| {current_thread} | 🚩 Miner '{miner_hotkey}' has less than {5}% markets predicted on in the last 5 days. Scaling their score.")
+                            lifetime_score = lifetime_score * 0.75
+                        elif distinct_markets < 0.85:
+                            bt.logging.trace(f"| {current_thread} | 🚩 Miner '{miner_hotkey}' has less than {85}% markets predicted on in the last 5 days. Scaling their score.")
+                            lifetime_score = lifetime_score * 0.85
 
                     # If last update was over 5 days ago, scale their score back by 50%
                     if time_diff > timedelta(days=5):
