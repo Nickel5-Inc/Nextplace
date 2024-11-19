@@ -67,7 +67,7 @@ class WeightSetter:
                             bt.logging.trace(f"| {current_thread} | 🚩 Miner '{miner_hotkey}' has less than {50}% markets predicted on in the last 5 days. Scaling their score.")
                             lifetime_score = lifetime_score * 0.5
                         elif distinct_markets < 0.75:
-                            bt.logging.trace(f"| {current_thread} | 🚩 Miner '{miner_hotkey}' has less than {5}% markets predicted on in the last 5 days. Scaling their score.")
+                            bt.logging.trace(f"| {current_thread} | 🚩 Miner '{miner_hotkey}' has less than {75}% markets predicted on in the last 5 days. Scaling their score.")
                             lifetime_score = lifetime_score * 0.75
                         elif distinct_markets < 0.85:
                             bt.logging.trace(f"| {current_thread} | 🚩 Miner '{miner_hotkey}' has less than {85}% markets predicted on in the last 5 days. Scaling their score.")
