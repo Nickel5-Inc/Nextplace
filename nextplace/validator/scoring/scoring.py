@@ -174,7 +174,7 @@ class Scorer:
         for prediction in formatted_predictions:
 
             nextplace_id, miner_hotkey, miner_coldkey, prediction_date, predicted_sale_price, predicted_sale_date, sale_price, sale_date = prediction
-            score = self.scoring_calculator.calculate_score(sale_price, predicted_sale_price, sale_date, predicted_sale_date)
+            score = self.scoring_calculator.calculate_score(sale_price, predicted_sale_price, sale_date, predicted_sale_date, miner_hotkey)
             prediction_date_parsed = self.parse_iso_datetime(prediction_date) if isinstance(prediction_date, str) else prediction_date
             predicted_sale_date_parsed = self.parse_iso_datetime(predicted_sale_date) if isinstance(predicted_sale_date, str) else predicted_sale_date
 
