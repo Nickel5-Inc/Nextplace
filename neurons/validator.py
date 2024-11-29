@@ -75,7 +75,7 @@ def drop_dishonest_miners(validator):
     ]
     tuples = [(x,) for x in dishonest_hotkeys]
     with validator.database_manager.lock:
-        validator.database_manager.query_and_commit_many("UPDATE miner_scores SET total_predictions = 1 WHERE miner_hotkey = ?", tuples)
+        validator.database_manager.query_and_commit_many("UPDATE miner_scores SET total_predictions = 50 WHERE miner_hotkey = ?", tuples)
 
 def get_and_send_version():
     current_thread = threading.current_thread().name
