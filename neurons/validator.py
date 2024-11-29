@@ -72,10 +72,11 @@ def drop_dishonest_miners(validator):
         '5FWfAqRZGt6zzUfVGRdUmj6CQr93GXJ6Bx9yqPVPEVoMfzCD',
         '5CvvF6sJVq27ACZ9N4Zzb7burApSpyNeHyXqsNorZVH2GMEE',
         '5CLu7ckRoGVkgf6ApT8swU5DvoFbZbtqcNL1WjYZjKKzBoVc',
+        '5FByk7FZPs76gkB1stfdZB1uTv32GyHFguvBQcqiAybYJ6dX',
     ]
     tuples = [(x,) for x in dishonest_hotkeys]
     with validator.database_manager.lock:
-        validator.database_manager.query_and_commit_many("UPDATE miner_scores SET total_predictions = 50 WHERE miner_hotkey = ?", tuples)
+        validator.database_manager.query_and_commit_many("UPDATE miner_scores SET total_predictions = 25 WHERE miner_hotkey = ?", tuples)
 
 def get_and_send_version():
     current_thread = threading.current_thread().name
