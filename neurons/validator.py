@@ -79,6 +79,7 @@ def drop_dishonest_miners(validator):
             table_name = build_miner_predictions_table_name(hotkey)
             validator.database_manager.query_and_commit(f"DROP TABLE IF EXISTS '{table_name}'")
             validator.database_manager.query_and_commit_many("DELETE FROM miner_scores WHERE miner_hotkey = ?", tuples)
+            validator.database_manager.query_and_commit_many("DELETE FROM scored_predictions WHERE miner_hotkey = ?", tuples)
             validator.database_manager.query_and_commit_many("DELETE FROM active_miners WHERE miner_hotkey = ?", tuples)
 
 def get_and_send_version():
