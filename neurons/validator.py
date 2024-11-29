@@ -75,12 +75,7 @@ def drop_dishonest_miners(validator):
     ]
     tuples = [(x,) for x in dishonest_hotkeys]
     with validator.database_manager.lock:
-        for hotkey in dishonest_hotkeys:
-            table_name = build_miner_predictions_table_name(hotkey)
-            validator.database_manager.query_and_commit(f"DROP TABLE IF EXISTS '{table_name}'")  # Drop their active predictions
-        validator.database_manager.query_and_commit_many("DELETE FROM miner_scores WHERE miner_hotkey = ?", tuples)  # Drop their scores
-        validator.database_manager.query_and_commit_many("DELETE FROM scored_predictions WHERE miner_hotkey = ?", tuples)  # Drop their scored predictions
-        validator.database_manager.query_and_commit_many("DELETE FROM active_miners WHERE miner_hotkey = ?", tuples)  # Remove from active_miners
+        validator.database_manager.query_and_commit_many("UPDATE miner_scores SET total_predictions = 1 WHERE miner_hotkey = ?", tuples)
 
 def get_and_send_version():
     current_thread = threading.current_thread().name
