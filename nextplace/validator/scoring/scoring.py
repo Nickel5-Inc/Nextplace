@@ -149,7 +149,7 @@ class Scorer:
             SELECT {table_name}.nextplace_id, {table_name}.miner_hotkey, {table_name}.predicted_sale_price, {table_name}.predicted_sale_date, {table_name}.prediction_timestamp, {table_name}.market, sales.sale_price, sales.sale_date
             FROM {table_name}
             JOIN sales ON {table_name}.nextplace_id = sales.nextplace_id
-            AND {table_name}.prediction_timestamp < sales.sale_date
+            AND DATE({table_name}.prediction_timestamp) = DATE(sales.sale_date, '-1 day')
         """
 
         with self.database_manager.lock:  # Acquire lock
