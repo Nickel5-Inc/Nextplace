@@ -45,10 +45,16 @@ class AutoUpdater:
         else:
             print("Already up to date.")
 
+    def run(self):
+        # while True:
+        self.check_github()
+            # Wait for an hour
+
 
 if __name__ == "__main__":
     if len(sys.argv) != 2:
-        print(f"Usage: auto_update.py <pm2_process_name>")
+        print(f"Usage: python3 auto_update.py <pm2_process_name>")
+        sys.exit(1)
     pm2_process_name = sys.argv[1]
     print(f"Running auto-updater with pm2 process name '{pm2_process_name}'")
     auto_updater = AutoUpdater(pm2_process_name)
