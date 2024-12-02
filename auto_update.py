@@ -2,8 +2,6 @@ import subprocess
 import sys
 import requests
 
-REPO_PATH = "."
-
 
 class AutoUpdater:
     def __init__(self, pm2_process: str) -> None:
@@ -24,7 +22,7 @@ class AutoUpdater:
         try:
             result = subprocess.run(
                 ["git", "rev-parse", "HEAD"],
-                cwd=REPO_PATH,
+                cwd=".",
                 text=True,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE
@@ -36,7 +34,16 @@ class AutoUpdater:
             sys.exit(1)
 
     def check_github(self):
-        pass
+        latest_sha = self.get_latest_commit_sha()
+        local_sha = self.get_local_commit_sha()
+
+        if latest_sha != local_sha:
+            print("Newer version detected. Pulling changes...")
+            # pull_latest_changes()
+            print("Restarting PM2 process...")
+            # restart_pm2_process()
+        else:
+            print("Already up to date.")
 
 
 if __name__ == "__main__":
