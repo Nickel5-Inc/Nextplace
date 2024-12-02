@@ -3,12 +3,15 @@ import sys
 from time import sleep
 import requests
 
+REPO_PATH = "."
+BRANCH = "main"
+
 
 class AutoUpdater:
 
     def __init__(self, pm2_process: str) -> None:
-        self.pm2_process = pm2_process
-        self.github_api_url = "https://api.github.com/repos/Nickel5-Inc/Nextplace/commits/main"
+        self.pm2_process = pm2_process  # store pm2 process name
+        self.github_api_url = f"https://api.github.com/repos/Nickel5-Inc/Nextplace/commits/{BRANCH}"  # store remote repo name
 
     def get_latest_commit_sha(self) -> str:
         """
@@ -35,7 +38,7 @@ class AutoUpdater:
             # get the local git repo info
             result = subprocess.run(
                 ["git", "rev-parse", "HEAD"],
-                cwd=".",
+                cwd=REPO_PATH,
                 text=True,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE
@@ -44,6 +47,47 @@ class AutoUpdater:
             return result.stdout.strip()  # parse output
         except subprocess.CalledProcessError as e:
             print(f"Error fetching local commit SHA: {e.stderr}")
+            sys.exit(1)
+
+    def pull_latest_changes(self) -> None:
+        """
+        Pull the latest version of the main branch from GitHub
+        Returns:
+            None
+        """
+        try:
+            # run subprocess to pull latest version of main
+            result = subprocess.run(
+                ["git", "pull", "origin", BRANCH],
+                cwd=REPO_PATH,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE
+            )
+            result.check_returncode()  # check return code
+            print(f"Pulled latest changes: {result.stdout}")
+        except subprocess.CalledProcessError as e:  # handle error
+            print(f"Error pulling latest changes: {e.stderr}")
+            sys.exit(1)
+
+    def restart_pm2_process(self) -> None:
+        """
+        Restart the PM2 process running the validator
+        Returns:
+            None
+        """
+        try:
+            # run subprocess to restart pm2
+            result = subprocess.run(
+                ["pm2", "restart", self.pm2_process],
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE
+            )
+            result.check_returncode()  # check return code
+            print(f"PM2 process restarted: {result.stdout}")
+        except subprocess.CalledProcessError as e:  # handle error
+            print(f"Error restarting PM2 process: {e.stderr}")
             sys.exit(1)
 
     def check_github(self) -> None:
@@ -57,9 +101,9 @@ class AutoUpdater:
 
         if latest_sha != local_sha:  # we need to update
             print("Newer version detected. Pulling changes...")
-            # pull_latest_changes()
+            self.pull_latest_changes()
             print("Restarting PM2 process...")
-            # restart_pm2_process()
+            self.restart_pm2_process()
         else:  # we don't need to update
             print("Already up to date.")
 
