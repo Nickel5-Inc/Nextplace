@@ -15,10 +15,8 @@ SCORE_THREAD_NAME = "🏋🏻 ScoreThread 🏋"
 
 def main(validator):
     get_and_send_version()
-    step = 250  # Initialize step
+    step = 1  # Initialize step
     current_thread = threading.current_thread().name
-
-    drop_dishonest_miners(validator)
 
     # Start the scoring thread
     scoring_thread = threading.Thread(target=validator.scorer.run_score_thread, name=SCORE_THREAD_NAME)
@@ -64,19 +62,6 @@ def main(validator):
             stack_trace = traceback.format_exc()
             bt.logging.error(f"| {current_thread} | Stack Trace: {stack_trace}")
             time.sleep(10)
-
-def drop_dishonest_miners(validator):
-    dishonest_hotkeys = [
-        '5GqLaywLxkfZUfgQjXU27kTF72yBYqnxmUkUcF6iQvQU4E3N',
-        '5Hp8LgpkUvSrqXyurRNXjiULN8ZmZGBsf6YDXuRC7mLuup1J',
-        '5FWfAqRZGt6zzUfVGRdUmj6CQr93GXJ6Bx9yqPVPEVoMfzCD',
-        '5CvvF6sJVq27ACZ9N4Zzb7burApSpyNeHyXqsNorZVH2GMEE',
-        '5CLu7ckRoGVkgf6ApT8swU5DvoFbZbtqcNL1WjYZjKKzBoVc',
-        '5FByk7FZPs76gkB1stfdZB1uTv32GyHFguvBQcqiAybYJ6dX',
-    ]
-    tuples = [(x,) for x in dishonest_hotkeys]
-    with validator.database_manager.lock:
-        validator.database_manager.query_and_commit_many("UPDATE miner_scores SET total_predictions = 25 WHERE miner_hotkey = ?", tuples)
 
 def get_and_send_version():
     current_thread = threading.current_thread().name
