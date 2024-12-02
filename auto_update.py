@@ -4,6 +4,7 @@ import requests
 
 
 class AutoUpdater:
+
     def __init__(self, pm2_process: str) -> None:
         self.pm2_process = pm2_process
         self.github_api_url = "https://api.github.com/repos/Nickel5-Inc/Nextplace/commits/main"
@@ -58,3 +59,4 @@ if __name__ == "__main__":
     pm2_process_name = sys.argv[1]
     print(f"Running auto-updater with pm2 process name '{pm2_process_name}'")
     auto_updater = AutoUpdater(pm2_process_name)
+    auto_updater.run()
