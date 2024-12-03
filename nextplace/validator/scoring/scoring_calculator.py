@@ -54,7 +54,7 @@ class ScoringCalculator:
         with self.database_manager.lock:
             results = self.database_manager.query_with_values(existing_daily_score_query, values)
 
-        if results:  # Update existing Miner score
+        if results and len(results) > 0:  # Update existing Miner score
             result = results[0]
             old_score = result[0]
             old_predictions = result[1]
@@ -73,6 +73,7 @@ class ScoringCalculator:
                 self.database_manager.query_and_commit_with_values(update_query, update_values)
 
             bt.logging.info(f"| {current_thread} | ⭐ Updated daily score. Score: {new_daily_score}, Total Scored: {new_total_predictions}")
+
         else:  # No scores for this Miner yet
             insert_query = """
                 INSERT INTO daily_scores (miner_hotkey, date, score, total_predictions) 
