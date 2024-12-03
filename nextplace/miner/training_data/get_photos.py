@@ -9,7 +9,7 @@ import os
 
 load_dotenv('miner.env')
 
-def get_property_photos_batch(db_path: str, api_key: str, limit: int = 10) -> Dict[int, List[str]]:
+def get_property_photos_batch(db_path: str, limit: int = 10) -> Dict[int, List[str]]:
     """
     Gets property photos from Redfin API.
     
@@ -102,10 +102,9 @@ def get_property_photos_batch(db_path: str, api_key: str, limit: int = 10) -> Di
 # Example usage
 if __name__ == "__main__":
     db_path = "data/miner.db"
-    api_key = "YOUR_API_KEY"
     
     print("Starting photo URL extraction for first 10 properties...")
-    property_photos = get_property_photos_batch(db_path, api_key, 10)
+    property_photos = get_property_photos_batch(db_path, 10)
     
     print("\nSummary of results:")
     for prop_id, urls in property_photos.items():
