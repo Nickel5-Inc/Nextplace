@@ -4,6 +4,10 @@ import requests
 import json
 from typing import List, Dict
 import time
+from dotenv import load_dotenv
+import os
+
+load_dotenv('miner.env')
 
 def get_property_photos_batch(db_path: str, api_key: str, limit: int = 10) -> Dict[int, List[str]]:
     """
@@ -17,6 +21,7 @@ def get_property_photos_batch(db_path: str, api_key: str, limit: int = 10) -> Di
     Returns:
         Dict[int, List[str]]: Dictionary mapping property_ids to lists of photo URLs
     """
+    api_key = os.getenv('RAPIDAPI_KEY')
     # First get the properties
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
