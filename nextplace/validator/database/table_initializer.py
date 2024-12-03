@@ -21,6 +21,7 @@ class TableInitializer:
         self._create_sales_table(cursor)
         self._create_miner_scores_table(cursor)
         self._create_active_miners_table(cursor)
+        self._create_daily_scores_table(cursor)
         db_connection.commit()
         cursor.close()
         db_connection.close()
@@ -128,6 +129,28 @@ class TableInitializer:
                 total_predictions INTEGER,
                 last_update_timestamp DATETIME
             )
+        ''')
+
+
+    def _create_daily_scores_table(self, cursor) -> None:
+        """
+        Create the miner scores table
+        Args:
+            cursor: a database cursor
+
+        Returns:
+            None
+        """
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS daily_scores (
+                miner_hotkey TEXT PRIMARY KEY,
+                date DATE,
+                score REAL,
+                total_predictions INTEGER
+            )
+        ''')
+        cursor.execute('''
+            CREATE INDEX IF NOT EXISTS idx_date ON daily_scores(date)
         ''')
 
 
