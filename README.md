@@ -29,7 +29,7 @@ Validators can run the `auto_update.py` script to manage auto updates for the co
 argument which is the name of the PM2 process in which they are running their validator. This script should be run in a
 separate PM2 process.
 
-Example: `python3 auto_update.py <validator_pm2_process_name>`
+Example: `pm2 start auto_update.py --name "auto_updater" --interpreter python -- <pm2 process name>`
 
 ### Scoring Method for Home Price Prediction
 
