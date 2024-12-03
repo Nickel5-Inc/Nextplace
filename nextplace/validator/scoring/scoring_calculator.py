@@ -71,6 +71,8 @@ class ScoringCalculator:
 
             with self.database_manager.lock:
                 self.database_manager.query_and_commit_with_values(update_query, update_values)
+
+            bt.logging.info(f"| {current_thread} | ⭐ Updated daily score. Score: {new_daily_score}, Total Scored: {new_total_predictions}")
         else:  # No scores for this Miner yet
             insert_query = """
                 INSERT INTO daily_scores (miner_hotkey, date, score, total_predictions) 
@@ -80,6 +82,7 @@ class ScoringCalculator:
 
             with self.database_manager.lock:
                 self.database_manager.query_and_commit_with_values(insert_query, insert_values)
+            bt.logging.info(f"| {current_thread} | ⭐ Added daily score. Score: {new_scores['total_score']}, Total Scored: {new_scores['new_predictions']}")
 
     def _update_miner_score(self, miner_score: Dict[str, float], new_scores: Dict[str, float], miner_hotkey: str) -> None:
         """
