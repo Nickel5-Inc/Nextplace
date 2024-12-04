@@ -196,3 +196,27 @@ This loads a file called `BaseModel.py` from the local filesystem. In this examp
 the full path to the file. The current working directory is `/root/PycharmProjects/nextplace`, so we must go up two levels
 to `/root` directory. The `--model_filename` argument is `BaseModel.py`. We can see in the example file structure that
 `BaseModel.py` is in the `/root` directory.
+
+### Using home photos for a vision model
+Home photos can be acquired for each listed home. Combining a Vision model with a traditional moddel can be very powerful. Photos of each home can expand the models understanding of each property.
+
+To begin, you need a [Redfin API](https://rapidapi.com/ntd119/api/redfin-com-data) key to run this validator. Select the ULTRA subscription at $35 per month.
+You must store your API key in a `miner.env` file at the root of this repository, in a field called `RAPIDAPI_KEY`. 
+- EX `miner.env`
+- ```RAPIDAPI_KEY="your-api-key"```
+
+Homes listed can be found on our website at https://nextplace.ai/downloadData. The data can also be downloaded by running the following module:
+
+```
+python nextplace/miner/training_data/download_data.py
+```
+
+This will save listed homes a database at `data/miner.db` in a table calledd `properties`. With this database, URL's for each home can be acquired by running
+
+```
+python nextplace/miner/training_data/get_photos.py
+```
+
+This will create a new table at `data/miner.db` called property_photos. The URL to the photo will be saved with its corresponding `property_id`. By default, this will only run for 10 properties to not overuse your API key, but it is a very easy change to make it run for all properties.
+
+Combining the photos with a traditional price prediction can be a powerful tool in rising to the top of Nextplace miners.
