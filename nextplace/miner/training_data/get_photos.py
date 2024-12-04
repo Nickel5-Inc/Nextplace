@@ -9,26 +9,46 @@ import os
 
 load_dotenv('miner.env')
 
+def create_photos_table(db_path: str):
+    """Creates the property_photos table if it doesn't exist."""
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS property_photos (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            property_id INTEGER,
+            photo_url TEXT NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (property_id) REFERENCES properties (property_id)
+        )
+    ''')
+    conn.commit()
+    conn.close()
+
+def save_photos_to_db(db_path: str, property_id: int, photo_urls: List[str]):
+    """Saves photo URLs to the database."""
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+    for url in photo_urls:
+        cursor.execute(
+            'INSERT INTO property_photos (property_id, photo_url) VALUES (?, ?)',
+            (property_id, url)
+        )
+    conn.commit()
+    conn.close()
+
 def get_property_photos_batch(db_path: str, limit: int = 10) -> Dict[int, List[str]]:
-    """
-    Gets property photos from Redfin API.
-    
-    Args:
-        db_path (str): Path to the SQLite database
-        api_key (str): Your RapidAPI key
-        limit (int): Number of properties to process
-        
-    Returns:
-        Dict[int, List[str]]: Dictionary mapping property_ids to lists of photo URLs
-    """
+    """Gets property photos from Redfin API and saves them to database."""
+    create_photos_table(db_path)
     api_key = os.getenv('RAPIDAPI_KEY')
-    # First get the properties
+    
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
     
     query = """
         SELECT address, city, state, zip_code, property_id
         FROM properties 
+        WHERE property_id NOT IN (SELECT DISTINCT property_id FROM property_photos)
         LIMIT ?
     """
     cursor.execute(query, (limit,))
@@ -36,7 +56,7 @@ def get_property_photos_batch(db_path: str, limit: int = 10) -> Dict[int, List[s
     conn.close()
     
     if not rows:
-        print("No properties found in database")
+        print("No new properties found in database")
         return {}
     
     results = {}
@@ -45,49 +65,35 @@ def get_property_photos_batch(db_path: str, limit: int = 10) -> Dict[int, List[s
         address, city, state, zip_code, prop_id = row
         print(f"\nProcessing property: {address}, {city}, {state} {zip_code} (ID: {prop_id})")
         
-        # Clean and format the address components
-        address = address.strip().replace('#', 'Unit')
-        address = address.replace('.', '').replace('  ', ' ')
-        address = address.replace(' ', '-')
+        address = address.strip().replace('#', 'Unit').replace('.', '').replace('  ', ' ').replace(' ', '-')
         city = city.strip().replace(' ', '-')
         
-        # Construct the Redfin web URL
         redfin_url = f"https://www.redfin.com/{state}/{city}/{address}-{zip_code}/home/{prop_id}"
-        print(f"Constructed Redfin URL: {redfin_url}")
-        
-        # URL encode the Redfin URL
         encoded_redfin_url = urllib.parse.quote(redfin_url, safe='')
-        
-        # Construct the API URL
         api_url = f"https://redfin-com-data.p.rapidapi.com/property/detail-photos?url={encoded_redfin_url}"
         
-        # Set up the headers
         headers = {
             'x-rapidapi-host': 'redfin-com-data.p.rapidapi.com',
             'x-rapidapi-key': api_key
         }
         
         try:
-            # Make the API request
             response = requests.get(api_url, headers=headers)
-            print(f"Response status code: {response.status_code}")
-            
             response.raise_for_status()
-            
-            # Parse the JSON response
             data = response.json()
             
-            # Extract all full screen photo URLs
             photo_urls = []
             if data.get('status') and data.get('data'):
                 for photo in data['data']:
                     if 'photoUrls' in photo and 'fullScreenPhotoUrl' in photo['photoUrls']:
                         photo_urls.append(photo['photoUrls']['fullScreenPhotoUrl'])
             
-            results[prop_id] = photo_urls
-            print(f"Found {len(photo_urls)} photos for property {prop_id}")
+            if photo_urls:
+                save_photos_to_db(db_path, prop_id, photo_urls)
             
-            # Add a small delay to avoid rate limiting
+            results[prop_id] = photo_urls
+            print(f"Saved {len(photo_urls)} photos for property {prop_id}")
+            
             time.sleep(1)
             
         except requests.exceptions.RequestException as e:
@@ -99,19 +105,7 @@ def get_property_photos_batch(db_path: str, limit: int = 10) -> Dict[int, List[s
     
     return results
 
-# Example usage
 if __name__ == "__main__":
     db_path = "data/miner.db"
-    
-    print("Starting photo URL extraction for first 10 properties...")
+    print("Starting photo URL extraction...")
     property_photos = get_property_photos_batch(db_path, 10)
-    
-    print("\nSummary of results:")
-    for prop_id, urls in property_photos.items():
-        print(f"\nProperty ID {prop_id}:")
-        if urls:
-            print(f"Found {len(urls)} photos:")
-            for i, url in enumerate(urls, 1):
-                print(f"  {i}. {url}")
-        else:
-            print("No photos found")
