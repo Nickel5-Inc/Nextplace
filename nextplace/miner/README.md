@@ -201,7 +201,7 @@ to `/root` directory. The `--model_filename` argument is `BaseModel.py`. We can 
 Home photos can be acquired for each listed home. Combining a Vision model with a traditional moddel can be very powerful. Photos of each home can expand the models understanding of each property.
 
 To begin, you need a [Redfin API](https://rapidapi.com/ntd119/api/redfin-com-data) key to run this validator. Select the ULTRA subscription at $35 per month.
-You must store your API key in a `.env` file at the root of this repository, in a field called `RAPIDAPI_KEY`. 
+You must store your API key in a `miner.env` file at the root of this repository, in a field called `RAPIDAPI_KEY`. 
 - EX `miner.env`
 - ```RAPIDAPI_KEY="your-api-key"```
 
