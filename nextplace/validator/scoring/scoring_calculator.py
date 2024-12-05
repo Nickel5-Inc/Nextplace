@@ -75,11 +75,12 @@ class ScoringCalculator:
             bt.logging.info(f"| {current_thread} | ⭐ Updated daily score. Score: {new_daily_score}, Total Scored: {new_total_predictions}")
 
         else:  # No scores for this Miner yet
+            score = new_scores['total_score'] / new_scores['new_predictions']
             insert_query = """
                 INSERT INTO daily_scores (miner_hotkey, date, score, total_predictions) 
                 VALUES (?, ?, ?, ?)
             """
-            insert_values = (miner_hotkey, today, new_scores['total_score'], new_scores['new_predictions'])
+            insert_values = (miner_hotkey, today, score, new_scores['new_predictions'])
 
             with self.database_manager.lock:
                 self.database_manager.query_and_commit_with_values(insert_query, insert_values)
