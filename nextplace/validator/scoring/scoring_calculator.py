@@ -21,11 +21,70 @@ class ScoringCalculator:
         if new_scores['new_predictions'] == 0:
             bt.logging.info(f"| {current_thread} | 📰 Miner '{miner_hotkey}' had only invalid scores, likely due to invalid date formatting.")
             return
+
+        self._add_to_daily_scores(new_scores, miner_hotkey)
+
         if miner_score is not None:
             self._update_miner_score(miner_score, new_scores, miner_hotkey)
         else:
             self._handle_new_miner_score(miner_hotkey, new_scores)
         bt.logging.info(f"| {current_thread} | 🎯 Scored {len(scorable_predictions)} predictions for hotkey '{miner_hotkey}'")
+
+    def _add_to_daily_scores(self, new_scores: dict, miner_hotkey: str) -> None:
+        """
+        Add new scores to daily_scores table.
+        Args:
+            new_scores: dict of new scores.
+            miner_hotkey: miner's hotkey.
+
+        Returns:
+            None
+        """
+        current_thread = threading.current_thread().name
+        today = datetime.now(timezone.utc).date()
+        bt.logging.info(f"| {current_thread} | 📅 Updating daily_scores for {today}")
+
+        existing_daily_score_query = """
+            SELECT score, total_predictions 
+            FROM daily_scores 
+            WHERE miner_hotkey = ? AND date = ?
+        """
+        values = (miner_hotkey, today)
+
+        with self.database_manager.lock:
+            results = self.database_manager.query_with_values(existing_daily_score_query, values)
+
+        if results and len(results) > 0:  # Update existing Miner score
+            result = results[0]
+            old_score = result[0]
+            old_predictions = result[1]
+            new_total_score = (old_score * old_predictions) + new_scores['total_score']
+            new_total_predictions = old_predictions + new_scores['new_predictions']
+            new_daily_score = new_total_score / new_total_predictions
+
+            update_query = """
+                UPDATE daily_scores 
+                SET score = ?, total_predictions = ? 
+                WHERE miner_hotkey = ? AND date = ?
+            """
+            update_values = (new_daily_score, new_total_predictions, miner_hotkey, today)
+
+            with self.database_manager.lock:
+                self.database_manager.query_and_commit_with_values(update_query, update_values)
+
+            bt.logging.info(f"| {current_thread} | ⭐ Updated daily score. Score: {new_daily_score}, Total Scored: {new_total_predictions}")
+
+        else:  # No scores for this Miner yet
+            score = new_scores['total_score'] / new_scores['new_predictions']
+            insert_query = """
+                INSERT INTO daily_scores (miner_hotkey, date, score, total_predictions) 
+                VALUES (?, ?, ?, ?)
+            """
+            insert_values = (miner_hotkey, today, score, new_scores['new_predictions'])
+
+            with self.database_manager.lock:
+                self.database_manager.query_and_commit_with_values(insert_query, insert_values)
+            bt.logging.info(f"| {current_thread} | ⭐ Added daily score. Score: {score}, Total Scored: {new_scores['new_predictions']}")
 
     def _update_miner_score(self, miner_score: Dict[str, float], new_scores: Dict[str, float], miner_hotkey: str) -> None:
         """
