@@ -29,10 +29,9 @@ class PredictionManager:
         """
 
         current_thread = threading.current_thread().name
-        bt.logging.info(f'| {current_thread} | 📡 Processing Responses')
-
         synapse_id = responses[0][1]
-        bt.logging.debug(f"| {current_thread} | 🪲 DEBUG Processing synapse with ID: {synapse_id}")
+
+        bt.logging.info(f"| {current_thread} | 📡 Processing Responses for synapse with ID: '{synapse_id}'")
 
         if responses is None or len(responses) == 0:
             bt.logging.error(f'| {current_thread} | ❗No responses received')
@@ -41,6 +40,13 @@ class PredictionManager:
         current_utc_datetime = datetime.now(timezone.utc)
         timestamp = current_utc_datetime.strftime(ISO8601)
         valid_hotkeys = set()
+
+        extract_synapse_data_query = "SELECT nextplace_ids FROM synapse_ids WHERE synapse_id = ?"
+        delete_synapse_data_query = "DELETE FROM synapse_ids WHERE synapse_id = ?"
+        nextplace_ids_tuple = (synapse_id,)
+        with self.database_manager.lock:
+            valid_synapse_data = self.database_manager.query_with_values(extract_synapse_data_query, nextplace_ids_tuple)  # Extract synapse data from db
+            self.database_manager.query_and_commit_with_values(delete_synapse_data_query, nextplace_ids_tuple)  # Delete synapse data from db
 
         for idx, response in enumerate(responses):  # Iterate responses
 
@@ -56,13 +62,6 @@ class PredictionManager:
                 table_name = build_miner_predictions_table_name(miner_hotkey)
                 replace_policy_data_for_ingestion: list[tuple] = []
                 ignore_policy_data_for_ingestion: list[tuple] = []
-
-                extract_synapse_data_query = "SELECT nextplace_ids FROM synapse_ids WHERE synapse_id = ?"
-                delete_synapse_data_query = "DELETE FROM synapse_ids WHERE synapse_id = ?"
-                values = (synapse_id,)
-                with self.database_manager.lock:
-                    valid_synapse_data = self.database_manager.query_with_values(extract_synapse_data_query, values)  # Extract synapse data from db
-                    self.database_manager.query_and_commit_with_values(delete_synapse_data_query, values)  # Delete synapse data from db
 
                 if not valid_synapse_data or len(valid_synapse_data) == 0:
                     bt.logging.info(f"| {current_thread} | ❗ Found invalid synapse id: '{synapse_id}'")
