@@ -179,7 +179,7 @@ class TableInitializer:
         """
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS synapse_ids (
-                synapse_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                uuid TEXT PRIMARY KEY,
                 nextplace_ids TEXT
             )
         ''')

@@ -1,14 +1,26 @@
 import threading
-
 import bittensor as bt
 from nextplace.protocol import RealEstateSynapse, RealEstatePrediction, RealEstatePredictions
 from nextplace.validator.database.database_manager import DatabaseManager
 from nextplace.validator.utils.contants import NUMBER_OF_PROPERTIES_PER_SYNAPSE
+import hashlib
+import os
+import json
 
 """
 Helper class manages creating Synapse objects
 """
 
+def _generate_uuid_from_sha256() -> str:
+    """
+    Generate a random UUID based on a SHA-256 hash and return it as a string.
+
+    Returns:
+        str: A UUID string created from a SHA-256 hash.
+    """
+    random_bytes = os.urandom(32)
+    sha256_hash = hashlib.sha256(random_bytes).hexdigest()
+    return f"{sha256_hash[:8]}-{sha256_hash[8:12]}-{sha256_hash[12:16]}-{sha256_hash[16:20]}-{sha256_hash[20:32]}"
 
 class SynapseManager:
 
@@ -43,7 +55,7 @@ class SynapseManager:
                 '''
             self.database_manager.query_and_commit(delete_query)  # Remove the retrieved rows from the database
 
-            outgoing_data = []
+            outgoing_data: list[RealEstatePrediction] = []
 
             for property_datum in property_data:  # Iterate db responses
                 if property_datum:
@@ -58,7 +70,9 @@ class SynapseManager:
                     return None
 
             real_estate_predictions = RealEstatePredictions(predictions=outgoing_data)
-            synapse = RealEstateSynapse.create(real_estate_predictions=real_estate_predictions)
+            synapse_id = _generate_uuid_from_sha256()
+            self._store_synapse_data(outgoing_data, synapse_id)
+            synapse = RealEstateSynapse.create(uuid=synapse_id, real_estate_predictions=real_estate_predictions)
             market_index = 20
             market = property_data[0][market_index]
             bt.logging.trace(f"| {current_thread} | ✉️ Created Synapse with {len(outgoing_data)} properties in {market}")
@@ -67,6 +81,23 @@ class SynapseManager:
         except IndexError:
             bt.logging.info(f"| {current_thread} | ❗No property data available")
             return None
+
+    def _store_synapse_data(self, outgoing_prediction_data: list[RealEstatePrediction], synapse_id: str) -> None:
+        """
+        Store the synapse id along with all nextplace ids
+        Args:
+            outgoing_prediction_data: all home data for this synapse
+            synapse_id: random has for this synapse
+
+        Returns:
+            None
+        """
+        if len(outgoing_prediction_data) == 0:
+            return
+        nextplace_ids = json.dumps([x[0] for x in outgoing_prediction_data])  # Extract & serialize nextplace ids in this synapse
+        query_str = "INSERT OR REPLACE INTO synapse_ids (uuid, nextplace_ids) VALUES (?, ?)"  # query
+        values = (synapse_id, nextplace_ids)  # values
+        self.database_manager.query_and_commit_with_values(query_str, values)
 
     def _property_from_database_row(self, property_data: any) -> RealEstatePrediction:
         """

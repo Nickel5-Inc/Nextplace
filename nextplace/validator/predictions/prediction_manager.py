@@ -1,6 +1,7 @@
 import threading
-from typing import List, Tuple
+from typing import List
 import bittensor as bt
+import json
 from datetime import datetime, timezone
 from nextplace.protocol import RealEstatePredictions
 from nextplace.validator.utils.contants import ISO8601, build_miner_predictions_table_name
@@ -53,10 +54,36 @@ class PredictionManager:
                 replace_policy_data_for_ingestion: list[tuple] = []
                 ignore_policy_data_for_ingestion: list[tuple] = []
 
+                synapse_id = real_estate_predictions.uuid
+                extract_synapse_data_query = "SELECT nextplace_ids FROM synapse_ids WHERE uuid = ?"
+                values = (synapse_id,)
+                with self.database_manager.lock:
+                    valid_synapse_data = self.database_manager.query_with_values(extract_synapse_data_query, values)
+
+                if not valid_synapse_data or len(valid_synapse_data) == 0:
+                    bt.logging.info(f"| {current_thread} | ❗ Found invalid synapse uid")
+                    return
+
+                bt.logging.debug(f"| {current_thread} | 🪲 DEBUG Synapse Data: {valid_synapse_data}")
+
+                valid_nextplace_ids_for_synapse = valid_synapse_data[0][0]
+                bt.logging.debug(f"| {current_thread} | 🪲 DEBUG ID's: {valid_nextplace_ids_for_synapse}")
+                try:
+                    nextplace_id_set = set(json.loads(valid_nextplace_ids_for_synapse))  # Ensure the string is valid JSON
+                    bt.logging.debug(f"| {current_thread} | 🪲 DEBUG Synapse ID Set: {nextplace_id_set}")
+                except json.JSONDecodeError as e:
+                    bt.logging.error(f"| {current_thread} | ❗ Failed to decode JSON: {e}")
+                    return
+
                 for prediction in real_estate_predictions.predictions:  # Iterate predictions in each response
 
                     # Only process valid predictions
                     if prediction is None or prediction.predicted_sale_price is None or prediction.predicted_sale_date is None:
+                        continue
+
+                    # Ignore nextplace_id's that weren't sent in the original synapse
+                    if prediction.nextplace_id not in nextplace_id_set:
+                        bt.logging.error(f"| {current_thread} | ❗ Found invalid nextplace_id for this synapse, ignoring")
                         continue
 
                     values = (
