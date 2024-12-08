@@ -17,7 +17,7 @@ class PredictionManager:
         self.database_manager = database_manager
         self.metagraph = metagraph
 
-    def process_predictions(self, responses: List[RealEstatePredictions]) -> None:
+    def process_predictions(self, responses: List[RealEstatePredictions], valid_synapse_ids: set[str]) -> None:
         """
         Process predictions from the Miners
         Args:
@@ -54,6 +54,10 @@ class PredictionManager:
                 ignore_policy_data_for_ingestion: list[tuple] = []
 
                 for prediction in real_estate_predictions.predictions:  # Iterate predictions in each response
+
+                    # Ignore predictions for houses not affiliated with this synapse
+                    if prediction.nextplace_id not in valid_synapse_ids:
+                        continue
 
                     # Only process valid predictions
                     if prediction is None or prediction.predicted_sale_price is None or prediction.predicted_sale_date is None:
