@@ -63,6 +63,9 @@ class PredictionManager:
             try:
                 miner_hotkey = self.metagraph.hotkeys[idx]
 
+                if miner_hotkey == "5DUpG59WAvKMk6e9zvyZWeUuXzBkUSkVqntChCSKnkwmBEm7":
+                    bt.logging.debug(f"DEBUG Our testnet miner predictions: {response[0].predictions}")
+
                 if miner_hotkey is None:
                     bt.logging.error(f"| {current_thread} | ❗ Failed to find miner_hotkey while processing predictions")
                     continue
