@@ -19,12 +19,9 @@ class RealEstateMiner(BaseMinerNeuron):
 
     # OVERRIDE | Required
     def forward(self, synapse: RealEstateSynapse) -> RealEstateSynapse:
-        synapse_id = synapse.synapse_id
         predictions = synapse.real_estate_predictions.predictions
         self.model.run_inference(predictions)
         self._set_force_update_prediction_flag(predictions)
-        for prediction in predictions:
-            bt.logging.debug(f"Found prediction {prediction.predicted_sale_price, prediction.predicted_sale_date} Synapse ID '{synapse_id}'")
         return synapse
 
     def _set_force_update_prediction_flag(self, predictions: list[RealEstatePrediction]):
