@@ -57,31 +57,25 @@ class PredictionManager:
                 replace_policy_data_for_ingestion: list[tuple] = []
                 ignore_policy_data_for_ingestion: list[tuple] = []
 
-                extract_synapse_data_query = "SELECT nextplace_ids FROM synapse_ids WHERE uuid = ?"
-                delete_synapse_data_query = "DELETE FROM synapse_ids WHERE uuid = ?"
+                extract_synapse_data_query = "SELECT nextplace_ids FROM synapse_ids WHERE synapse_id = ?"
+                delete_synapse_data_query = "DELETE FROM synapse_ids WHERE synapse_id = ?"
                 values = (synapse_id,)
                 with self.database_manager.lock:
                     valid_synapse_data = self.database_manager.query_with_values(extract_synapse_data_query, values)  # Extract synapse data from db
                     self.database_manager.query_and_commit_with_values(delete_synapse_data_query, values)  # Delete synapse data from db
 
                 if not valid_synapse_data or len(valid_synapse_data) == 0:
-                    bt.logging.info(f"| {current_thread} | ❗ Found invalid synapse id")
+                    bt.logging.info(f"| {current_thread} | ❗ Found invalid synapse id: '{synapse_id}'")
                     return
 
                 valid_nextplace_ids_for_synapse = valid_synapse_data[0][0]
                 try:
                     nextplace_id_set = set(json.loads(valid_nextplace_ids_for_synapse))  # Ensure the string is valid JSON
-                    bt.logging.debug(f"| {current_thread} | 🪲 DEBUG Synapse ID Set: {nextplace_id_set}")
                 except json.JSONDecodeError as e:
                     bt.logging.error(f"| {current_thread} | ❗ Failed to decode JSON: {e}")
                     return
 
                 for prediction in response[0].predictions:  # Iterate predictions in each response
-                    bt.logging.debug(f"| {current_thread} | 🪲 DEBUG Processing Prediction: {prediction}")
-
-                    # Only process valid predictions
-                    if prediction is None or prediction.predicted_sale_price is None or prediction.predicted_sale_date is None:
-                        continue
 
                     # Ignore nextplace_id's that weren't sent in the original synapse
                     if prediction.nextplace_id not in nextplace_id_set:
@@ -89,6 +83,10 @@ class PredictionManager:
                         continue
 
                     bt.logging.debug(f"| {current_thread} | 🪲 DEBUG Found Valid nextplace_id: {prediction.nextplace_id}")
+
+                    # Only process valid predictions
+                    if prediction is None or prediction.predicted_sale_price is None or prediction.predicted_sale_date is None:
+                        continue
 
                     values = (
                         prediction.nextplace_id,
