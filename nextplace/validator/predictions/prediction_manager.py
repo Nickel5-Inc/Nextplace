@@ -106,7 +106,7 @@ class PredictionManager:
             except Exception as e:
                 bt.logging.error(f"| {current_thread} | ❗Failed to process prediction: {e}")
 
-        found_synapse_ids = [(x[1],) for x in responses]  # Build list of tuples representing every synapse_id found in responses
+        found_synapse_ids = list(set([(x[1],) for x in responses]))  # Build list of unique tuples representing every synapse_id found in responses
         bt.logging.error(f"| {current_thread} | 🪲 DEBUG Removing data for the following synapse_id's from the database '{found_synapse_ids}'")
         delete_synapse_data_query = "DELETE FROM synapse_ids WHERE synapse_id = ?"
         with self.database_manager.lock:
