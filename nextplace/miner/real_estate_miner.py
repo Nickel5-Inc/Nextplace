@@ -20,7 +20,8 @@ class RealEstateMiner(BaseMinerNeuron):
     # OVERRIDE | Required
     def forward(self, synapse: RealEstateSynapse) -> RealEstateSynapse:
         bt.logging.debug(f"DEBUG Type of synapse: {type(synapse)}, Synapse: {synapse}")
-        predictions = synapse.predictions
+        predictions = synapse.real_estate_predictions.predictions
+        bt.logging.debug(f"DEBUG Miner processing {len(predictions)} predictions")
         self.model.run_inference(predictions)
         self._set_force_update_prediction_flag(predictions)
         return synapse
