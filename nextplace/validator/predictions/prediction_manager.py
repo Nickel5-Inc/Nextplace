@@ -18,7 +18,7 @@ class PredictionManager:
         self.database_manager = database_manager
         self.metagraph = metagraph
 
-    def process_predictions(self, responses: Tuple[List[RealEstatePredictions], str]) -> None:
+    def process_predictions(self, responses: list) -> None:
         """
         Process predictions from the Miners
         Args:
@@ -29,7 +29,9 @@ class PredictionManager:
         """
         current_thread = threading.current_thread().name
 
-        bt.logging.debug(f"| {current_thread} | 🪲 DEBUG Type of Responses: '{type(responses)}', Responses: {responses}")
+        bt.logging.debug(f"| {current_thread} | 🪲 DEBUG Type of Responses: '{type(responses)}'")
+        for response in responses:
+            bt.logging.debug(f"| {current_thread} | 🪲 DEBUG Inner Type of Responses: '{type(response)}'")
 
         synapse_id = responses[0][1]
 
