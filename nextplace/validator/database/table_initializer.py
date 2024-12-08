@@ -22,6 +22,7 @@ class TableInitializer:
         self._create_miner_scores_table(cursor)
         self._create_active_miners_table(cursor)
         self._create_daily_scores_table(cursor)
+        self._create_synapse_id_table(cursor)
         db_connection.commit()
         cursor.close()
         db_connection.close()
@@ -163,5 +164,22 @@ class TableInitializer:
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS active_miners (
                 miner_hotkey TEXT PRIMARY KEY
+            )
+        ''')
+
+
+    def _create_synapse_id_table(self, cursor) -> None:
+        """
+        Create the active miners table
+        Args:
+            cursor: a database cursor
+
+        Returns:
+            None
+        """
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS synapse_ids (
+                synapse_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                nextplace_ids TEXT
             )
         ''')
