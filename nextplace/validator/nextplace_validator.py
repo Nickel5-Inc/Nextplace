@@ -119,6 +119,7 @@ class RealEstateValidator(BaseValidatorNeuron):
                 bt.logging.trace(f"| {self.current_thread} | ↻ No data for Synapse, returning.")
                 return
 
+            synapse_ids = set([x.nextplace_id for x in synapse.real_estate_predictions.predictions])
             responses = self.dendrite.query(
                 axons=self.metagraph.axons,
                 synapse=synapse,
@@ -126,7 +127,7 @@ class RealEstateValidator(BaseValidatorNeuron):
                 timeout=30
             )
 
-            self.prediction_manager.process_predictions(responses)  # Process Miner predictions
+            self.prediction_manager.process_predictions(responses, synapse_ids)  # Process Miner predictions
 
         finally:
             self.database_manager.lock.release()  # Always release the lock
