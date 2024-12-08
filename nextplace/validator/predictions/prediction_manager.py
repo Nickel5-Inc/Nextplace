@@ -81,8 +81,6 @@ class PredictionManager:
                         bt.logging.error(f"| {current_thread} | ❗ Found invalid nextplace_id for this synapse, ignoring")
                         continue
 
-                    bt.logging.debug(f"| {current_thread} | 🪲 DEBUG Found Valid nextplace_id: {prediction.nextplace_id}")
-
                     # Only process valid predictions
                     if prediction is None or prediction.predicted_sale_price is None or prediction.predicted_sale_date is None:
                         continue

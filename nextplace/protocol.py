@@ -2,6 +2,7 @@ import bittensor as bt
 from typing import Optional, List
 from pydantic import BaseModel, Field
 
+
 class RealEstatePrediction(BaseModel):
     """Real Estate Prediction data class"""
     id: Optional[str] = Field(None, description="UUID of the prediction")
@@ -30,8 +31,10 @@ class RealEstatePrediction(BaseModel):
     predicted_sale_price: Optional[float] = Field(None, description="Predicted sale price")
     predicted_sale_date: Optional[str] = Field(None, description="Predicted sale date")
 
+
 class RealEstatePredictions(BaseModel):
     predictions: List[RealEstatePrediction] = Field(None, description="List of predictions")
+
 
 class RealEstateSynapse(bt.Synapse):
 
