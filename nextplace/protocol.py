@@ -44,7 +44,6 @@ class RealEstateSynapse(bt.Synapse):
 
     @classmethod
     def create(cls, uuid: str, real_estate_predictions: RealEstatePredictions = None):
-        bt.logging.info(f"Creating RealEstateSynapse with synapse_id: {uuid}")
         return cls(synapse_id=uuid, real_estate_predictions=real_estate_predictions)
 
     def deserialize(self):
