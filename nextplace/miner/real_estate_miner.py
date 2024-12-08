@@ -1,7 +1,7 @@
 import bittensor as bt
 from template.base.miner import BaseMinerNeuron
 from typing import Tuple
-from nextplace.protocol import RealEstateSynapse
+from nextplace.protocol import RealEstateSynapse, RealEstatePrediction
 from nextplace.miner.ml.model import Model
 from nextplace.miner.ml.model_loader import ModelArgs
 
@@ -20,12 +20,13 @@ class RealEstateMiner(BaseMinerNeuron):
     # OVERRIDE | Required
     def forward(self, synapse: RealEstateSynapse) -> RealEstateSynapse:
         bt.logging.debug(f"DEBUG Type of synapse: {type(synapse)}, Synapse: {synapse}")
-        self.model.run_inference(synapse)
-        self._set_force_update_prediction_flag(synapse)
+        predictions = synapse.predictions
+        self.model.run_inference(predictions)
+        self._set_force_update_prediction_flag(predictions)
         return synapse
 
-    def _set_force_update_prediction_flag(self, synapse: RealEstateSynapse):
-        for prediction in synapse.real_estate_predictions.predictions:
+    def _set_force_update_prediction_flag(self, predictions: list[RealEstatePrediction]):
+        for prediction in predictions:
             prediction.force_update_past_predictions = self.force_update_past_predictions
 
     # OVERRIDE | Required
