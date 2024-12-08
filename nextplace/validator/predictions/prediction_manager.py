@@ -42,11 +42,6 @@ class PredictionManager:
         for idx, response in enumerate(responses):  # Iterate responses
             synapse_id = response[1]
 
-            # DEBUG
-            if idx == 1:
-                synapse_id = "TEST_INVALID_ID"
-
-            bt.logging.error(f"| {current_thread} | 🪲 DEBUG Processing response with synapse_id '{synapse_id}'")
             extract_synapse_data_query = "SELECT nextplace_ids FROM synapse_ids WHERE synapse_id = ?"
             nextplace_ids_tuple = (synapse_id,)
             with self.database_manager.lock:
@@ -114,12 +109,11 @@ class PredictionManager:
             except Exception as e:
                 bt.logging.error(f"| {current_thread} | ❗Failed to process prediction: {e}")
 
-        found_synapse_ids = list((x,) for x in valid_synapse_ids) # Build list of unique tuples representing every synapse_id found in responses
-        found_synapse_ids.append(("TEST_INVALID_ID",)) ## FOR TESTING
-        bt.logging.error(f"| {current_thread} | 🪲 DEBUG Removing data for the following synapse_id's from the database '{found_synapse_ids}'")
+        # Maintain synapse_ids table
+        valid_synapse_ids_tuples = list((x,) for x in valid_synapse_ids) # Build list of unique tuples representing every synapse_id found in responses
         delete_synapse_data_query = "DELETE FROM synapse_ids WHERE synapse_id = ?"
         with self.database_manager.lock:
-            self.database_manager.query_and_commit_many(delete_synapse_data_query, found_synapse_ids)  # Delete synapse data from db
+            self.database_manager.query_and_commit_many(delete_synapse_data_query, valid_synapse_ids_tuples)  # Delete synapse data from db
 
         self._track_miners(valid_hotkeys)
 
