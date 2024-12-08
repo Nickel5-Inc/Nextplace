@@ -45,4 +45,4 @@ class RealEstateSynapse(bt.Synapse):
         return cls(synapse_id=uuid, real_estate_predictions=real_estate_predictions)
 
     def deserialize(self):
-        return self.real_estate_predictions
+        return self.real_estate_predictions, self.synapse_id
