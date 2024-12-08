@@ -1,5 +1,5 @@
 import threading
-from typing import List
+from typing import List, Tuple
 import bittensor as bt
 import json
 from datetime import datetime, timezone
@@ -18,7 +18,7 @@ class PredictionManager:
         self.database_manager = database_manager
         self.metagraph = metagraph
 
-    def process_predictions(self, responses: List[RealEstatePredictions]) -> None:
+    def process_predictions(self, responses: Tuple[List[RealEstatePredictions], str]) -> None:
         """
         Process predictions from the Miners
         Args:
@@ -30,6 +30,10 @@ class PredictionManager:
 
         current_thread = threading.current_thread().name
         bt.logging.info(f'| {current_thread} | 📡 Processing Responses')
+
+        synapse_id = responses[1]
+        bt.logging.debug(f"| {current_thread} | 🪲 DEBUG Processing synapse with ID: {synapse_id}")
+        responses = responses[0]
 
         if responses is None or len(responses) == 0:
             bt.logging.error(f'| {current_thread} | ❗No responses received')
@@ -54,8 +58,6 @@ class PredictionManager:
                 replace_policy_data_for_ingestion: list[tuple] = []
                 ignore_policy_data_for_ingestion: list[tuple] = []
 
-                synapse_id = real_estate_predictions.uuid
-                bt.logging.debug(f"| {current_thread} | 🪲 DEBUG Found Synapse ID: {synapse_id}")
                 extract_synapse_data_query = "SELECT nextplace_ids FROM synapse_ids WHERE uuid = ?"
                 delete_synapse_data_query = "DELETE FROM synapse_ids WHERE uuid = ?"
                 values = (synapse_id,)
