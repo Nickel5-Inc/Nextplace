@@ -18,9 +18,13 @@ def _generate_uuid_from_sha256() -> str:
     Returns:
         str: A UUID string created from a SHA-256 hash.
     """
+    current_thread = threading.current_thread().name
     random_bytes = os.urandom(32)
     sha256_hash = hashlib.sha256(random_bytes).hexdigest()
-    return f"{sha256_hash[:8]}-{sha256_hash[8:12]}-{sha256_hash[12:16]}-{sha256_hash[16:20]}-{sha256_hash[20:32]}"
+    bt.logging.debug(f"| {current_thread} | 🪲 DEBUG Generated hash: {sha256_hash}")
+    uuid = f"{sha256_hash[:8]}-{sha256_hash[8:12]}-{sha256_hash[12:16]}-{sha256_hash[16:20]}-{sha256_hash[20:32]}"
+    bt.logging.debug(f"| {current_thread} | 🪲 DEBUG Generated UUID: {uuid}")
+    return uuid
 
 class SynapseManager:
 
@@ -76,7 +80,7 @@ class SynapseManager:
             market_index = 20
             market = property_data[0][market_index]
             bt.logging.trace(f"| {current_thread} | ✉️ Created Synapse with {len(outgoing_data)} properties in {market}")
-            bt.logging.debug(f"| {current_thread} | 🪲 DEBUG Created Synapse: {synapse}")
+            # bt.logging.debug(f"| {current_thread} | 🪲 DEBUG Created Synapse: {synapse}")
             return synapse
 
         except IndexError:
