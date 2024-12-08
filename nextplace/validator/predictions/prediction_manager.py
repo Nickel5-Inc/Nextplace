@@ -54,7 +54,7 @@ class PredictionManager:
 
             if not valid_synapse_data or len(valid_synapse_data) == 0:
                 bt.logging.info(f"| {current_thread} | ❗ Found invalid synapse id: '{synapse_id}'")
-                return
+                continue
 
             valid_synapse_ids.add(synapse_id)  # Maintain set of valid synapse_id's for extraction
 
@@ -63,7 +63,7 @@ class PredictionManager:
                 nextplace_id_set = set(json.loads(valid_nextplace_ids_for_synapse))  # Ensure the string is valid JSON
             except json.JSONDecodeError as e:
                 bt.logging.error(f"| {current_thread} | ❗ Failed to decode JSON: {e}")
-                return
+                continue
 
             try:
                 miner_hotkey = self.metagraph.hotkeys[idx]
