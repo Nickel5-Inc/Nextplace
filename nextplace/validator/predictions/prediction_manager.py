@@ -31,9 +31,8 @@ class PredictionManager:
         current_thread = threading.current_thread().name
         bt.logging.info(f'| {current_thread} | 📡 Processing Responses')
 
-        synapse_id = responses[1]
+        synapse_id = responses[0][1]
         bt.logging.debug(f"| {current_thread} | 🪲 DEBUG Processing synapse with ID: {synapse_id}")
-        responses = responses[0]
 
         if responses is None or len(responses) == 0:
             bt.logging.error(f'| {current_thread} | ❗No responses received')
@@ -43,7 +42,8 @@ class PredictionManager:
         timestamp = current_utc_datetime.strftime(ISO8601)
         valid_hotkeys = set()
 
-        for idx, real_estate_predictions in enumerate(responses):  # Iterate responses
+        for idx, response in enumerate(responses):  # Iterate responses
+            bt.logging.debug(f"| {current_thread} | 🪲 DEBUG Processing Response: {response}")
 
             try:
                 miner_hotkey = self.metagraph.hotkeys[idx]
@@ -80,7 +80,7 @@ class PredictionManager:
                     bt.logging.error(f"| {current_thread} | ❗ Failed to decode JSON: {e}")
                     return
 
-                for prediction in real_estate_predictions.predictions:  # Iterate predictions in each response
+                for prediction in response[0].predictions:  # Iterate predictions in each response
 
                     # Only process valid predictions
                     if prediction is None or prediction.predicted_sale_price is None or prediction.predicted_sale_date is None:
@@ -90,6 +90,8 @@ class PredictionManager:
                     if prediction.nextplace_id not in nextplace_id_set:
                         bt.logging.error(f"| {current_thread} | ❗ Found invalid nextplace_id for this synapse, ignoring")
                         continue
+
+                    bt.logging.debug(f"| {current_thread} | 🪲 DEBUG Found Valid nextplace_id: {prediction.nextplace_id}")
 
                     values = (
                         prediction.nextplace_id,
