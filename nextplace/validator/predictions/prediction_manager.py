@@ -37,6 +37,7 @@ class PredictionManager:
         current_utc_datetime = datetime.now(timezone.utc)
         timestamp = current_utc_datetime.strftime(ISO8601)
         valid_hotkeys = set()
+        valid_synapse_ids = set()
 
         for idx, response in enumerate(responses):  # Iterate responses
             synapse_id = response[1]
@@ -54,6 +55,8 @@ class PredictionManager:
             if not valid_synapse_data or len(valid_synapse_data) == 0:
                 bt.logging.info(f"| {current_thread} | ❗ Found invalid synapse id: '{synapse_id}'")
                 return
+
+            valid_synapse_ids.add(synapse_id)  # Maintain set of valid synapse_id's for extraction
 
             valid_nextplace_ids_for_synapse = valid_synapse_data[0][0]
             try:
@@ -111,7 +114,7 @@ class PredictionManager:
             except Exception as e:
                 bt.logging.error(f"| {current_thread} | ❗Failed to process prediction: {e}")
 
-        found_synapse_ids = list(set([(x[1],) for x in responses]))  # Build list of unique tuples representing every synapse_id found in responses
+        found_synapse_ids = list((x, ) for x in valid_synapse_ids) # Build list of unique tuples representing every synapse_id found in responses
         found_synapse_ids.append("TEST_INVALID_ID") ## FOR TESTING
         bt.logging.error(f"| {current_thread} | 🪲 DEBUG Removing data for the following synapse_id's from the database '{found_synapse_ids}'")
         delete_synapse_data_query = "DELETE FROM synapse_ids WHERE synapse_id = ?"
