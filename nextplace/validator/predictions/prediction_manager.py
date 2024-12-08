@@ -57,9 +57,11 @@ class PredictionManager:
                 synapse_id = real_estate_predictions.uuid
                 bt.logging.debug(f"| {current_thread} | 🪲 DEBUG Found Synapse ID: {synapse_id}")
                 extract_synapse_data_query = "SELECT nextplace_ids FROM synapse_ids WHERE uuid = ?"
+                delete_synapse_data_query = "DELETE FROM synapse_ids WHERE uuid = ?"
                 values = (synapse_id,)
                 with self.database_manager.lock:
-                    valid_synapse_data = self.database_manager.query_with_values(extract_synapse_data_query, values)
+                    valid_synapse_data = self.database_manager.query_with_values(extract_synapse_data_query, values)  # Extract synapse data from db
+                    self.database_manager.query_and_commit_with_values(delete_synapse_data_query, values)  # Delete synapse data from db
 
                 bt.logging.debug(f"| {current_thread} | 🪲 DEBUG Synapse Data: {valid_synapse_data}")
 

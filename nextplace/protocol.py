@@ -38,6 +38,7 @@ class RealEstateSynapse(bt.Synapse):
 
     """Real Estate Synapse class"""
     real_estate_predictions: RealEstatePredictions
+    uuid: str
 
     @classmethod
     def create(cls, uuid: str, real_estate_predictions: RealEstatePredictions = None):
