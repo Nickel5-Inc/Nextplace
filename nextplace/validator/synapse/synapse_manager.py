@@ -76,6 +76,7 @@ class SynapseManager:
             market_index = 20
             market = property_data[0][market_index]
             bt.logging.trace(f"| {current_thread} | ✉️ Created Synapse with {len(outgoing_data)} properties in {market}")
+            bt.logging.debug(f"| {current_thread} | 🪲 DEBUG Created Synapse: {synapse}")
             return synapse
 
         except IndexError:

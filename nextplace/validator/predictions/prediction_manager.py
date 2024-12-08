@@ -55,16 +55,17 @@ class PredictionManager:
                 ignore_policy_data_for_ingestion: list[tuple] = []
 
                 synapse_id = real_estate_predictions.uuid
+                bt.logging.debug(f"| {current_thread} | 🪲 DEBUG Found Synapse ID: {synapse_id}")
                 extract_synapse_data_query = "SELECT nextplace_ids FROM synapse_ids WHERE uuid = ?"
                 values = (synapse_id,)
                 with self.database_manager.lock:
                     valid_synapse_data = self.database_manager.query_with_values(extract_synapse_data_query, values)
 
+                bt.logging.debug(f"| {current_thread} | 🪲 DEBUG Synapse Data: {valid_synapse_data}")
+
                 if not valid_synapse_data or len(valid_synapse_data) == 0:
                     bt.logging.info(f"| {current_thread} | ❗ Found invalid synapse uid")
                     return
-
-                bt.logging.debug(f"| {current_thread} | 🪲 DEBUG Synapse Data: {valid_synapse_data}")
 
                 valid_nextplace_ids_for_synapse = valid_synapse_data[0][0]
                 bt.logging.debug(f"| {current_thread} | 🪲 DEBUG ID's: {valid_nextplace_ids_for_synapse}")
