@@ -58,7 +58,7 @@ class PredictionManager:
 
                     # Ignore predictions for houses not affiliated with this synapse
                     if prediction.nextplace_id not in valid_synapse_ids:
-                        bt.logging.error(f"| {current_thread} | 🐝 Found invalid nextplace_id for miner '{miner_hotkey}'")
+                        bt.logging.error(f"| {current_thread} | 🐝 Found invalid nextplace_id for miner: '{miner_hotkey}'")
                         continue
 
                     # Only process valid predictions
