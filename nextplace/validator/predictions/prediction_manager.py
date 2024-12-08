@@ -84,8 +84,6 @@ class PredictionManager:
                     if prediction is None or prediction.predicted_sale_price is None or prediction.predicted_sale_date is None:
                         continue
 
-                    bt.logging.error(f"| {current_thread} | DEBUG Found valid Prediction!")
-
                     values = (
                         prediction.nextplace_id,
                         miner_hotkey,
@@ -165,7 +163,6 @@ class PredictionManager:
         Returns:
             None
         """
-        bt.logging.debug(f"| PREDICTION MANAGEMENT | DEBUG Ingesting predictions {values}")
         query_str = f"""
             INSERT OR {conflict_policy} INTO {table_name} 
             (nextplace_id, miner_hotkey, predicted_sale_price, predicted_sale_date, prediction_timestamp, market)
