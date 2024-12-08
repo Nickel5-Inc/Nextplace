@@ -18,7 +18,7 @@ class PredictionManager:
         self.database_manager = database_manager
         self.metagraph = metagraph
 
-    def process_predictions(self, responses: list) -> None:
+    def process_predictions(self, responses: list[tuple]) -> None:
         """
         Process predictions from the Miners
         Args:
@@ -32,6 +32,7 @@ class PredictionManager:
         bt.logging.debug(f"| {current_thread} | 🪲 DEBUG Type of Responses: '{type(responses)}'")
         for response in responses:
             bt.logging.debug(f"| {current_thread} | 🪲 DEBUG Inner Type of Responses: '{type(response)}'")
+            bt.logging.debug(f"| {current_thread} | 🪲 DEBUG Type of tuple: ('{type(response[0])}', '{type(response[1])}')")
 
         synapse_id = responses[0][1]
 
