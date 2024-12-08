@@ -26,7 +26,6 @@ class Model:
             None. Synapse is updated by reference.
         """
         for prediction in predictions:
-            bt.logging.debug(f"DEBUG Processing prediction {prediction}")
             input_data = prepare_input(prediction)  # transform synapse into dictionary
             price, date = self.model.run_inference(input_data)  # run inference
             prediction.predicted_sale_price = price  # Update price by reference
