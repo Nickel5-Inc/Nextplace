@@ -27,8 +27,10 @@ class PredictionManager:
         Returns:
             None
         """
-
         current_thread = threading.current_thread().name
+
+        bt.logging.debug(f"| {current_thread} | 🪲 DEBUG Type of Responses: '{type(responses)}', Responses: {responses}")
+
         synapse_id = responses[0][1]
 
         bt.logging.info(f"| {current_thread} | 📡 Processing Responses for synapse with ID: '{synapse_id}'")
