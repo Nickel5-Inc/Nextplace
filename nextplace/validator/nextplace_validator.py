@@ -125,6 +125,7 @@ class RealEstateValidator(BaseValidatorNeuron):
                 deserialize=True,
                 timeout=30
             )
+            bt.logging.debug(f"🪲 DEBUG Responses: {responses}")
 
             self.prediction_manager.process_predictions(responses)  # Process Miner predictions
 

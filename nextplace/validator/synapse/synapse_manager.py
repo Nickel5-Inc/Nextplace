@@ -18,13 +18,10 @@ def _generate_uuid_from_sha256() -> str:
     Returns:
         str: A UUID string created from a SHA-256 hash.
     """
-    current_thread = threading.current_thread().name
     random_bytes = os.urandom(32)
     sha256_hash = hashlib.sha256(random_bytes).hexdigest()
-    bt.logging.debug(f"| {current_thread} | 🪲 DEBUG Generated hash: {sha256_hash}")
-    uuid = f"{sha256_hash[:8]}-{sha256_hash[8:12]}-{sha256_hash[12:16]}-{sha256_hash[16:20]}-{sha256_hash[20:32]}"
-    bt.logging.debug(f"| {current_thread} | 🪲 DEBUG Generated UUID: {uuid}")
-    return uuid
+    return f"{sha256_hash[:8]}-{sha256_hash[8:12]}-{sha256_hash[12:16]}-{sha256_hash[16:20]}-{sha256_hash[20:32]}"
+
 
 class SynapseManager:
 
@@ -76,8 +73,8 @@ class SynapseManager:
             real_estate_predictions = RealEstatePredictions(predictions=outgoing_data)
             synapse_id = _generate_uuid_from_sha256()
             self._store_synapse_data(outgoing_data, synapse_id)
-            synapse: RealEstateSynapse = RealEstateSynapse.create(uuid=synapse_id, real_estate_predictions=real_estate_predictions)
-            bt.logging.debug(f"| {current_thread} | 🪲 DEBUG Created Synapse with ID: {synapse.uuid}")
+            synapse = RealEstateSynapse.create(uuid=synapse_id, real_estate_predictions=real_estate_predictions)
+            bt.logging.debug(f"| {current_thread} | 🪲 DEBUG Created Synapse: {synapse}")
             market_index = 20
             market = property_data[0][market_index]
             bt.logging.trace(f"| {current_thread} | ✉️ Created Synapse with {len(outgoing_data)} properties in {market} with UUID {synapse_id}")

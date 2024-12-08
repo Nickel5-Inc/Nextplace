@@ -31,18 +31,17 @@ class RealEstatePrediction(BaseModel):
     predicted_sale_date: Optional[str] = Field(None, description="Predicted sale date")
 
 class RealEstatePredictions(BaseModel):
-    uuid: Optional[str] = Field(None, description="Random hash for the synapse")
     predictions: List[RealEstatePrediction] = Field(None, description="List of predictions")
 
 class RealEstateSynapse(bt.Synapse):
 
     """Real Estate Synapse class"""
     real_estate_predictions: RealEstatePredictions
-    uuid: str
+    synapse_id: str
 
     @classmethod
     def create(cls, uuid: str, real_estate_predictions: RealEstatePredictions = None):
-        return cls(uuid=uuid, real_estate_predictions=real_estate_predictions)
+        return cls(synapse_id=uuid, real_estate_predictions=real_estate_predictions)
 
     def deserialize(self):
         return self.real_estate_predictions

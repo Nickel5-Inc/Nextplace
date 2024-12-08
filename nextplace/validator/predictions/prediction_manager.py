@@ -45,7 +45,7 @@ class PredictionManager:
                 miner_hotkey = self.metagraph.hotkeys[idx]
 
                 if miner_hotkey is None:
-                    bt.logging.error(f"🪲 Failed to find miner_hotkey while processing predictions")
+                    bt.logging.error(f"| {current_thread} | ❗ Failed to find miner_hotkey while processing predictions")
                     continue
 
                 valid_hotkeys.add(miner_hotkey)
