@@ -94,7 +94,7 @@ class SynapseManager:
         """
         if len(outgoing_prediction_data) == 0:
             return
-        nextplace_ids = json.dumps([x[0] for x in outgoing_prediction_data])  # Extract & serialize nextplace ids in this synapse
+        nextplace_ids = json.dumps([x.nextplace_id for x in outgoing_prediction_data])  # Extract & serialize nextplace ids in this synapse
         query_str = "INSERT OR REPLACE INTO synapse_ids (uuid, nextplace_ids) VALUES (?, ?)"  # query
         values = (synapse_id, nextplace_ids)  # values
         self.database_manager.query_and_commit_with_values(query_str, values)
