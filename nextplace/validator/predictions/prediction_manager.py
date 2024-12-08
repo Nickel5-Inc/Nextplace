@@ -36,6 +36,7 @@ class PredictionManager:
 
         current_utc_datetime = datetime.now(timezone.utc)
         timestamp = current_utc_datetime.strftime(ISO8601)
+        bt.logging.debug(f"| {current_thread} | 🪲 Processing Predictions with timestamp: '{timestamp}'")
         valid_hotkeys = set()
         valid_synapse_ids = set()
 
@@ -163,6 +164,9 @@ class PredictionManager:
         Returns:
             None
         """
+        if table_name == "predictions_5DUpG59WAvKMk6e9zvyZWeUuXzBkUSkVqntChCSKnkwmBEm7":
+            bt.logging.debug(f"🪲 Storing {len(values)} of our testnet miner's predictions with policy: '{conflict_policy}'")
+
         query_str = f"""
             INSERT OR {conflict_policy} INTO {table_name} 
             (nextplace_id, miner_hotkey, predicted_sale_price, predicted_sale_date, prediction_timestamp, market)
