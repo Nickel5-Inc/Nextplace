@@ -40,6 +40,11 @@ class PredictionManager:
 
         for idx, response in enumerate(responses):  # Iterate responses
             synapse_id = response[1]
+
+            # DEBUG
+            if idx == 1:
+                synapse_id = "TEST_INVALID_ID"
+
             bt.logging.error(f"| {current_thread} | 🪲 DEBUG Processing response with synapse_id '{synapse_id}'")
             extract_synapse_data_query = "SELECT nextplace_ids FROM synapse_ids WHERE synapse_id = ?"
             nextplace_ids_tuple = (synapse_id,)
@@ -107,6 +112,7 @@ class PredictionManager:
                 bt.logging.error(f"| {current_thread} | ❗Failed to process prediction: {e}")
 
         found_synapse_ids = list(set([(x[1],) for x in responses]))  # Build list of unique tuples representing every synapse_id found in responses
+        found_synapse_ids.append("TEST_INVALID_ID") ## FOR TESTING
         bt.logging.error(f"| {current_thread} | 🪲 DEBUG Removing data for the following synapse_id's from the database '{found_synapse_ids}'")
         delete_synapse_data_query = "DELETE FROM synapse_ids WHERE synapse_id = ?"
         with self.database_manager.lock:
