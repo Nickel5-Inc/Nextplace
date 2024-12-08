@@ -43,7 +43,6 @@ class PredictionManager:
         valid_hotkeys = set()
 
         for idx, response in enumerate(responses):  # Iterate responses
-            bt.logging.debug(f"| {current_thread} | 🪲 DEBUG Processing Response: {response}")
 
             try:
                 miner_hotkey = self.metagraph.hotkeys[idx]
@@ -65,14 +64,11 @@ class PredictionManager:
                     valid_synapse_data = self.database_manager.query_with_values(extract_synapse_data_query, values)  # Extract synapse data from db
                     self.database_manager.query_and_commit_with_values(delete_synapse_data_query, values)  # Delete synapse data from db
 
-                bt.logging.debug(f"| {current_thread} | 🪲 DEBUG Synapse Data: {valid_synapse_data}")
-
                 if not valid_synapse_data or len(valid_synapse_data) == 0:
-                    bt.logging.info(f"| {current_thread} | ❗ Found invalid synapse uid")
+                    bt.logging.info(f"| {current_thread} | ❗ Found invalid synapse id")
                     return
 
                 valid_nextplace_ids_for_synapse = valid_synapse_data[0][0]
-                bt.logging.debug(f"| {current_thread} | 🪲 DEBUG ID's: {valid_nextplace_ids_for_synapse}")
                 try:
                     nextplace_id_set = set(json.loads(valid_nextplace_ids_for_synapse))  # Ensure the string is valid JSON
                     bt.logging.debug(f"| {current_thread} | 🪲 DEBUG Synapse ID Set: {nextplace_id_set}")
@@ -81,6 +77,7 @@ class PredictionManager:
                     return
 
                 for prediction in response[0].predictions:  # Iterate predictions in each response
+                    bt.logging.debug(f"| {current_thread} | 🪲 DEBUG Processing Prediction: {prediction}")
 
                     # Only process valid predictions
                     if prediction is None or prediction.predicted_sale_price is None or prediction.predicted_sale_date is None:
