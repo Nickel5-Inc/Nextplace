@@ -93,9 +93,6 @@ class PredictionManager:
                         prediction.market,
                     )
 
-                    if miner_hotkey == "5DUpG59WAvKMk6e9zvyZWeUuXzBkUSkVqntChCSKnkwmBEm7":
-                        bt.logging.debug(f"DEBUG Our testnet miner formatted predictions: {values, prediction.force_update_past_predictions}")
-
                     # Parse force update flag
                     if prediction.force_update_past_predictions:
                         replace_policy_data_for_ingestion.append(values)
