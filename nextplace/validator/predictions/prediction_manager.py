@@ -22,6 +22,7 @@ class PredictionManager:
         Process predictions from the Miners
         Args:
             responses (list): list of synapses from Miners
+            valid_synapse_ids (set): set of valid synapse ids
 
         Returns:
             None
@@ -44,7 +45,7 @@ class PredictionManager:
                 miner_hotkey = self.metagraph.hotkeys[idx]
 
                 if miner_hotkey is None:
-                    bt.logging.error(f"🪲 Failed to find miner_hotkey while processing predictions")
+                    bt.logging.error(f" | {current_thread} | ❗ Failed to find miner_hotkey while processing predictions")
                     continue
 
                 valid_hotkeys.add(miner_hotkey)
@@ -57,6 +58,7 @@ class PredictionManager:
 
                     # Ignore predictions for houses not affiliated with this synapse
                     if prediction.nextplace_id not in valid_synapse_ids:
+                        bt.logging.error(f"| {current_thread} | 🐝 Found invalid nextplace_id for miner '{miner_hotkey}'")
                         continue
 
                     # Only process valid predictions
