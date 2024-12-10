@@ -76,15 +76,12 @@ class SoldHomesAPI(ApiBase):
 
             # Iterate all homes
             for home in homes:
-                bt.logging.debug(f"| {current_thread} | 🪲 Home: {home}")
-                break
-                # self._process_home(home, valid_results, invalid_results)
+                self._process_home(home, valid_results, invalid_results)
 
             if len(homes) < self.max_results_per_page:  # Last page
                 break
 
             page += 1  # Increment page
-            break
 
         bt.logging.trace(f"| {current_thread} | 📣 Found {invalid_results['date']} homes with invalid dates and {invalid_results['price']} homes with invalid prices")
         self._ingest_valid_homes(valid_results)
