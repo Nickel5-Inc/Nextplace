@@ -37,7 +37,7 @@ class Scorer:
         # If no sales, get them
         with self.database_manager.lock:
             # number_of_sales = self.database_manager.get_size_of_table('sales')
-            number_of_sales = 0
+            number_of_sales = 0  # Force validators to update sales table initially, for now update v1.2.0
         if number_of_sales == 0:
             self.sold_homes_api.get_sold_properties()  # Get recently sold homes
             now = datetime.now(timezone.utc)
