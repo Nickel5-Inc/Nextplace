@@ -44,6 +44,7 @@ class MinerManager:
                     self.database_manager.query_and_commit(f"DROP TABLE IF EXISTS '{table_name}'")
                 self.database_manager.query_and_commit_many("DELETE FROM miner_scores WHERE miner_hotkey = ?", tuples)
                 self.database_manager.query_and_commit_many("DELETE FROM active_miners WHERE miner_hotkey = ?", tuples)
+                self.database_manager.query_and_commit_many("DELETE FROM daily_scores WHERE miner_hotkey = ?", tuples)
                 self.database_manager.query_and_commit_many("DELETE FROM scored_predictions WHERE miner_hotkey = ?", tuples)
 
         bt.logging.trace(f"| {current_thread} | Thread terminating")

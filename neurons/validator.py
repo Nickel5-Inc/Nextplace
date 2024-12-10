@@ -33,7 +33,7 @@ def main(validator):
             validator.sync_metagraph()  # Sync metagraph
             validator.forward(step)  # Get predictions from the Miners
 
-            if step % 100 == 0:  # Check if any registrations/deregistrations have happened, make necessary updates
+            if step % 25 == 0:  # Check if any registrations/deregistrations have happened, make necessary updates
                 thread = threading.Thread(target=validator.miner_manager.manage_miner_data, name="📋 MinerManagementThread 📋")
                 thread.start()
 
