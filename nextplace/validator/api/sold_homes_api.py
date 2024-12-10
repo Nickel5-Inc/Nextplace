@@ -92,18 +92,20 @@ class SoldHomesAPI(ApiBase):
         property_id = home_data.get('propertyId')  # Extract property id
         timezone = home_data.get('timezone')
         sale_price = self._get_nested(home_data, 'priceInfo', 'amount')  # Extract sale price
-        naive_sale_datetime = self._get_nested(home_data, 'lastSaleData', 'lastSoldDate')  # Extract the sale date
+        naive_sale_datetime_str = self._get_nested(home_data, 'lastSaleData', 'lastSoldDate')  # Extract the sale date
         address = self._get_nested(home_data, 'addressInfo', 'formattedStreetLine')
         zip_code = self._get_nested(home_data, 'addressInfo', 'zip')
         nextplace_id = self.get_hash(address, zip_code)
-        if address and zip_code and property_id and sale_price and naive_sale_datetime and timezone:
+
+        if address and zip_code and property_id and sale_price and naive_sale_datetime_str and timezone:
+            naive_sale_datetime = datetime.strptime(naive_sale_datetime_str, "%Y-%m-%dT%H:%M:%SZ")
             original_timezone = pytz.timezone(timezone)
             localized_sale_datetime = original_timezone.localize(naive_sale_datetime)
             utc_sale_datetime = localized_sale_datetime.astimezone(pytz.utc)
             now = datetime.utcnow()
             current_thread = threading.current_thread().name
             utc_sale_string = utc_sale_datetime.strftime("%Y-%m-%dT%H:%M:%SZ")
-            bt.logging.debug(f"| {current_thread} | 🪲 Comparing UTC Sale Date '{utc_sale_string}', Original Sale Date '{naive_sale_datetime}', now '{now}'")
+            bt.logging.debug(f"| {current_thread} | 🪲 Comparing UTC Sale Date '{utc_sale_string}', Original Sale Date '{naive_sale_datetime_str}', now '{now}'")
             if sale_price == 0:  # If sale price is 0, ignore
                 invalid_results['price'] += 1
                 return
