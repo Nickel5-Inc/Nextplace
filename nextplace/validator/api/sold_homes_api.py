@@ -1,6 +1,6 @@
 import threading
 from datetime import datetime
-
+import pprint
 import bittensor as bt
 import requests
 from nextplace.validator.api.api_base import ApiBase
@@ -76,7 +76,7 @@ class SoldHomesAPI(ApiBase):
 
             # Iterate all homes
             for home in homes:
-                bt.logging.debug(f"| {current_thread} | 🪲 Home: {home}")
+                bt.logging.debug(f"| {current_thread} | 🪲 Home: {pprint.pprint(home)}")
                 break
                 # self._process_home(home, valid_results, invalid_results)
 
