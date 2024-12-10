@@ -102,10 +102,12 @@ class SoldHomesAPI(ApiBase):
             original_timezone = pytz.timezone(timezone)
             localized_sale_datetime = original_timezone.localize(naive_sale_datetime)
             utc_sale_datetime = localized_sale_datetime.astimezone(pytz.utc)
-            now = datetime.utcnow()
-            current_thread = threading.current_thread().name
             utc_sale_string = utc_sale_datetime.strftime("%Y-%m-%dT%H:%M:%SZ")
+            now = datetime.now(timezone.utc)
+
+            current_thread = threading.current_thread().name
             bt.logging.debug(f"| {current_thread} | 🪲 Comparing UTC Sale Date '{utc_sale_string}', Original Sale Date '{naive_sale_datetime_str}', now '{now}'")
+
             if sale_price == 0:  # If sale price is 0, ignore
                 invalid_results['price'] += 1
                 return
