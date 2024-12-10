@@ -5,6 +5,7 @@ import bittensor as bt
 import requests
 from nextplace.validator.api.api_base import ApiBase
 from nextplace.validator.database.database_manager import DatabaseManager
+import pytz
 
 """
 Helper class to get recently sold homes
@@ -76,15 +77,12 @@ class SoldHomesAPI(ApiBase):
 
             # Iterate all homes
             for home in homes:
-                bt.logging.debug(f"| {current_thread} | 🪲 Home: {pprint.pprint(home)}")
-                break
-                # self._process_home(home, valid_results, invalid_results)
+                self._process_home(home, valid_results, invalid_results)
 
             if len(homes) < self.max_results_per_page:  # Last page
                 break
 
             page += 1  # Increment page
-            break
 
         bt.logging.trace(f"| {current_thread} | 📣 Found {invalid_results['date']} homes with invalid dates and {invalid_results['price']} homes with invalid prices")
         self._ingest_valid_homes(valid_results)
@@ -92,21 +90,27 @@ class SoldHomesAPI(ApiBase):
     def _process_home(self, home: any, result_tuples: list[tuple], invalid_results: dict[str, int]) -> None:
         home_data = home['homeData']
         property_id = home_data.get('propertyId')  # Extract property id
+        timezone = home_data.get('timezone')
         sale_price = self._get_nested(home_data, 'priceInfo', 'amount')  # Extract sale price
-        sale_date = self._get_nested(home_data, 'lastSaleData', 'lastSoldDate')  # Extract the sale date
+        naive_sale_datetime = self._get_nested(home_data, 'lastSaleData', 'lastSoldDate')  # Extract the sale date
         address = self._get_nested(home_data, 'addressInfo', 'formattedStreetLine')
         zip_code = self._get_nested(home_data, 'addressInfo', 'zip')
         nextplace_id = self.get_hash(address, zip_code)
-        if address and zip_code and property_id and sale_price and sale_date:
-            sale_date_obj = datetime.strptime(sale_date, "%Y-%m-%dT%H:%M:%SZ").date()
-            today = datetime.utcnow().date()
+        if address and zip_code and property_id and sale_price and naive_sale_datetime and timezone:
+            original_timezone = pytz.timezone(timezone)
+            localized_sale_datetime = original_timezone.localize(naive_sale_datetime)
+            utc_sale_datetime = localized_sale_datetime.astimezone(pytz.utc)
+            now = datetime.utcnow()
+            current_thread = threading.current_thread().name
+            utc_sale_string = utc_sale_datetime.strftime("%Y-%m-%dT%H:%M:%SZ")
+            bt.logging.debug(f"| {current_thread} | 🪲 Comparing UTC Sale Date '{utc_sale_string}', Original Sale Date '{naive_sale_datetime}', now '{now}'")
             if sale_price == 0:  # If sale price is 0, ignore
                 invalid_results['price'] += 1
                 return
-            if sale_date_obj > today:  # If sale date is in the future, ignore
+            if utc_sale_datetime > now:  # If sale date is in the future, ignore
                 invalid_results['date'] += 1
                 return
-            result_tuples.append((nextplace_id, property_id, sale_price, sale_date))
+            result_tuples.append((nextplace_id, property_id, sale_price, utc_sale_datetime.strftime(utc_sale_string)))
 
     def _ingest_valid_homes(self, result_tuples: list[tuple]) -> None:
         """
