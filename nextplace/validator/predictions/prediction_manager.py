@@ -17,11 +17,12 @@ class PredictionManager:
         self.database_manager = database_manager
         self.metagraph = metagraph
 
-    def process_predictions(self, responses: List[RealEstatePredictions]) -> None:
+    def process_predictions(self, responses: List[RealEstatePredictions], valid_synapse_ids: set[str]) -> None:
         """
         Process predictions from the Miners
         Args:
             responses (list): list of synapses from Miners
+            valid_synapse_ids (set): set of valid synapse ids
 
         Returns:
             None
@@ -31,7 +32,7 @@ class PredictionManager:
         bt.logging.info(f'| {current_thread} | 📡 Processing Responses')
 
         if responses is None or len(responses) == 0:
-            bt.logging.error(f'| {current_thread} | ❗No responses received')
+            bt.logging.trace(f'| {current_thread} | ❗No responses received')
             return
 
         current_utc_datetime = datetime.now(timezone.utc)
@@ -44,7 +45,7 @@ class PredictionManager:
                 miner_hotkey = self.metagraph.hotkeys[idx]
 
                 if miner_hotkey is None:
-                    bt.logging.error(f"🪲 Failed to find miner_hotkey while processing predictions")
+                    bt.logging.trace(f" | {current_thread} | ❗ Failed to find miner_hotkey while processing predictions")
                     continue
 
                 valid_hotkeys.add(miner_hotkey)
@@ -54,6 +55,11 @@ class PredictionManager:
                 ignore_policy_data_for_ingestion: list[tuple] = []
 
                 for prediction in real_estate_predictions.predictions:  # Iterate predictions in each response
+
+                    # Ignore predictions for houses not affiliated with this synapse
+                    if prediction.nextplace_id not in valid_synapse_ids:
+                        bt.logging.trace(f"| {current_thread} | 🐝 Found invalid nextplace_id for miner: '{miner_hotkey}'")
+                        continue
 
                     # Only process valid predictions
                     if prediction is None or prediction.predicted_sale_price is None or prediction.predicted_sale_date is None:
@@ -82,7 +88,7 @@ class PredictionManager:
                     self._handle_ingestion('REPLACE', replace_policy_data_for_ingestion, table_name)
 
             except Exception as e:
-                bt.logging.error(f"| {current_thread} | ❗Failed to process prediction: {e}")
+                bt.logging.trace(f"| {current_thread} | ❗Failed to process prediction: {e}")
 
         self._track_miners(valid_hotkeys)
 
