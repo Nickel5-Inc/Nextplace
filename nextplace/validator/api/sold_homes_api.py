@@ -1,6 +1,5 @@
 import threading
-from datetime import datetime
-import pprint
+from datetime import datetime, timezone
 import bittensor as bt
 import requests
 from nextplace.validator.api.api_base import ApiBase
@@ -90,7 +89,7 @@ class SoldHomesAPI(ApiBase):
     def _process_home(self, home: any, result_tuples: list[tuple], invalid_results: dict[str, int]) -> None:
         home_data = home['homeData']
         property_id = home_data.get('propertyId')  # Extract property id
-        timezone = home_data.get('timezone')
+        home_timezone = home_data.get('timezone')
         sale_price = self._get_nested(home_data, 'priceInfo', 'amount')  # Extract sale price
         naive_sale_datetime_str = self._get_nested(home_data, 'lastSaleData', 'lastSoldDate')  # Extract the sale date
         address = self._get_nested(home_data, 'addressInfo', 'formattedStreetLine')
@@ -99,7 +98,7 @@ class SoldHomesAPI(ApiBase):
 
         if address and zip_code and property_id and sale_price and naive_sale_datetime_str and timezone:
             naive_sale_datetime = datetime.strptime(naive_sale_datetime_str, "%Y-%m-%dT%H:%M:%SZ")
-            original_timezone = pytz.timezone(timezone)
+            original_timezone = pytz.timezone(home_timezone)
             localized_sale_datetime = original_timezone.localize(naive_sale_datetime)
             utc_sale_datetime = localized_sale_datetime.astimezone(pytz.utc)
             utc_sale_string = utc_sale_datetime.strftime("%Y-%m-%dT%H:%M:%SZ")
