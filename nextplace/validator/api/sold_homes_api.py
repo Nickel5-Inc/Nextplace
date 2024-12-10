@@ -46,7 +46,7 @@ class SoldHomesAPI(ApiBase):
         url_sold = "https://redfin-com-data.p.rapidapi.com/properties/search-sold"  # URL for sold houses
         page = 1  # Page number for api results
 
-        invalid_results = {'date': 0, 'price': 0}
+        invalid_results = {'date': 0, 'price': 0, 'timezone': 0}
         valid_results = []
         # Iteratively call the API until we have no more results to read
         while True:
@@ -83,7 +83,7 @@ class SoldHomesAPI(ApiBase):
 
             page += 1  # Increment page
 
-        bt.logging.trace(f"| {current_thread} | 📣 Found {invalid_results['date']} homes with invalid dates and {invalid_results['price']} homes with invalid prices")
+        bt.logging.trace(f"| {current_thread} | 📣 Found {invalid_results['date']} homes with invalid dates, {invalid_results['price']} homes with invalid prices, {invalid_results['timezone']} homes with invalid timezones")
         self._ingest_valid_homes(valid_results)
 
     def _process_home(self, home: any, result_tuples: list[tuple], invalid_results: dict[str, int]) -> None:
@@ -96,16 +96,18 @@ class SoldHomesAPI(ApiBase):
         zip_code = self._get_nested(home_data, 'addressInfo', 'zip')
         nextplace_id = self.get_hash(address, zip_code)
 
-        if address and zip_code and property_id and sale_price and naive_sale_datetime_str and timezone:
-            naive_sale_datetime = datetime.strptime(naive_sale_datetime_str, "%Y-%m-%dT%H:%M:%SZ")
-            original_timezone = pytz.timezone(home_timezone)
-            localized_sale_datetime = original_timezone.localize(naive_sale_datetime)
-            utc_sale_datetime = localized_sale_datetime.astimezone(pytz.utc)
-            utc_sale_string = utc_sale_datetime.strftime("%Y-%m-%dT%H:%M:%SZ")
-            now = datetime.now(timezone.utc)
+        if home_timezone is None:
+            invalid_results['timezone'] += 1
+            return
 
-            current_thread = threading.current_thread().name
-            bt.logging.debug(f"| {current_thread} | 🪲 Comparing UTC Sale Date '{utc_sale_string}', Original Sale Date '{naive_sale_datetime_str}', now '{now}'")
+        if address and zip_code and property_id and sale_price and naive_sale_datetime_str and timezone:
+
+            naive_sale_datetime = datetime.strptime(naive_sale_datetime_str, "%Y-%m-%dT%H:%M:%SZ")  # Convert to datetime object
+            original_timezone = pytz.timezone(home_timezone)  # Build original timezone
+            localized_sale_datetime = original_timezone.localize(naive_sale_datetime)  # localize original datetime object
+            utc_sale_datetime = localized_sale_datetime.astimezone(pytz.utc)  # Convert to UTC datetime
+            utc_sale_string = utc_sale_datetime.strftime("%Y-%m-%dT%H:%M:%SZ")  # Build datetime string
+            now = datetime.now(timezone.utc)  # Get current datetime
 
             if sale_price == 0:  # If sale price is 0, ignore
                 invalid_results['price'] += 1
@@ -113,7 +115,7 @@ class SoldHomesAPI(ApiBase):
             if utc_sale_datetime > now:  # If sale date is in the future, ignore
                 invalid_results['date'] += 1
                 return
-            result_tuples.append((nextplace_id, property_id, sale_price, utc_sale_datetime.strftime(utc_sale_string)))
+            result_tuples.append((nextplace_id, property_id, sale_price, utc_sale_string))
 
     def _ingest_valid_homes(self, result_tuples: list[tuple]) -> None:
         """
