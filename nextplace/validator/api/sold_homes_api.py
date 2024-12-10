@@ -1,6 +1,5 @@
 import threading
-from datetime import datetime
-
+from datetime import datetime, timezone
 import bittensor as bt
 import requests
 from nextplace.validator.api.api_base import ApiBase
@@ -95,15 +94,18 @@ class SoldHomesAPI(ApiBase):
         zip_code = self._get_nested(home_data, 'addressInfo', 'zip')
         nextplace_id = self.get_hash(address, zip_code)
         if address and zip_code and property_id and sale_price and sale_date:
-            sale_date_obj = datetime.strptime(sale_date, "%Y-%m-%dT%H:%M:%SZ").date()
+            sale_date_obj = datetime.strptime(sale_date, "%Y-%m-%dT%H:%M:%SZ")
+            sale_date_obj = sale_date_obj.replace(tzinfo=timezone.utc)
+            sale_date_utc = sale_date_obj.strftime("%Y-%m-%dT%H:%M:%SZ")
+            utc_date_only = sale_date_obj.date()
             today = datetime.utcnow().date()
             if sale_price == 0:  # If sale price is 0, ignore
                 invalid_results['price'] += 1
                 return
-            if sale_date_obj > today:  # If sale date is in the future, ignore
+            if utc_date_only > today:  # If sale date is in the future, ignore
                 invalid_results['date'] += 1
                 return
-            result_tuples.append((nextplace_id, property_id, sale_price, sale_date))
+            result_tuples.append((nextplace_id, property_id, sale_price, sale_date_utc))
 
     def _ingest_valid_homes(self, result_tuples: list[tuple]) -> None:
         """
