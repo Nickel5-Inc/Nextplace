@@ -96,6 +96,7 @@ class TimeGatedScorer:
         if len(past_scores) == 0:
             bt.logging.debug(f"| {current_thread} | 🪲 Found no non-consistency window predictions for hotkey '{miner_hotkey}'")
             return 0.0
+        # ToDo Scaling function on past_scores
 
     def _get_past_scores(self, miner_hotkey: str) -> list:
         """
