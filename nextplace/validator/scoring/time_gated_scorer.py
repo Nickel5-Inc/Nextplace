@@ -23,9 +23,16 @@ class TimeGatedScorer:
         """
         # ToDo Handle the case where there are no daily_scores for this hotkey
         current_thread = threading.current_thread().name
+        consistency_window_percent = self._get_consistency_window_percent(miner_hotkey)
+        bt.logging.debug(f"| {current_thread} | 🪲 Found consistency window percent: {consistency_window_percent}")
         consistency_window_score = self._get_consistency_window_score(miner_hotkey)
         bt.logging.debug(f"| {current_thread} | 🪲 Found consistency window score: {consistency_window_score}")
-        return 1.0
+        non_consistency_window_score = self._get_non_consistency_window_score(miner_hotkey)
+        bt.logging.debug(f"| {current_thread} | 🪲 Found non-consistency window score: {consistency_window_score}")
+        non_consistency_window_percent = 100.0 - consistency_window_percent
+        calculated_score = (consistency_window_score * consistency_window_percent) + (non_consistency_window_score * non_consistency_window_percent)
+        bt.logging.debug(f"| {current_thread} | 🪲 Calculated score: {calculated_score}")
+        return (consistency_window_score * consistency_window_percent) + (non_consistency_window_score * non_consistency_window_percent)
 
     def _get_consistency_window_percent(self, miner_hotkey: str) -> float:
         """
@@ -37,16 +44,19 @@ class TimeGatedScorer:
             Percentage [0.0, 100.0]
         """
         current_thread = threading.current_thread().name
+        min_output = 51.0
+        max_output = 100.0
         oldest_prediction_date = self._get_oldest_prediction_date(miner_hotkey)
         if oldest_prediction_date is None:
-            return 100.0
+            return max_output
         today = datetime.today().date()
         difference = today - oldest_prediction_date
         bt.logging.debug(f"| {current_thread} | 🪲 Found difference between today and oldest prediction: {difference}")
-        if difference < self.consistency_window_duration:
-            return 100.0
-        # ToDo Scale the return between 51.0 and 100.0 where self.consistency_window_duration -> 100.0 and self.score_date_cutoff = 28 -> 51.0
-
+        if difference <= self.consistency_window_duration:
+            return max_output
+        if difference >= self.score_date_cutoff:
+            return min_output
+        return max_output + ((min_output - max_output) * (difference - self.consistency_window_duration)) / (self.score_date_cutoff - self.consistency_window_duration)
 
     def _get_oldest_prediction_date(self, miner_hotkey: str) -> datetime.date or None:
         """
@@ -96,7 +106,15 @@ class TimeGatedScorer:
         if len(past_scores) == 0:
             bt.logging.debug(f"| {current_thread} | 🪲 Found no non-consistency window predictions for hotkey '{miner_hotkey}'")
             return 0.0
-        # ToDo Scaling function on past_scores
+
+        # FIXME This is temporary
+        total_predictions = 0
+        total_score = 0
+        for result in past_scores:
+            total_score += result[1]
+            total_predictions += result[2]
+        return total_score / total_predictions
+        # ToDo Scaling function on past_scores linearly according to date
 
     def _get_past_scores(self, miner_hotkey: str) -> list:
         """
