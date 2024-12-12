@@ -22,6 +22,8 @@ class RequestLogger:
                 validator_uid INTEGER,
                 validator_stake REAL,
                 request_type TEXT,
+                market TEXT,
+                total_predictions INTEGER,
                 request_data TEXT,
                 response_data TEXT,
                 processing_time REAL
@@ -37,11 +39,25 @@ class RequestLogger:
                 property_id TEXT,
                 listing_id TEXT,
                 address TEXT,
+                city TEXT,
+                state TEXT,
+                zip_code TEXT,
                 price REAL,
+                beds INTEGER,
+                baths REAL,
+                sqft INTEGER,
+                lot_size INTEGER,
+                year_built INTEGER,
+                days_on_market INTEGER,
+                latitude REAL,
+                longitude REAL,
+                property_type TEXT,
+                last_sale_date TEXT,
+                hoa_dues REAL,
+                query_date TEXT,
+                market TEXT,
                 predicted_price REAL,
                 predicted_date TEXT,
-                market TEXT,
-                property_details TEXT,
                 FOREIGN KEY (request_id) REFERENCES request_logs(id)
             )
         ''')
@@ -50,46 +66,66 @@ class RequestLogger:
         conn.close()
 
     def log_request(self, hotkey: str, request_data: str, validator_uid: int, validator_stake: float):
-        """記錄請求到數據庫"""
         try:
             conn = sqlite3.connect(self.db_path)
             cursor = conn.cursor()
             
-            timestamp = datetime.now().isoformat()
+            request_obj = json.loads(request_data)
+            predictions = request_obj.get('predictions', [])
             
-            # 插入基本請求信息
+            # 插入主請求記錄
             cursor.execute('''
-                INSERT INTO request_logs (timestamp, hotkey, validator_uid, validator_stake, request_type, request_data)
-                VALUES (?, ?, ?, ?, ?, ?)
-            ''', (timestamp, hotkey, validator_uid, validator_stake, 'prediction_request', request_data))
+                INSERT INTO request_logs (
+                    timestamp, hotkey, validator_uid, validator_stake,
+                    request_type, market, total_predictions, request_data
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (
+                datetime.now().isoformat(),
+                hotkey,
+                validator_uid,
+                validator_stake,
+                'prediction_request',
+                predictions[0].get('market') if predictions else None,
+                len(predictions),
+                request_data
+            ))
             
             request_id = cursor.lastrowid
             
-            # 如果是預測請求，解析並存儲詳細信息
-            try:
-                request_obj = json.loads(request_data)
-                if 'predictions' in request_obj:
-                    for pred in request_obj['predictions']:
-                        cursor.execute('''
-                            INSERT INTO prediction_details (
-                                request_id, nextplace_id, property_id, listing_id,
-                                address, price, market, property_details
-                            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-                        ''', (
-                            request_id,
-                            pred.get('nextplace_id'),
-                            pred.get('property_id'),
-                            pred.get('listing_id'),
-                            pred.get('address'),
-                            pred.get('price'),
-                            pred.get('market'),
-                            json.dumps(pred)
-                        ))
-            except json.JSONDecodeError as e:
-                bt.logging.error(f"JSON 解析錯誤: {e}")
-                bt.logging.error(f"原始數據: {request_data}")
-            except Exception as e:
-                bt.logging.error(f"處理預測數據時發生錯誤: {e}")
+            # 插入每個預測請求的詳細信息
+            for pred in predictions:
+                cursor.execute('''
+                    INSERT INTO prediction_details (
+                        request_id, nextplace_id, property_id, listing_id,
+                        address, city, state, zip_code, price, beds,
+                        baths, sqft, lot_size, year_built, days_on_market,
+                        latitude, longitude, property_type, last_sale_date,
+                        hoa_dues, query_date, market
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ''', (
+                    request_id,
+                    pred.get('nextplace_id'),
+                    pred.get('property_id'),
+                    pred.get('listing_id'),
+                    pred.get('address'),
+                    pred.get('city'),
+                    pred.get('state'),
+                    pred.get('zip_code'),
+                    pred.get('price'),
+                    pred.get('beds'),
+                    pred.get('baths'),
+                    pred.get('sqft'),
+                    pred.get('lot_size'),
+                    pred.get('year_built'),
+                    pred.get('days_on_market'),
+                    pred.get('latitude'),
+                    pred.get('longitude'),
+                    pred.get('property_type'),
+                    pred.get('last_sale_date'),
+                    pred.get('hoa_dues'),
+                    pred.get('query_date'),
+                    pred.get('market')
+                ))
             
             conn.commit()
             return request_id
