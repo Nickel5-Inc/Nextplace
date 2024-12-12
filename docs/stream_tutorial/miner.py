@@ -14,6 +14,7 @@ from typing import List, Dict, Tuple, Union, Callable, Awaitable
 
 from protocol import StreamPrompting
 from config import get_config, check_config
+from neurons.real_estate import RealEstateSynapse
 
 
 class StreamMiner(ABC):
