@@ -44,9 +44,23 @@ class RealEstateMiner(BaseMinerNeuron):
                     'property_id': pred.property_id if hasattr(pred, 'property_id') else None,
                     'listing_id': pred.listing_id if hasattr(pred, 'listing_id') else None,
                     'address': pred.address if hasattr(pred, 'address') else None,
+                    'city': pred.city if hasattr(pred, 'city') else None,
+                    'state': pred.state if hasattr(pred, 'state') else None,
+                    'zip_code': pred.zip_code if hasattr(pred, 'zip_code') else None,
                     'price': pred.price if hasattr(pred, 'price') else None,
+                    'beds': pred.beds if hasattr(pred, 'beds') else None,
+                    'baths': pred.baths if hasattr(pred, 'baths') else None,
+                    'sqft': pred.sqft if hasattr(pred, 'sqft') else None,
+                    'lot_size': pred.lot_size if hasattr(pred, 'lot_size') else None,
+                    'year_built': pred.year_built if hasattr(pred, 'year_built') else None,
+                    'days_on_market': pred.days_on_market if hasattr(pred, 'days_on_market') else None,
+                    'latitude': pred.latitude if hasattr(pred, 'latitude') else None,
+                    'longitude': pred.longitude if hasattr(pred, 'longitude') else None,
+                    'property_type': pred.property_type if hasattr(pred, 'property_type') else None,
+                    'last_sale_date': pred.last_sale_date if hasattr(pred, 'last_sale_date') else None,
+                    'hoa_dues': pred.hoa_dues if hasattr(pred, 'hoa_dues') else None,
                     'market': pred.market if hasattr(pred, 'market') else None
-                }
+                }   
                 request_data['predictions'].append(pred_dict)
         
         request_id = self.logger.log_request(

@@ -13,7 +13,7 @@ class RequestLogger:
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
         
-        # 創建請求日誌表
+        # 創建請求日誌主表
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS request_logs (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -22,11 +22,23 @@ class RequestLogger:
                 validator_uid INTEGER,
                 validator_stake REAL,
                 request_type TEXT,
+                processing_time REAL
+            )
+        ''')
+        
+        # 創建請求詳情表
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS request_details (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                request_id INTEGER,
+                nextplace_id TEXT,
                 market TEXT,
-                total_predictions INTEGER,
+                request_timestamp TEXT,
                 request_data TEXT,
                 response_data TEXT,
-                processing_time REAL
+                predicted_sale_price REAL,
+                predicted_sale_date TEXT,
+                FOREIGN KEY (request_id) REFERENCES request_logs(id)
             )
         ''')
         
@@ -76,24 +88,34 @@ class RequestLogger:
             # 插入主請求記錄
             cursor.execute('''
                 INSERT INTO request_logs (
-                    timestamp, hotkey, validator_uid, validator_stake,
-                    request_type, market, total_predictions, request_data
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                    timestamp, hotkey, validator_uid, validator_stake, request_type
+                ) VALUES (?, ?, ?, ?, ?)
             ''', (
                 datetime.now().isoformat(),
                 hotkey,
                 validator_uid,
                 validator_stake,
-                'prediction_request',
-                predictions[0].get('market') if predictions else None,
-                len(predictions),
-                request_data
+                'prediction_request'
             ))
             
             request_id = cursor.lastrowid
             
-            # 插入每個預測請求的詳細信息
+            # 插入每個請求的詳細信息
             for pred in predictions:
+                cursor.execute('''
+                    INSERT INTO request_details (
+                        request_id, nextplace_id, market, request_timestamp,
+                        request_data
+                    ) VALUES (?, ?, ?, ?, ?)
+                ''', (
+                    request_id,
+                    pred.get('nextplace_id'),
+                    pred.get('market'),
+                    datetime.now().isoformat(),
+                    json.dumps(pred)
+                ))
+                
+                # 插入預測詳情
                 cursor.execute('''
                     INSERT INTO prediction_details (
                         request_id, nextplace_id, property_id, listing_id,
