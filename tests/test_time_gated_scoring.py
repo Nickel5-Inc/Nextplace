@@ -2,7 +2,7 @@ from nextplace.validator.database.database_manager import DatabaseManager
 from nextplace.validator.scoring.time_gated_scorer import TimeGatedScorer
 import bittensor as bt
 
-if __name__ == '__main__':
+def main():
     database_manager = DatabaseManager()
     hotkeys_to_test = [
         "5F1SGqHYbvaa68EbVEjJ1C8C9gDrMBd8PnkGmR7GzGNnf8A1",
@@ -15,3 +15,6 @@ if __name__ == '__main__':
     for hotkey in hotkeys_to_test:
         score = time_gated_scorer.score(hotkey)
         bt.logging.info(f"| TIME GATED SCORE TESTER | 🧪 '{hotkey}' Score: {score}'")
+
+if __name__ == '__main__':
+    main()
