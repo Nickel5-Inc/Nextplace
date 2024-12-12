@@ -78,7 +78,7 @@ class TimeGatedScorer:
         if results is None or len(results) == 0:
             return None
         result = results[0][0]
-        return datetime.strptime(result, "%Y-%m-%d")
+        return datetime.strptime(result, "%Y-%m-%d").date()
 
     def _get_consistency_window_score(self, miner_hotkey: str) -> float:
         """
