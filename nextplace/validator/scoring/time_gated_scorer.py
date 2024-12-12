@@ -13,6 +13,7 @@ class TimeGatedScorer:
         self.database_manager = database_manager
         self.score_date_cutoff = 28
         self.consistency_window_duration = 5
+        self.min_consistency_window_percent = 51.0
 
     def score(self, miner_hotkey: str) -> float:
         """
@@ -44,19 +45,19 @@ class TimeGatedScorer:
             Percentage [0.0, 100.0]
         """
         current_thread = threading.current_thread().name
-        min_output = 51.0
-        max_output = 100.0
+        max_consistency_window_percent = 100.0
         oldest_prediction_date = self._get_oldest_prediction_date(miner_hotkey)
+        bt.logging.debug(f"| {current_thread} | 🪲 Found oldest daily_score prediction: {oldest_prediction_date}")
         if oldest_prediction_date is None:
-            return max_output
+            return max_consistency_window_percent
         today = datetime.today().date()
         difference = today - oldest_prediction_date
         bt.logging.debug(f"| {current_thread} | 🪲 Found difference between today and oldest prediction: {difference}")
         if difference <= self.consistency_window_duration:
-            return max_output
+            return max_consistency_window_percent
         if difference >= self.score_date_cutoff:
-            return min_output
-        return max_output + ((min_output - max_output) * (difference - self.consistency_window_duration)) / (self.score_date_cutoff - self.consistency_window_duration)
+            return self.min_consistency_window_percent
+        return max_consistency_window_percent + ((self.min_consistency_window_percent - max_consistency_window_percent) * (difference - self.consistency_window_duration)) / (self.score_date_cutoff - self.consistency_window_duration)
 
     def _get_oldest_prediction_date(self, miner_hotkey: str) -> datetime.date or None:
         """
@@ -82,6 +83,7 @@ class TimeGatedScorer:
         Returns:
             list of relevant historic scores for the miner
         """
+        # ToDo Scale scores based on total_predictions
         current_thread = threading.current_thread().name
         consistency_window_cutoff = self._get_consistency_window_start_date()
         query_string = "SELECT score, total_predictions FROM daily_scores WHERE miner_hotkey = ? AND date <= ?"
@@ -95,10 +97,34 @@ class TimeGatedScorer:
             for result in results:
                 total_score += result[0]
                 total_predictions += result[1]
-            return total_score / total_predictions
+            score = total_score / total_predictions
+            score_scalar = self._get_score_scalar(total_predictions)
+            return score * score_scalar
 
         bt.logging.debug(f"| {current_thread} | 🪲 Found no consistency window predictions for hotkey '{miner_hotkey}'")
         return 0.0
+
+    def _get_score_scalar(self, prediction_volume: int) -> float:
+        """
+        Get the scalar for the score based on the prediction volume
+        Args:
+            prediction_volume: number of predictions
+
+        Returns:
+            The scalar, a float
+        """
+        if prediction_volume < 5:
+            return 0.7
+        elif prediction_volume < 10:
+            return 0.725
+        elif prediction_volume < 15:
+            return 0.75
+        elif prediction_volume < 20:
+            return 0.8
+        elif prediction_volume < 25:
+            return 0.85
+        else:
+            return 1
 
     def _get_non_consistency_window_score(self, miner_hotkey: str) -> float:
         current_thread = threading.current_thread().name
@@ -126,8 +152,8 @@ class TimeGatedScorer:
         current_thread = threading.current_thread().name
         date_cutoff = self._get_score_cutoff_date()
         consistency_window_cutoff = self._get_consistency_window_start_date()
-        query_string = "SELECT date, score, total_predictions FROM daily_scores WHERE miner_hotkey = ? AND date <= ? AND date > ?"
-        values = (miner_hotkey, date_cutoff, consistency_window_cutoff)
+        query_string = "SELECT date, score, total_predictions FROM daily_scores WHERE miner_hotkey = ? AND date > ? AND date <= ?"
+        values = (miner_hotkey, consistency_window_cutoff, date_cutoff)
         with self.database_manager.lock:
             results = self.database_manager.query_with_values(query_string, values)
         if results is not None and len(results) > 0:

@@ -4,6 +4,7 @@ import traceback
 import threading
 from datetime import datetime, timezone, timedelta
 
+from nextplace.validator.scoring.time_gated_scorer import TimeGatedScorer
 from nextplace.validator.utils.contants import build_miner_predictions_table_name
 from nextplace.validator.utils.system import timeout_with_multiprocess
 
@@ -39,24 +40,17 @@ class WeightSetter:
 
     def calculate_miner_scores(self):
         current_thread = threading.current_thread().name
+        time_gated_scorer = TimeGatedScorer(self.database_manager)
         try:  # database_manager lock is already acquire at this point
-            results = self.database_manager.query("SELECT miner_hotkey, lifetime_score, last_update_timestamp, total_predictions FROM miner_scores")
+
             average_markets = self.get_average_markets_in_range()
 
             scores = torch.zeros(len(self.metagraph.hotkeys))
             hotkey_to_uid = {hk: uid for uid, hk in enumerate(self.metagraph.hotkeys)}
-            now = datetime.now(timezone.utc)
 
-            for miner_hotkey, lifetime_score, last_update_timestamp, total_predictions in results:
+            for miner_hotkey in self.metagraph.hotkeys:
                 if miner_hotkey in hotkey_to_uid:
-                    last_update_dt = datetime.strptime(last_update_timestamp, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
-                    time_diff = now - last_update_dt  # Calculate difference between now and last update
-
-                    # Score Scaling
-                    # -------------
-                    # We do this so people don't get a few lucky predictions, then turn off their miner
-                    # If a miner hasn't predicted in 5 days or has less than 5 predictions, we scale their score back
-
+                    score = time_gated_scorer.score(miner_hotkey)
                     table_name = build_miner_predictions_table_name(miner_hotkey)
                     # Handle the case where they're only targeting specific markets
                     market_query = f"SELECT COUNT(DISTINCT(market)) FROM {table_name} WHERE prediction_timestamp >= datetime('now', '-5 days')"
@@ -65,45 +59,16 @@ class WeightSetter:
                         distinct_markets = distinct_markets[0][0]
                         if distinct_markets < int(average_markets * 0.5):
                             bt.logging.trace(f"| {current_thread} | 🚩 Miner '{miner_hotkey}' has less than 50% markets predicted on in the last 5 days. Scaling their score.")
-                            lifetime_score = lifetime_score * 0.5
+                            score = score * 0.5
                         elif distinct_markets < int(average_markets * 0.75):
                             bt.logging.trace(f"| {current_thread} | 🚩 Miner '{miner_hotkey}' has less than 75% markets predicted on in the last 5 days. Scaling their score.")
-                            lifetime_score = lifetime_score * 0.6
+                            score = score * 0.6
                         elif distinct_markets < int(average_markets * 0.9):
                             bt.logging.trace(f"| {current_thread} | 🚩 Miner '{miner_hotkey}' has less than 90% markets predicted on in the last 5 days. Scaling their score.")
-                            lifetime_score = lifetime_score * 0.75
-
-                    # If last update was over 5 days ago, scale their score back by 50%
-                    if time_diff > timedelta(days=5):
-                        bt.logging.trace(f"| {current_thread} | 🚩 Miner '{miner_hotkey}' has not predicted in 5 days. Scaling their score.")
-                        lifetime_score = lifetime_score * 0.5
-
-                    '''
-                    Handle low scored prediction volume, only applies to miners who just registered.
-                    We don't want miners getting outsized rewards for a few lucky predictions.
-                    '''
-                    if total_predictions < 5:
-                        bt.logging.trace(f"| {current_thread} | 🚩 Miner '{miner_hotkey}' has less than 5 scored predictions. Scaling their score.")
-                        lifetime_score = lifetime_score * 0.7
-
-                    elif total_predictions < 10:
-                        bt.logging.trace(f"| {current_thread} | 🚩 Miner '{miner_hotkey}' has less than 10 scored predictions. Scaling their score.")
-                        lifetime_score = lifetime_score * 0.725
-
-                    elif total_predictions < 15:
-                        bt.logging.trace(f"| {current_thread} | 🚩 Miner '{miner_hotkey}' has less than 15 scored predictions. Scaling their score.")
-                        lifetime_score = lifetime_score * 0.75
-
-                    elif total_predictions < 20:
-                        bt.logging.trace(f"| {current_thread} | 🚩 Miner '{miner_hotkey}' has less than 20 scored predictions. Scaling their score.")
-                        lifetime_score = lifetime_score * 0.8
-
-                    elif total_predictions < 25:
-                        bt.logging.trace(f"| {current_thread} | 🚩 Miner '{miner_hotkey}' has less than 25 scored predictions. Scaling their score.")
-                        lifetime_score = lifetime_score * 0.85
+                            score = score * 0.75
 
                     uid = hotkey_to_uid[miner_hotkey]
-                    scores[uid] = lifetime_score
+                    scores[uid] = score
 
             return scores
 
