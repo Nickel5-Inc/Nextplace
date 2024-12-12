@@ -70,7 +70,7 @@ class TimeGatedScorer:
         Returns:
             Date object representing the date of the oldest prediction
         """
-        query_string = f"SELECT date FROM {TABLE_NAME} WHERE miner_hotkey = ? ORDER BY date DESC LIMIT 1"
+        query_string = f"SELECT date FROM {TABLE_NAME} WHERE miner_hotkey = ? ORDER BY date LIMIT 1"
         values = (miner_hotkey, )
         with self.database_manager.lock:
             results = self.database_manager.query_with_values(query_string, values)
@@ -140,7 +140,7 @@ class TimeGatedScorer:
         total_predictions = 0
         total_score = 0
         for result in past_scores:
-            total_score += result[1]
+            total_score += (result[1] * result[2])
             total_predictions += result[2]
         return total_score / total_predictions
         # ToDo Scaling function on past_scores linearly according to date
