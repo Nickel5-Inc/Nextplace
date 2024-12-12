@@ -1,6 +1,6 @@
 import sqlite3
 import json
-from datetime import datetime
+from datetime import datetime, timedelta
 import bittensor as bt
 
 class RequestLogger:
@@ -22,7 +22,8 @@ class RequestLogger:
                 validator_uid INTEGER,
                 validator_stake REAL,
                 request_type TEXT,
-                processing_time REAL
+                processing_time REAL,
+                response_data TEXT
             )
         ''')
         
@@ -102,28 +103,28 @@ class RequestLogger:
             
             # 插入每個請求的詳細信息
             for pred in predictions:
-                cursor.execute('''
-                    INSERT INTO request_details (
-                        request_id, nextplace_id, market, request_timestamp,
-                        request_data
-                    ) VALUES (?, ?, ?, ?, ?)
-                ''', (
-                    request_id,
-                    pred.get('nextplace_id'),
-                    pred.get('market'),
-                    datetime.now().isoformat(),
-                    json.dumps(pred)
-                ))
+                # 計算預測日期
+                query_date = pred.get('query_date')
+                if query_date:
+                    try:
+                        base_date = datetime.strptime(query_date, "%Y-%m-%d")
+                        predicted_date = (base_date + timedelta(days=30)).strftime("%Y-%m-%d")
+                    except (ValueError, TypeError):
+                        predicted_date = (datetime.now() + timedelta(days=30)).strftime("%Y-%m-%d")
+                else:
+                    predicted_date = (datetime.now() + timedelta(days=30)).strftime("%Y-%m-%d")
+
+                # 獲取預測價格
+                predicted_price = float(pred.get('price', 0.0))
                 
-                # 插入預測詳情
                 cursor.execute('''
                     INSERT INTO prediction_details (
                         request_id, nextplace_id, property_id, listing_id,
                         address, city, state, zip_code, price, beds,
                         baths, sqft, lot_size, year_built, days_on_market,
                         latitude, longitude, property_type, last_sale_date,
-                        hoa_dues, query_date, market
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        hoa_dues, query_date, market, predicted_price, predicted_date
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ''', (
                     request_id,
                     pred.get('nextplace_id'),
@@ -146,7 +147,9 @@ class RequestLogger:
                     pred.get('last_sale_date'),
                     pred.get('hoa_dues'),
                     pred.get('query_date'),
-                    pred.get('market')
+                    pred.get('market'),
+                    predicted_price,
+                    predicted_date
                 ))
             
             conn.commit()
