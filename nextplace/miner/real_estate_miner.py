@@ -5,6 +5,8 @@ from nextplace.protocol import RealEstateSynapse
 from nextplace.miner.ml.model import Model
 from nextplace.miner.ml.model_loader import ModelArgs
 from nextplace.miner.request_logger import RequestLogger
+from datetime import datetime
+import json
 
 
 class RealEstateMiner(BaseMinerNeuron):
@@ -24,26 +26,58 @@ class RealEstateMiner(BaseMinerNeuron):
         
     # OVERRIDE | Required
     def forward(self, synapse: RealEstateSynapse) -> RealEstateSynapse:
-        # Log the incoming request
-        self.logger.log_request(synapse.dendrite.hotkey, str(synapse))
+        start_time = datetime.now()
         
-        # 添加詳細的 synapse 日誌
-        bt.logging.info(f"📥 收到 Synapse 請求：")
-        bt.logging.info(f"  - Hotkey: {synapse.dendrite.hotkey}")
+        # 記錄請求
+        stake, uid = self.get_validator_stake_and_uid(synapse.dendrite.hotkey)
         
-        # 記錄預測請求的詳細信息
+        # 將 synapse 轉換為可序列化的字典
+        request_data = {
+            'hotkey': synapse.dendrite.hotkey,
+            'predictions': []
+        }
+        
         if hasattr(synapse, 'real_estate_predictions') and hasattr(synapse.real_estate_predictions, 'predictions'):
-            bt.logging.info("  - 預測請求詳情：")
-            for idx, pred in enumerate(synapse.real_estate_predictions.predictions):
-                bt.logging.info(f"    預測 {idx + 1}:")
-                bt.logging.info(f"      - 房產ID: {pred.nextplace_id if hasattr(pred, 'nextplace_id') else 'N/A'}")
-                bt.logging.info(f"      - 其他屬性: {vars(pred)}")
+            for pred in synapse.real_estate_predictions.predictions:
+                pred_dict = {
+                    'nextplace_id': pred.nextplace_id if hasattr(pred, 'nextplace_id') else None,
+                    'property_id': pred.property_id if hasattr(pred, 'property_id') else None,
+                    'listing_id': pred.listing_id if hasattr(pred, 'listing_id') else None,
+                    'address': pred.address if hasattr(pred, 'address') else None,
+                    'price': pred.price if hasattr(pred, 'price') else None,
+                    'market': pred.market if hasattr(pred, 'market') else None
+                }
+                request_data['predictions'].append(pred_dict)
         
+        request_id = self.logger.log_request(
+            hotkey=synapse.dendrite.hotkey,
+            request_data=json.dumps(request_data),
+            validator_uid=uid,
+            validator_stake=stake
+        )
+        
+        # 處理請求
         self.model.run_inference(synapse)
         self._set_force_update_prediction_flag(synapse)
         
-        # 記錄處理後的結果
-        bt.logging.info("📤 處理完成，準備返回結果")
+        # 準備響應數據
+        response_data = {
+            'hotkey': synapse.dendrite.hotkey,
+            'predictions': []
+        }
+        
+        if hasattr(synapse, 'real_estate_predictions') and hasattr(synapse.real_estate_predictions, 'predictions'):
+            for pred in synapse.real_estate_predictions.predictions:
+                pred_dict = {
+                    'nextplace_id': pred.nextplace_id if hasattr(pred, 'nextplace_id') else None,
+                    'predicted_sale_price': pred.predicted_sale_price if hasattr(pred, 'predicted_sale_price') else None,
+                    'predicted_sale_date': pred.predicted_sale_date if hasattr(pred, 'predicted_sale_date') else None
+                }
+                response_data['predictions'].append(pred_dict)
+        
+        # 記錄響應
+        processing_time = (datetime.now() - start_time).total_seconds()
+        self.logger.log_response(request_id, json.dumps(response_data), processing_time)
         
         return synapse
 
