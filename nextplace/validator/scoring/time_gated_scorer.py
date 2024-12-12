@@ -31,9 +31,9 @@ class TimeGatedScorer:
         consistency_window_score = self._get_consistency_window_score(miner_hotkey)
         bt.logging.debug(f"| {current_thread} | 🪲 Found consistency window score: {consistency_window_score}")
         non_consistency_window_score = self._get_non_consistency_window_score(miner_hotkey)
-        bt.logging.debug(f"| {current_thread} | 🪲 Found non-consistency window score: {consistency_window_score}")
+        bt.logging.debug(f"| {current_thread} | 🪲 Found non-consistency window score: {non_consistency_window_score}")
         non_consistency_window_percent = 100.0 - consistency_window_percent
-        calculated_score = (consistency_window_score * consistency_window_percent) + (non_consistency_window_score * non_consistency_window_percent)
+        calculated_score = ((consistency_window_score * consistency_window_percent) / 100) + ((non_consistency_window_score * non_consistency_window_percent) / 100)
         bt.logging.debug(f"| {current_thread} | 🪲 Calculated score: {calculated_score}")
         return (consistency_window_score * consistency_window_percent) + (non_consistency_window_score * non_consistency_window_percent)
 
@@ -98,7 +98,7 @@ class TimeGatedScorer:
             total_predictions = 0
             total_score = 0
             for result in results:
-                total_score += result[0]
+                total_score += (result[0] * result[1])
                 total_predictions += result[1]
             score = total_score / total_predictions
             score_scalar = self._get_score_scalar(total_predictions)
