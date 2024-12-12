@@ -70,10 +70,13 @@ class TimeGatedScorer:
         Returns:
             Date object representing the date of the oldest prediction
         """
+        current_thread = threading.current_thread().name
         query_string = f"SELECT date FROM {TABLE_NAME} WHERE miner_hotkey = ? ORDER BY date DESC LIMIT 1"
         values = (miner_hotkey, )
         with self.database_manager.lock:
             results = self.database_manager.query_with_values(query_string, values)
+
+        bt.logging.debug(f"| {current_thread} | 🪲 Oldest prediction results: {results}")
         if results is None or len(results) == 0:
             return None
         return results[0][0]
