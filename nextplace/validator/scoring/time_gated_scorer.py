@@ -25,6 +25,7 @@ class TimeGatedScorer:
         """
         # ToDo Handle the case where there are no daily_scores for this hotkey
         current_thread = threading.current_thread().name
+        bt.logging.debug(f"| {current_thread} | 🪲 Scoring miner '{miner_hotkey}'")
         consistency_window_percent = self._get_consistency_window_percent(miner_hotkey)
         bt.logging.debug(f"| {current_thread} | 🪲 Found consistency window percent: {consistency_window_percent}")
         consistency_window_score = self._get_consistency_window_score(miner_hotkey)
