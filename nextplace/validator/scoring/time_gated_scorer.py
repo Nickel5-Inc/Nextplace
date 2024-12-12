@@ -49,7 +49,7 @@ class TimeGatedScorer:
         current_thread = threading.current_thread().name
         max_consistency_window_percent = 100.0
         oldest_prediction_date = self._get_oldest_prediction_date(miner_hotkey)
-        bt.logging.debug(f"| {current_thread} | 🪲 Found oldest daily_score prediction: {oldest_prediction_date}")
+        bt.logging.debug(f"| {current_thread} | 🪲 Found oldest daily_score prediction: {oldest_prediction_date}, {type(oldest_prediction_date)}")
         if oldest_prediction_date is None:
             return max_consistency_window_percent
         today = datetime.today().date()
@@ -70,16 +70,15 @@ class TimeGatedScorer:
         Returns:
             Date object representing the date of the oldest prediction
         """
-        current_thread = threading.current_thread().name
         query_string = f"SELECT date FROM {TABLE_NAME} WHERE miner_hotkey = ? ORDER BY date DESC LIMIT 1"
         values = (miner_hotkey, )
         with self.database_manager.lock:
             results = self.database_manager.query_with_values(query_string, values)
 
-        bt.logging.debug(f"| {current_thread} | 🪲 Oldest prediction results: {results}")
         if results is None or len(results) == 0:
             return None
-        return results[0][0]
+        result = results[0][0]
+        return datetime.strptime(result, "%Y-%m-%d")
 
     def _get_consistency_window_score(self, miner_hotkey: str) -> float:
         """
