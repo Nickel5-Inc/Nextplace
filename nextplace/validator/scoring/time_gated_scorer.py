@@ -6,6 +6,7 @@ from nextplace.validator.database.database_manager import DatabaseManager
 """
 Use this class when calculating weights
 """
+TABLE_NAME = "test_daily_scores"
 
 
 class TimeGatedScorer:
@@ -86,7 +87,7 @@ class TimeGatedScorer:
         # ToDo Scale scores based on total_predictions
         current_thread = threading.current_thread().name
         consistency_window_cutoff = self._get_consistency_window_start_date()
-        query_string = "SELECT score, total_predictions FROM daily_scores WHERE miner_hotkey = ? AND date <= ?"
+        query_string = f"SELECT score, total_predictions FROM {TABLE_NAME} WHERE miner_hotkey = ? AND date <= ?"
         values = (miner_hotkey, consistency_window_cutoff)
         with self.database_manager.lock:
             results = self.database_manager.query_with_values(query_string, values)
@@ -152,7 +153,7 @@ class TimeGatedScorer:
         current_thread = threading.current_thread().name
         date_cutoff = self._get_score_cutoff_date()
         consistency_window_cutoff = self._get_consistency_window_start_date()
-        query_string = "SELECT date, score, total_predictions FROM daily_scores WHERE miner_hotkey = ? AND date > ? AND date <= ?"
+        query_string = f"SELECT date, score, total_predictions FROM {TABLE_NAME} WHERE miner_hotkey = ? AND date > ? AND date <= ?"
         values = (miner_hotkey, consistency_window_cutoff, date_cutoff)
         with self.database_manager.lock:
             results = self.database_manager.query_with_values(query_string, values)
