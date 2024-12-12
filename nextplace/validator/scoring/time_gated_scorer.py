@@ -6,7 +6,7 @@ from nextplace.validator.database.database_manager import DatabaseManager
 """
 Use this class when calculating weights
 """
-TABLE_NAME = "test_daily_scores"
+TABLE_NAME = "daily_scores"
 
 
 class TimeGatedScorer:
