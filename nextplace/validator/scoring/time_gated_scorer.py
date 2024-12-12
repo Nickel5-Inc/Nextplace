@@ -87,10 +87,9 @@ class TimeGatedScorer:
         Returns:
             list of relevant historic scores for the miner
         """
-        # ToDo Scale scores based on total_predictions
         current_thread = threading.current_thread().name
         consistency_window_cutoff = self._get_consistency_window_start_date()
-        query_string = f"SELECT score, total_predictions FROM {TABLE_NAME} WHERE miner_hotkey = ? AND date <= ?"
+        query_string = f"SELECT score, total_predictions FROM {TABLE_NAME} WHERE miner_hotkey = ? AND date >= ?"
         values = (miner_hotkey, consistency_window_cutoff)
         with self.database_manager.lock:
             results = self.database_manager.query_with_values(query_string, values)
@@ -156,7 +155,7 @@ class TimeGatedScorer:
         current_thread = threading.current_thread().name
         date_cutoff = self._get_score_cutoff_date()
         consistency_window_cutoff = self._get_consistency_window_start_date()
-        query_string = f"SELECT date, score, total_predictions FROM {TABLE_NAME} WHERE miner_hotkey = ? AND date > ? AND date <= ?"
+        query_string = f"SELECT date, score, total_predictions FROM {TABLE_NAME} WHERE miner_hotkey = ? AND date < ? AND date >= ?"
         values = (miner_hotkey, consistency_window_cutoff, date_cutoff)
         with self.database_manager.lock:
             results = self.database_manager.query_with_values(query_string, values)
