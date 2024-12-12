@@ -3,6 +3,9 @@ import sys
 import bittensor as bt
 from nextplace.miner.ml.model_loader import ModelArgs
 from nextplace.miner.real_estate_miner import RealEstateMiner
+import logging
+
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 
 # Build the ArgumentParser using wallet, subtensor, logging, and validator permit enforcing
