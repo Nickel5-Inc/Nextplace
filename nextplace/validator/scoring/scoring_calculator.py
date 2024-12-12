@@ -22,7 +22,10 @@ class ScoringCalculator:
             bt.logging.info(f"| {current_thread} | 📰 Miner '{miner_hotkey}' had only invalid scores, likely due to invalid date formatting.")
             return
 
-        self._add_to_daily_scores(new_scores, miner_hotkey)
+        try:
+            self._add_to_daily_scores(new_scores, miner_hotkey)
+        except Exception as e:
+            bt.logging.error(f"| {current_thread} | Caught exception: {e}")
 
         if miner_score is not None:
             self._update_miner_score(miner_score, new_scores, miner_hotkey)
