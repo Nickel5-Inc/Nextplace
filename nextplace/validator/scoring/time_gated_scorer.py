@@ -53,7 +53,7 @@ class TimeGatedScorer:
         if oldest_prediction_date is None:
             return max_consistency_window_percent
         today = datetime.today().date()
-        difference = today - oldest_prediction_date
+        difference = (today - oldest_prediction_date).days
         bt.logging.debug(f"| {current_thread} | 🪲 Found difference between today and oldest prediction: {difference}")
         if difference <= self.consistency_window_duration:
             return max_consistency_window_percent
