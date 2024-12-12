@@ -70,7 +70,7 @@ class TimeGatedScorer:
         Returns:
             Date object representing the date of the oldest prediction
         """
-        query_string = "SELECT date FROM active_miners WHERE miner_hotkey = ? ORDER BY date DESC LIMIT 1"
+        query_string = f"SELECT date FROM {TABLE_NAME} WHERE miner_hotkey = ? ORDER BY date DESC LIMIT 1"
         values = (miner_hotkey, )
         with self.database_manager.lock:
             results = self.database_manager.query_with_values(query_string, values)

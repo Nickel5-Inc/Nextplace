@@ -2,6 +2,7 @@ from nextplace.validator.database.database_manager import DatabaseManager
 from nextplace.validator.scoring.time_gated_scorer import TimeGatedScorer
 import bittensor as bt
 
+
 def main():
     database_manager = DatabaseManager()
     hotkeys_to_test = [

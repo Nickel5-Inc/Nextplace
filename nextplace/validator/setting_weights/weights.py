@@ -3,7 +3,6 @@ import bittensor as bt
 import traceback
 import threading
 from datetime import datetime, timezone, timedelta
-
 from nextplace.validator.scoring.time_gated_scorer import TimeGatedScorer
 from nextplace.validator.utils.contants import build_miner_predictions_table_name
 from nextplace.validator.utils.system import timeout_with_multiprocess
