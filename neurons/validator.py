@@ -8,6 +8,8 @@ import traceback
 from nextplace.validator.nextplace_validator import RealEstateValidator
 import configparser
 import os
+
+from nextplace.validator.utils.daily_score_table_manager import DailyScoreTableManager
 from nextplace.validator.website_data.website_communicator import WebsiteCommunicator
 
 SCORE_THREAD_NAME = "🏋🏻 ScoreThread 🏋"
@@ -18,7 +20,9 @@ def main(validator):
     step = 1  # Initialize step
     current_thread = threading.current_thread().name
 
-    back_populate_daily_scores(validator)
+    # Back-populate the daily_scores table
+    daily_score_table_manager = DailyScoreTableManager(validator.database_manager)
+    daily_score_table_manager.populate()
 
     # Start the scoring thread
     scoring_thread = threading.Thread(target=validator.scorer.run_score_thread, name=SCORE_THREAD_NAME)
@@ -64,48 +68,6 @@ def main(validator):
             stack_trace = traceback.format_exc()
             bt.logging.error(f"| {current_thread} | Stack Trace: {stack_trace}")
             time.sleep(10)
-
-def back_populate_daily_scores(validator: RealEstateValidator):
-    """
-    Populate the daily_scores table from the scored_predictions table
-    Args:
-        validator: Instance of a validator
-
-    Returns:
-        None
-    """
-    start_date = "2024-12-01"
-    """
-    ToDo
-        - Get earliest 'date' from daily_scores
-        - If earliest 'date' is on or before 'start_date', return
-        - If earliest 'date' is None, set earliest 'date' to today
-        - Aggregate data from scored_predictions by day (calculating scores for each prediction)
-        - Populate daily_scores table
-            - Test test_daily_scores first! 
-    """
-    earliest_date = validator.database_manager.query("SELECT date FROM daily_scores ORDER BY date LIMIT 1")
-    if validator_has_already_run_back_population(earliest_date, start_date):
-        return
-    if earliest_date is None:  # daily_scores table was empty
-        earliest_date = datetime.now(timezone.utc).date()
-
-
-def validator_has_already_run_back_population(earliest_date: list or None, start_date: str) -> bool:
-    """
-    Check if this validator needs to run back population for daily_scores table
-    Args:
-        earliest_date: Earliest date in daily_scores table
-        start_date: Start date to check
-
-    Returns:
-        False if this validator needs to run back population for daily_scores table, else True
-    """
-    if earliest_date and len(earliest_date) > 0:
-        earliest_date = earliest_date[0]
-        if earliest_date <= start_date:  # This validator has already done this operation
-            return True
-    return False
 
 def get_and_send_version():
     current_thread = threading.current_thread().name
