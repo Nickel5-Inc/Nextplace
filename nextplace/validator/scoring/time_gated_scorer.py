@@ -20,13 +20,12 @@ class TimeGatedScorer:
     def score(self, miner_hotkey: str) -> float:
         """
         Score the miner
-        :param miner_hotkey: hotkey for the miner being scored
+        Args:
+            miner_hotkey: date of the oldest prediction for this miner
+
         Returns:
             The score for the miner
         """
-        current_thread = threading.current_thread().name
-        bt.logging.debug(f"| {current_thread} | 🪲 Scoring miner '{miner_hotkey}'")
-
         # Get the oldest prediction in daily_scores for this miner
         oldest_prediction_date = self._get_oldest_prediction_date(miner_hotkey)
 
