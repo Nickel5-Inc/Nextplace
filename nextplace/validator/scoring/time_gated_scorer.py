@@ -1,3 +1,4 @@
+import statistics
 import threading
 from datetime import datetime, timedelta, timezone
 import bittensor as bt
@@ -159,39 +160,26 @@ class TimeGatedScorer:
         current_thread = threading.current_thread().name
         past_scores = self._get_past_scores(miner_hotkey)
         if len(past_scores) == 0:
-            bt.logging.debug(f"| {current_thread} | 🪲 🪟🚫 Found no non-consistency window predictions for hotkey '{miner_hotkey}'")
+            print(f"| {current_thread} | 🪲 🪟🚫 Found no non-consistency window predictions for hotkey '{miner_hotkey}'")
             return 0.0
 
-        # ToDo Finish + test this thoroughly!
-        total_score = 0
         today = datetime.now(timezone.utc).date()
+        all_scores = []
         for result in past_scores:
             date, score, total_predictions = result
             date = datetime.strptime(date, "%Y-%m-%d").date()
-            days_back = (today - date).days
+            days_back = (today - date).days - self.consistency_window_duration
             score_scalar = self.calculate_day_weight(size_of_non_consistency_window, days_back)
-            bt.logging.debug(f"| {current_thread} | 🪲 ⚖️ Found scalar {score_scalar} for {days_back} days back")
-            weighted_daily_score = score * score_scalar
-            total_score += weighted_daily_score
-        scaled = self.scale_between_0_and_100(total_score, size_of_non_consistency_window)
-        bt.logging.debug(f"| {current_thread} | 🪲 🪟⭐ Calculated non-consistency window score for hotkey '{miner_hotkey}': {scaled}")
-        return scaled
+            for i in range(score_scalar):
+                all_scores.append(score)
+            print(
+                f"| {current_thread} | 🪲 🪟⚖️ Found score scalar {score_scalar} for {days_back} days back, score: {score}")
+        final_score = statistics.mean(all_scores)
+        print(
+            f"| {current_thread} | 🪲 🪟⭐ Found {final_score} for non-consistency window score for hotkey '{miner_hotkey}'")
+        return final_score
 
-    def scale_between_0_and_100(self, value: float, size_of_non_consistency_window: int) -> float:
-        """
-        Scale a number to between 0 and 100
-        Args:
-            value: The number to scale
-            size_of_non_consistency_window: size of the non-consistency window
-
-        Returns:
-            The scaled number
-        """
-        min_value = 0
-        max_value = size_of_non_consistency_window * 100  # This represents perfect predictions
-        return 100 * (value - min_value) / (max_value - min_value)
-
-    def calculate_day_weight(self, size_of_non_consistency_window: int, days_back: int) -> float:
+    def calculate_day_weight(self, size_of_non_consistency_window: int, days_back: int) -> int:
         """
         Calculate the weight of a day based on the number of days in the non-consistency window
         Args:
@@ -208,11 +196,11 @@ class TimeGatedScorer:
             bt.logging.trace(f"| {current_thread} | ❗ days_back '{days_back}' is out of range for size of window {size_of_non_consistency_window}")
             return 0.0
 
-        maximum_scalar = 1.0
-        minimum_scalar = 0.05
+        maximum_scalar = 100
+        minimum_scalar = 5
 
         # Map the range [1, size_of_non_consistency_window] to [maximum_scalar, minimum_scalar]
-        return maximum_scalar - ((days_back - 1) * ((maximum_scalar - minimum_scalar) / (size_of_non_consistency_window - 1)))
+        return int(maximum_scalar - ((days_back - 1) * ((maximum_scalar - minimum_scalar) / (size_of_non_consistency_window - 1))))
 
     def _get_past_scores(self, miner_hotkey: str) -> list:
         """
