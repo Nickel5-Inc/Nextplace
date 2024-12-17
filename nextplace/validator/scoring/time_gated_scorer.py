@@ -52,7 +52,7 @@ class TimeGatedScorer:
         # Scale each set scores based on hyperparameters
         calculated_score = ((consistency_window_score * consistency_window_percent) / 100) + ((non_consistency_window_score * non_consistency_window_percent) / 100)
         bt.logging.debug(f"| {current_thread} | 🪲 🏆 Calculated score: {calculated_score}")
-        return (consistency_window_score * consistency_window_percent) + (non_consistency_window_score * non_consistency_window_percent)
+        return calculated_score
 
     def get_size_of_non_consistency_window(self, oldest_prediction_date: datetime.date) -> int:
         """
