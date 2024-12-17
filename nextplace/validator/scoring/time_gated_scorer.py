@@ -262,7 +262,7 @@ class TimeGatedScorer:
         Returns:
             The date of the beginning of the consistency window
         """
-        today = datetime.today().date()  # Today's date
+        today = datetime.now(timezone.utc).date()  # Today's date
         return today - timedelta(days=int(self.consistency_window_duration))
 
     def _get_score_cutoff_date(self) -> datetime.date:
@@ -271,5 +271,5 @@ class TimeGatedScorer:
         Returns:
             The date of the beginning of the scoring window
         """
-        today = datetime.today().date()  # Today's date
+        today = datetime.now(timezone.utc).date()  # Today's date
         return today - timedelta(days=int(self.score_date_cutoff))
