@@ -27,17 +27,23 @@ class TimeGatedScorer:
         current_thread = threading.current_thread().name
         bt.logging.debug(f"| {current_thread} | 🪲 Scoring miner '{miner_hotkey}'")
 
+        # Get the oldest prediction in daily_scores for this miner
         oldest_prediction_date = self._get_oldest_prediction_date(miner_hotkey)
+
+        # Handle the case where this miner has no scored predictions
         if oldest_prediction_date is None:
             return 0.0
 
+        # Get consistency window metrics
         consistency_window_percent = self._get_consistency_window_percent(oldest_prediction_date)
         consistency_window_score = self._get_consistency_window_score(miner_hotkey)
 
+        # Get non-consistency window metrics
         size_of_non_consistency_window = self.get_size_of_non_consistency_window(oldest_prediction_date)
         non_consistency_window_score = self._get_non_consistency_window_score(miner_hotkey, size_of_non_consistency_window)
         non_consistency_window_percent = 100.0 - consistency_window_percent
 
+        # Scale each set scores based on hyperparameters
         return (consistency_window_score * consistency_window_percent) + (non_consistency_window_score * non_consistency_window_percent)
 
     def get_size_of_non_consistency_window(self, oldest_prediction_date: datetime.date) -> int:
