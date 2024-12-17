@@ -1,8 +1,8 @@
 import statistics
 import threading
 from datetime import datetime, timedelta, timezone
-import bittensor as bt
 from nextplace.validator.database.database_manager import DatabaseManager
+import bittensor as bt
 
 """
 Use this class when calculating weights
@@ -26,23 +26,33 @@ class TimeGatedScorer:
         Returns:
             The score for the miner
         """
+        current_thread = threading.current_thread().name
+
         # Get the oldest prediction in daily_scores for this miner
         oldest_prediction_date = self._get_oldest_prediction_date(miner_hotkey)
+        bt.logging.debug(f"| {current_thread} | 🪲 👵🏻 Found oldest daily_score prediction: {oldest_prediction_date}")
 
         # Handle the case where this miner has no scored predictions
         if oldest_prediction_date is None:
+            bt.logging.debug(f"| {current_thread} | 🪲 No scores for this miner")
             return 0.0
 
         # Get consistency window metrics
         consistency_window_percent = self._get_consistency_window_percent(oldest_prediction_date)
+        bt.logging.debug(f"| {current_thread} | 🪲 🪟📊 Found consistency window percent: {consistency_window_percent}")
         consistency_window_score = self._get_consistency_window_score(miner_hotkey)
+        bt.logging.debug(f"| {current_thread} | 🪲 🪟💎 Found consistency window score: {consistency_window_score}")
 
         # Get non-consistency window metrics
-        size_of_non_consistency_window = self.get_size_of_non_consistency_window(oldest_prediction_date)
-        non_consistency_window_score = self._get_non_consistency_window_score(miner_hotkey, size_of_non_consistency_window)
         non_consistency_window_percent = 100.0 - consistency_window_percent
+        bt.logging.debug(f"| {current_thread} | 🪲 🪟📊 Found non-consistency window percent: {non_consistency_window_percent}")
+        size_of_non_consistency_window = self.get_size_of_non_consistency_window(oldest_prediction_date)
+        non_consistency_window_score = self._get_non_consistency_window_score(miner_hotkey, size_of_non_consistency_window, non_consistency_window_percent)
+        bt.logging.debug(f"| {current_thread} | 🪲 🪟🎯 Found non-consistency window score: {non_consistency_window_score}")
 
         # Scale each set scores based on hyperparameters
+        calculated_score = ((consistency_window_score * consistency_window_percent) / 100) + ((non_consistency_window_score * non_consistency_window_percent) / 100)
+        bt.logging.debug(f"| {current_thread} | 🪲 🏆 Calculated score: {calculated_score}")
         return (consistency_window_score * consistency_window_percent) + (non_consistency_window_score * non_consistency_window_percent)
 
     def get_size_of_non_consistency_window(self, oldest_prediction_date: datetime.date) -> int:
@@ -58,6 +68,8 @@ class TimeGatedScorer:
         difference = (today - oldest_prediction_date).days  # Calculate the difference
         if difference <= self.consistency_window_duration:  # No non-consistency window days for this miner
             return 0
+
+        # If reg'd for than score_date_cutoff, return diff between consistency window duration and cutoff, else return diff between reg date and conistency window length
         return min((self.score_date_cutoff - self.consistency_window_duration), (difference - self.consistency_window_duration))
 
 
@@ -70,9 +82,12 @@ class TimeGatedScorer:
         Returns:
             Percentage [0.0, 100.0]
         """
+        current_thread = threading.current_thread().name
         max_consistency_window_percent = 100.0  # Define the max percent
         today = datetime.now(timezone.utc).date()  # Today's date
         difference = (today - oldest_prediction_date).days  # Number of days within consistency window where there are score predictions
+
+        bt.logging.debug(f"| {current_thread} | 🪲 ⩇⩇:⩇⩇ Found difference between today and oldest prediction: {difference}")
 
         # If miner reg'd for less than consistency window days, return max
         if difference <= self.consistency_window_duration:
@@ -139,7 +154,6 @@ class TimeGatedScorer:
         score_scalar = self._get_score_scalar(all_predictions)  # Calculate scalar for low prediction volume
         return score * score_scalar  # Scale the score
 
-
     def _get_score_scalar(self, prediction_volume: int) -> float:
         """
         Get the scalar for the score based on the prediction volume
@@ -162,14 +176,9 @@ class TimeGatedScorer:
         else:
             return 1
 
-    def _get_non_consistency_window_score(self, miner_hotkey: str, size_of_non_consistency_window: int) -> float:
+    def _get_non_consistency_window_score(self, miner_hotkey: str, size_of_non_consistency_window: int, non_consistency_window_percent: float) -> float:
         """
         Get the score for the non consistency window
-        This function calculates the score by
-            1) Get a scalar for the day based on how long ago it was. This will be higher for more recent days.
-            2) Add *n* copies of the day's score to a list, where *n* is the value of the scalar from (1)
-            3) Calculate the mean of this list. This will ensure that more recent days (higher *n* value) have a
-               greater effect on the calculated mean.
         Args:
             miner_hotkey: this miner's hotkey
             size_of_non_consistency_window: number of days in the non-consistency window
@@ -177,6 +186,7 @@ class TimeGatedScorer:
         Returns:
             the score for the non-consistency window
         """
+        current_thread = threading.current_thread().name
         past_scores = self._get_past_scores(miner_hotkey)  # Get all past score within non-consistency window
 
         # If no scored predictions in the window, return 0
@@ -195,8 +205,9 @@ class TimeGatedScorer:
             for i in range(score_scalar):
                 all_scores.append(score)
 
-        # Final score is the mean of the list
-        return statistics.mean(all_scores)
+        final_score = statistics.mean(all_scores)
+        bt.logging.debug(f"| {current_thread} | 🪲 🪟⭐ Found {final_score} for non-consistency window score for hotkey '{miner_hotkey}'")
+        return final_score
 
     def calculate_day_weight(self, size_of_non_consistency_window: int, days_back: int) -> int:
         """
@@ -208,7 +219,6 @@ class TimeGatedScorer:
         Returns:
             The weight for the prediction
         """
-        days_back = days_back - self.consistency_window_duration # Get the number of days since the end of the consistency window
 
         # Handle invalid values for days_back
         if days_back < 1 or days_back > size_of_non_consistency_window:
@@ -226,7 +236,8 @@ class TimeGatedScorer:
     def _get_past_scores(self, miner_hotkey: str) -> list:
         """
         Retrieve the past scores for the miner
-        :param miner_hotkey: hotkey for the miner being scored
+        Args:
+            miner_hotkey hotkey for the miner being scored
         Returns:
             list of relevant historic scores for the miner
         """
@@ -241,8 +252,6 @@ class TimeGatedScorer:
 
         # Handle invalid query results
         if results is None or len(results) == 0:
-            current_thread = threading.current_thread().name
-            bt.logging.trace(f"| {current_thread} | ❗ Found no historic predictions in time range for hotkey '{miner_hotkey}'")
             return []
 
         # Return valid query results
