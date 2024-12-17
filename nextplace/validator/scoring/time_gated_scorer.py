@@ -7,7 +7,6 @@ import bittensor as bt
 """
 Use this class when calculating weights
 """
-TABLE_NAME = "daily_scores"
 
 
 class TimeGatedScorer:
@@ -111,7 +110,7 @@ class TimeGatedScorer:
         """
 
         # Query
-        query_string = f"SELECT date FROM {TABLE_NAME} WHERE miner_hotkey = ? ORDER BY date LIMIT 1"
+        query_string = f"SELECT date FROM daily_scores WHERE miner_hotkey = ? ORDER BY date LIMIT 1"
         values = (miner_hotkey, )
         with self.database_manager.lock:
             results = self.database_manager.query_with_values(query_string, values)
@@ -134,7 +133,7 @@ class TimeGatedScorer:
         consistency_window_cutoff = self._get_consistency_window_start_date()  # Get cutoff
 
         # Query
-        query_string = f"SELECT score, total_predictions FROM {TABLE_NAME} WHERE miner_hotkey = ? AND date >= ?"
+        query_string = f"SELECT score, total_predictions FROM daily_scores WHERE miner_hotkey = ? AND date >= ?"
         values = (miner_hotkey, consistency_window_cutoff)
         with self.database_manager.lock:
             results = self.database_manager.query_with_values(query_string, values)
@@ -245,7 +244,7 @@ class TimeGatedScorer:
         consistency_window_cutoff = self._get_consistency_window_start_date()  # Calculate consistency window start
 
         # Query finds all scores between the date cutoff and the start of the consistency window
-        query_string = f"SELECT date, score, total_predictions FROM {TABLE_NAME} WHERE miner_hotkey = ? AND date < ? AND date >= ?"
+        query_string = f"SELECT date, score, total_predictions FROM daily_scores WHERE miner_hotkey = ? AND date < ? AND date >= ?"
         values = (miner_hotkey, consistency_window_cutoff, date_cutoff)
         with self.database_manager.lock:
             results = self.database_manager.query_with_values(query_string, values)
