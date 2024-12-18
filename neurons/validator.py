@@ -15,7 +15,7 @@ from nextplace.validator.website_data.website_communicator import WebsiteCommuni
 SCORE_THREAD_NAME = "🏋🏻 ScoreThread 🏋"
 
 
-def main(validator):
+async def main(validator):
     get_and_send_version()
     step = 1  # Initialize step
     current_thread = threading.current_thread().name
@@ -37,7 +37,7 @@ def main(validator):
                 validator.check_timer_set_weights()
 
             validator.sync_metagraph()  # Sync metagraph
-            validator.forward(step)  # Get predictions from the Miners
+            await validator.forward(step)  # Get predictions from the Miners
 
             if step % 25 == 0:  # Check if any registrations/deregistrations have happened, make necessary updates
                 thread = threading.Thread(target=validator.miner_manager.manage_miner_data, name="📋 MinerManagementThread 📋")
