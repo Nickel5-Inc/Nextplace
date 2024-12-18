@@ -134,8 +134,7 @@ class RealEstateValidator(BaseValidatorNeuron):
             all_responses = []
 
             # Split valid axons into batches of 42
-            # batch_size = 42
-            batch_size = 5  # FOR TESTING ON TESTNET
+            batch_size = 42
             axon_batches = [valid_axons[i:i + batch_size] for i in range(0, len(valid_axons), batch_size)]
 
             # Asynchronously query the batches, gather the results
