@@ -13,8 +13,10 @@ from nextplace.validator.setting_weights.weights import WeightSetter
 from nextplace.validator.website_data.miner_score_sender import MinerScoreSender
 from template.base.validator import BaseValidatorNeuron
 import threading
+import asyncio
 
 PROPERTIES_THREAD_NAME = "🏠 PropertiesThread 🏠"
+
 
 class RealEstateValidator(BaseValidatorNeuron):
     def __init__(self, config=None):
@@ -33,6 +35,7 @@ class RealEstateValidator(BaseValidatorNeuron):
         self.current_thread = threading.current_thread().name
         self.miner_manager = MinerManager(self.database_manager, self.metagraph)
         self.miner_score_sender = MinerScoreSender(self.database_manager)
+        self.lock = threading.RLock()
 
         self.weight_setter = WeightSetter(
             metagraph=self.metagraph,
@@ -70,8 +73,7 @@ class RealEstateValidator(BaseValidatorNeuron):
                 return True
         return False
 
-    # OVERRIDE | Required
-    def forward(self, step: int) -> None:
+    async def forward(self, step: int) -> None:
         """
         Forward pass
         Returns:
@@ -132,21 +134,54 @@ class RealEstateValidator(BaseValidatorNeuron):
             all_responses = []
 
             # Split valid axons into batches of 42
-            BATCH_SIZE = 42
-            axon_batches = [valid_axons[i:i + BATCH_SIZE] for i in range(0, len(valid_axons), BATCH_SIZE)]
+            batch_size = 42
+            axon_batches = [valid_axons[i:i + batch_size] for i in range(0, len(valid_axons), batch_size)]
 
-            for batch_idx, axon_batch in enumerate(axon_batches):
-                bt.logging.info(f"| {self.current_thread} | 🔄 Querying batch {batch_idx + 1}/{len(axon_batches)} ({len(axon_batch)} miners)")
-
-                batch_responses = self.dendrite.query(
-                    axons=axon_batch,
-                    synapse=synapse,
-                    deserialize=True,
-                    timeout=30
-                )
-                all_responses.extend(batch_responses)
+            # Asynchronously query the batches, gather the results
+            await self.query_batches(synapse, axon_batches, all_responses)
 
             self.prediction_manager.process_predictions(all_responses, synapse_ids)
 
         finally:
             self.database_manager.lock.release()  # Always release the lock
+
+    async def query_batches(self, synapse: bt.Synapse, axon_batches, responses) -> None:
+        """
+        Iterate all batches, gather results asynchronously
+        Args:
+            synapse: The Synapse object
+            axon_batches: List of all axon batches
+            responses: List of results to accumulate
+
+        Returns:
+            None
+        """
+        tasks = []  # List of async tasks
+
+        # Iterate batches
+        for batch_idx, axon_batch in enumerate(axon_batches):
+            bt.logging.info(f"| {self.current_thread} | 🔄 Querying batch {batch_idx + 1}/{len(axon_batches)} ({len(axon_batch)} miners)")
+            tasks.append(self.send_synapse(synapse, axon_batch))  # Create a task for each batch query
+
+        # Wait for all tasks to complete
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+
+        # Collect all results, handling any exceptions
+        for result in results:
+            if isinstance(result, Exception):
+                bt.logging.error(f"| {self.current_thread} | ❗ Error during batch query: {result}")
+            else:
+                responses.extend(result)
+
+    async def send_synapse(self, synapse: bt.Synapse, batch):
+        """
+        Asynchronously send synapse to the network
+        Returns:
+            Results from the network
+        """
+        return self.dendrite.query(
+            axons=batch,
+            synapse=synapse,
+            deserialize=True,
+            timeout=30
+        )
