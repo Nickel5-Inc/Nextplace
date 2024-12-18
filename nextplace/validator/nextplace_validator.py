@@ -35,7 +35,6 @@ class RealEstateValidator(BaseValidatorNeuron):
         self.current_thread = threading.current_thread().name
         self.miner_manager = MinerManager(self.database_manager, self.metagraph)
         self.miner_score_sender = MinerScoreSender(self.database_manager)
-        self.lock = threading.RLock()
 
         self.weight_setter = WeightSetter(
             metagraph=self.metagraph,
