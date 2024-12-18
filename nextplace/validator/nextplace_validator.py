@@ -120,14 +120,33 @@ class RealEstateValidator(BaseValidatorNeuron):
                 return
 
             synapse_ids = set([x.nextplace_id for x in synapse.real_estate_predictions.predictions])
-            responses = self.dendrite.query(
-                axons=self.metagraph.axons,
-                synapse=synapse,
-                deserialize=True,
-                timeout=30
-            )
 
-            self.prediction_manager.process_predictions(responses, synapse_ids)  # Process Miner predictions
+            # Filter out axons with IP 0.0.0.0
+            valid_axons = [
+                axon for axon in self.metagraph.axons
+                if not (('/ipv0/0.0.0.0' in str(axon.ip_str())) or
+                    ('/ipv4/0.0.0.0' in str(axon.ip_str())) or
+                    axon.ip_str().endswith(':0'))
+            ]
+
+            all_responses = []
+
+            # Split valid axons into batches of 42
+            BATCH_SIZE = 42
+            axon_batches = [valid_axons[i:i + BATCH_SIZE] for i in range(0, len(valid_axons), BATCH_SIZE)]
+
+            for batch_idx, axon_batch in enumerate(axon_batches):
+                bt.logging.info(f"| {self.current_thread} | 🔄 Querying batch {batch_idx + 1}/{len(axon_batches)} ({len(axon_batch)} miners)")
+
+                batch_responses = self.dendrite.query(
+                    axons=axon_batch,
+                    synapse=synapse,
+                    deserialize=True,
+                    timeout=30
+                )
+                all_responses.extend(batch_responses)
+
+            self.prediction_manager.process_predictions(all_responses, synapse_ids)
 
         finally:
             self.database_manager.lock.release()  # Always release the lock
