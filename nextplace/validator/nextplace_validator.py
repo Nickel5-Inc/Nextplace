@@ -141,6 +141,7 @@ class RealEstateValidator(BaseValidatorNeuron):
             # Asynchronously query the batches, gather the results
             await self.query_batches(synapse, axon_batches, all_responses)
 
+            # Handle responses
             self.prediction_manager.process_predictions(all_responses, synapse_ids)
 
         finally:
