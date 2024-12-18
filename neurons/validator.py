@@ -1,14 +1,12 @@
 import time
 import argparse
-from datetime import datetime, timezone, timedelta
-
+import asyncio
 import bittensor as bt
 import threading
 import traceback
 from nextplace.validator.nextplace_validator import RealEstateValidator
 import configparser
 import os
-
 from nextplace.validator.utils.daily_score_table_manager import DailyScoreTableManager
 from nextplace.validator.website_data.website_communicator import WebsiteCommunicator
 
@@ -91,4 +89,4 @@ if __name__ == "__main__":
 
     config = bt.config(parser)  # Build config object
     validator_instance = RealEstateValidator(config)  # Initialize the validator
-    main(validator_instance)  # Run the main loop
+    asyncio.run(main(validator_instance))  # Run the main loop
