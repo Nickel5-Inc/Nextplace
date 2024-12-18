@@ -1,5 +1,7 @@
 import time
 import argparse
+from datetime import datetime, timezone, timedelta
+
 import bittensor as bt
 import threading
 import traceback
@@ -7,7 +9,7 @@ from nextplace.validator.nextplace_validator import RealEstateValidator
 import configparser
 import os
 
-from nextplace.validator.utils.contants import build_miner_predictions_table_name
+from nextplace.validator.utils.daily_score_table_manager import DailyScoreTableManager
 from nextplace.validator.website_data.website_communicator import WebsiteCommunicator
 
 SCORE_THREAD_NAME = "🏋🏻 ScoreThread 🏋"
@@ -17,6 +19,10 @@ def main(validator):
     get_and_send_version()
     step = 1  # Initialize step
     current_thread = threading.current_thread().name
+
+    # Back-populate the daily_scores table
+    daily_score_table_manager = DailyScoreTableManager(validator.database_manager)
+    daily_score_table_manager.populate()
 
     # Start the scoring thread
     scoring_thread = threading.Thread(target=validator.scorer.run_score_thread, name=SCORE_THREAD_NAME)
