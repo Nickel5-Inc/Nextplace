@@ -33,6 +33,7 @@ class RealEstateValidator(BaseValidatorNeuron):
         self.current_thread = threading.current_thread().name
         self.miner_manager = MinerManager(self.database_manager, self.metagraph)
         self.miner_score_sender = MinerScoreSender(self.database_manager)
+        self.lock = threading.RLock()
 
         self.weight_setter = WeightSetter(
             metagraph=self.metagraph,
@@ -130,21 +131,21 @@ class RealEstateValidator(BaseValidatorNeuron):
             ]
 
             all_responses = []
+            threads: list[threading.Thread] = []
 
             # Split valid axons into batches of 42
-            BATCH_SIZE = 42
-            axon_batches = [valid_axons[i:i + BATCH_SIZE] for i in range(0, len(valid_axons), BATCH_SIZE)]
+            batch_size = 42
+            axon_batches = [valid_axons[i:i + batch_size] for i in range(0, len(valid_axons), batch_size)]
 
+            # Iterate batches, spawn a thread to manage sending/receiving predictions
             for batch_idx, axon_batch in enumerate(axon_batches):
-                bt.logging.info(f"| {self.current_thread} | 🔄 Querying batch {batch_idx + 1}/{len(axon_batches)} ({len(axon_batch)} miners)")
+                thread = threading.Thread(self.synapse_manager.get_synapse(), name=f"🪽 SynapseThread_{batch_idx + 1} 🪽")  # Create thread
+                thread.start()  # Start thread
+                threads.append(thread)  # Add thread to list
 
-                batch_responses = self.dendrite.query(
-                    axons=axon_batch,
-                    synapse=synapse,
-                    deserialize=True,
-                    timeout=30
-                )
-                all_responses.extend(batch_responses)
+            # Wait for all threads to finish
+            for thread in threads:  # Iterate threads
+                thread.join()  # Wait for thread to complete
 
             self.prediction_manager.process_predictions(all_responses, synapse_ids)
 

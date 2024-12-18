@@ -15,6 +15,33 @@ class SynapseManager:
     def __init__(self, database_manager: DatabaseManager):
         self.database_manager = database_manager
 
+    def send_synapse(self, synapse: RealEstateSynapse, responses: list, lock: threading.RLock, axon_batch, batch_idx: int, dendrite) -> None:
+        """
+        RUN IN THREAD
+        Query miners in the batch, store results in thread-safe manner
+        Args:
+            synapse: Synapse object containing homes on the market
+            responses: List to append results to
+            lock: Lock for the list
+            axon_batch: Axons in this batch
+            batch_idx: Index of the batch (for logging)
+            dendrite: Reference to the validator's dendrite
+
+        Returns:
+            None
+        """
+        current_thread = threading.current_thread().name
+        bt.logging.info(f"| {current_thread} | 🔄 Querying batch #{batch_idx + 1} ({len(axon_batch)} miners)")
+        batch_responses = dendrite.query(
+            axons=axon_batch,
+            synapse=synapse,
+            deserialize=True,
+            timeout=30
+        )
+        with lock:
+            responses.extend(batch_responses)
+
+
     def get_synapse(self) -> RealEstateSynapse or None:
         """
         Get a property from the `properties` table, format the synapse
