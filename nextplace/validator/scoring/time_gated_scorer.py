@@ -215,6 +215,9 @@ class TimeGatedScorer:
         maximum_scalar = 100  # Maximum scalar value
         minimum_scalar = 5  # Minimum scalar value
 
+        if size_of_non_consistency_window == 1:
+            return maximum_scalar
+
         # Map the range [1, size_of_non_consistency_window] to [maximum_scalar, minimum_scalar]
         return int(maximum_scalar - ((days_back - 1) * ((maximum_scalar - minimum_scalar) / (size_of_non_consistency_window - 1))))
 
