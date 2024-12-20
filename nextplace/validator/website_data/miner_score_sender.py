@@ -5,6 +5,7 @@ from nextplace.validator.database.database_manager import DatabaseManager
 import threading
 import bittensor as bt
 
+from nextplace.validator.scoring.time_gated_scorer import TimeGatedScorer
 from nextplace.validator.utils.contants import ISO8601
 from nextplace.validator.website_data.website_communicator import WebsiteCommunicator
 
@@ -22,20 +23,20 @@ class MinerScoreSender:
             None
         """
         current_thread = threading.current_thread().name
-
-        with self.database_manager.lock:
-            active_miners = self.database_manager.query(f"SELECT miner_hotkey FROM active_miners")
-
         data_to_send = []
 
         now = datetime.now(timezone.utc).strftime(ISO8601)
-        for hotkey in active_miners:
-            hotkey = hotkey[0]
+        time_gated_scorer = TimeGatedScorer(self.database_manager)
+        with self.database_manager.lock:
+            hotkeys = self.database_manager.query("SELECT DISTINCT(miner_hotkey) FROM daily_scores")
+        hotkeys = [x[0] for x in hotkeys]
+        for hotkey in hotkeys:
             with self.database_manager.lock:
-                result = self.database_manager.query(f"SELECT lifetime_score, total_predictions, last_update_timestamp FROM miner_scores WHERE miner_hotkey='{hotkey}'")
-                score = result[0][0] if len(result) == 1 else 0
-                num_predictions = result[0][1] if len(result) == 1 else 0
-                last_update_timestamp = result[0][2] if len(result) == 1 else now
+                score = time_gated_scorer.score(hotkey)
+                results = self.database_manager.query(f"SELECT total_predictions FROM daily_scores WHERE miner_hotkey='{hotkey}'")
+                num_predictions = 0
+                for result in results:
+                    num_predictions += result[0]
                 try:
                     total_predictions = self.database_manager.get_size_of_table(f"predictions_{hotkey}")
                 except OperationalError:
@@ -45,7 +46,7 @@ class MinerScoreSender:
                     "minerColdKey": "N/A",
                     "minerScore": score,
                     "numPredictions": num_predictions,
-                    "scoreGenerationDate": last_update_timestamp,
+                    "scoreGenerationDate": now,
                     "totalPredictions": total_predictions,
                 })
 

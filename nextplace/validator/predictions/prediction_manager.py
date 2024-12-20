@@ -29,7 +29,7 @@ class PredictionManager:
         """
 
         current_thread = threading.current_thread().name
-        bt.logging.info(f'| {current_thread} | 📡 Processing Responses')
+        bt.logging.info(f'| {current_thread} | 📡 Processing {len(responses)} Responses')
 
         if responses is None or len(responses) == 0:
             bt.logging.trace(f'| {current_thread} | ❗No responses received')
