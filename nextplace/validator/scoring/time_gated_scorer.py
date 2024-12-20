@@ -41,7 +41,7 @@ class TimeGatedScorer:
 
         # Scale each set scores based on hyperparameters
         calculated_score = ((consistency_window_score * consistency_window_percent) / 100) + ((non_consistency_window_score * non_consistency_window_percent) / 100)
-        bt.logging.trace(f"| {current_thread} | 🏆 Time-Gated Score: {calculated_score}")
+        bt.logging.trace(f"| {current_thread} | 🏆 Miner '{miner_hotkey}' Received Time-Gated Score: {calculated_score}")
         return calculated_score
 
     def get_size_of_non_consistency_window(self, oldest_prediction_date: datetime.date) -> int:
