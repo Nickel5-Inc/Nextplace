@@ -149,12 +149,10 @@ class TimeGatedScorer:
         if prediction_volume < 5:
             return 0.7
         elif prediction_volume < 10:
-            return 0.725
-        elif prediction_volume < 15:
             return 0.75
-        elif prediction_volume < 20:
+        elif prediction_volume < 15:
             return 0.8
-        elif prediction_volume < 25:
+        elif prediction_volume < 20:
             return 0.85
         else:
             return 1
