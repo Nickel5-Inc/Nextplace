@@ -30,7 +30,7 @@ class TimeGatedScorer:
 
         # Get consistency window metrics
         consistency_window_percent = self._get_consistency_window_percent(oldest_prediction_date)
-        consistency_window_score = self._get_consistency_window_score(miner_hotkey)
+        consistency_window_score, score_scalar = self._get_consistency_window_score(miner_hotkey)
 
         # Get non-consistency window metrics
         non_consistency_window_percent = 100.0 - consistency_window_percent
@@ -39,7 +39,12 @@ class TimeGatedScorer:
 
         # Scale each set scores based on hyperparameters
         calculated_score = ((consistency_window_score * consistency_window_percent) / 100) + ((non_consistency_window_score * non_consistency_window_percent) / 100)
-        return calculated_score
+        final_score = calculated_score * score_scalar
+
+        current_thread = threading.current_thread().name
+        bt.logging.trace(f"| {current_thread} | 🪲🏆 {miner_hotkey} Score: {final_score}")
+
+        return final_score
 
     def get_size_of_non_consistency_window(self, oldest_prediction_date: datetime.date) -> int:
         """
@@ -107,7 +112,7 @@ class TimeGatedScorer:
         # Format result as a Date
         return datetime.strptime(result, "%Y-%m-%d").date()
 
-    def _get_consistency_window_score(self, miner_hotkey: str) -> float:
+    def _get_consistency_window_score(self, miner_hotkey: str) -> tuple[float, float]:
         """
         Retrieve the past scores for the miner
         :param miner_hotkey: hotkey for the miner being scored
@@ -124,7 +129,7 @@ class TimeGatedScorer:
 
         # Handle invalid query results
         if results is None or len(results) == 0:
-            return 0.0  # Return a score of 0 if no results.
+            return 0.0, 0.0  # Return a score of 0 if no results.
 
         # Calculate actual score by re-building daily score sums
         all_predictions = 0
@@ -135,7 +140,7 @@ class TimeGatedScorer:
             all_predictions += day_total_predictions  # Sum daily predictions
         score = total_score / all_predictions  # Calculate true average for time range
         score_scalar = self._get_score_scalar(all_predictions)  # Calculate scalar for low prediction volume
-        return score * score_scalar  # Scale the score
+        return score, score_scalar  # Scale the score
 
     def _get_score_scalar(self, prediction_volume: int) -> float:
         """
