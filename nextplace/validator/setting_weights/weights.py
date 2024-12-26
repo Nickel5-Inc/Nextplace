@@ -33,7 +33,8 @@ class WeightSetter:
         Returns:
             None
         """
-        bt.logging.trace("📸 Time to set weights, resetting timer and setting weights.")
+        current_thread = threading.current_thread().name
+        bt.logging.trace(f"📸 | {current_thread} | Time to set weights, resetting timer and setting weights.")
         self.timer = datetime.now(timezone.utc)  # Reset the timer
         self.set_weights()  # Set weights
 
