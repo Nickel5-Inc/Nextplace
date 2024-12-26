@@ -183,5 +183,5 @@ class RealEstateValidator(BaseValidatorNeuron):
             axons=batch,
             synapse=synapse,
             deserialize=True,
-            timeout=180
+            timeout=150
         )
