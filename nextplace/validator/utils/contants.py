@@ -1,5 +1,5 @@
 ISO8601 = "%Y-%m-%dT%H:%M:%SZ"
-NUMBER_OF_PROPERTIES_PER_SYNAPSE = 400
+NUMBER_OF_PROPERTIES_PER_SYNAPSE = 600
 
 
 def build_miner_predictions_table_name(miner_hotkey):
