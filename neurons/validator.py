@@ -19,18 +19,7 @@ async def main(validator):
     current_thread = threading.current_thread().name
 
     bt.logging.debug(f"| {current_thread} | 🪲 Running scoring first, before other threads start")
-
-    active_threads = threading.enumerate()
-    bt.logging.debug(f"| {current_thread} | 🪲 Active threads before weight setting:")
-    for thread in active_threads:
-        bt.logging.debug(f"| {current_thread} | 🪲 - {thread.name}")
-
     validator.check_timer_set_weights()  # FOR TESTING ONLY
-
-    active_threads = threading.enumerate()
-    bt.logging.debug(f"| {current_thread} | 🪲 Active threads after weight setting:")
-    for thread in active_threads:
-        bt.logging.debug(f"| {current_thread} | 🪲 - {thread.name}")
 
     # Back-populate the daily_scores table
     daily_score_table_manager = DailyScoreTableManager(validator.database_manager)
