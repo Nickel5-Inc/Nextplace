@@ -135,8 +135,7 @@ class WeightSetter:
     def set_weights(self):
         current_thread = threading.current_thread().name
         # Sync the metagraph to get the latest data
-        with self.metagraph.lock:
-            self.metagraph.sync(subtensor=self.subtensor, lite=True)
+        self.metagraph.sync(subtensor=self.subtensor, lite=True)
 
         bt.logging.info(f"| {current_thread} | 🪲 Metagraph synced for weight setting, about to score miners")
 
