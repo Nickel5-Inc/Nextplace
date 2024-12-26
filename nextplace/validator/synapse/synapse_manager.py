@@ -27,7 +27,7 @@ class SynapseManager:
             # Query to get the next round of properties
             retrieve_query = f'''
                 SELECT * FROM properties
-                LIMIT {NUMBER_OF_PROPERTIES_PER_SYNAPSE}
+                LIMIT 400
             '''
             property_data = self.database_manager.query(retrieve_query)  # Execute query
 
