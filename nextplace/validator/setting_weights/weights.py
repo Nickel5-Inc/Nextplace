@@ -15,7 +15,7 @@ class WeightSetter:
         self.subtensor = subtensor
         self.config = config
         self.database_manager = database_manager
-        self.timer = datetime.now(timezone.utc)
+        self.timer = datetime.now(timezone.utc) - timedelta(hours=2)
 
     def is_time_to_set_weights(self) -> bool:
         """
@@ -26,7 +26,6 @@ class WeightSetter:
         now = datetime.now(timezone.utc)
         time_diff = now - self.timer
         return time_diff >= timedelta(hours=1)
-        # return time_diff >= timedelta(minutes=0)
 
     def check_timer_set_weights(self) -> None:
         """
