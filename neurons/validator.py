@@ -18,6 +18,9 @@ async def main(validator):
     step = 5  # Initialize step
     current_thread = threading.current_thread().name
 
+    bt.logging.debug(f"| {current_thread} | 🪲 Running scoring first, before other threads start")
+    validator.check_timer_set_weights()  # FOR TESTING ONLY
+
     # Back-populate the daily_scores table
     daily_score_table_manager = DailyScoreTableManager(validator.database_manager)
     daily_score_table_manager.populate()

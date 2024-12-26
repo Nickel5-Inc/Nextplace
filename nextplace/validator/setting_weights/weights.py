@@ -15,7 +15,7 @@ class WeightSetter:
         self.subtensor = subtensor
         self.config = config
         self.database_manager = database_manager
-        self.timer = datetime.now(timezone.utc) - timedelta(hours=2)
+        self.timer = datetime.now(timezone.utc) - timedelta(hours=2)  # For testing only
 
     def is_time_to_set_weights(self) -> bool:
         """
@@ -133,21 +133,24 @@ class WeightSetter:
 
     @timeout_with_multiprocess(seconds=180)
     def set_weights(self):
-        current_thread = threading.current_thread()
+        current_thread = threading.current_thread().name
         # Sync the metagraph to get the latest data
-        self.metagraph.sync(subtensor=self.subtensor, lite=True)
+        with self.metagraph.lock:
+            self.metagraph.sync(subtensor=self.subtensor, lite=True)
+
+        bt.logging.info(f"| {current_thread} | 🪲 Metagraph synced for weight setting, about to score miners")
 
         scores = self.calculate_miner_scores()
         weights = self.calculate_weights(scores)
 
-        bt.logging.info(f"| {current_thread.name} | ⚖️ Calculated weights: {weights}")
+        bt.logging.info(f"| {current_thread} | ⚖️ Calculated weights: {weights}")
 
         try:
             uid = self.metagraph.hotkeys.index(self.wallet.hotkey.ss58_address)
             stake = float(self.metagraph.S[uid])
 
             if stake < 1000.0:
-                bt.logging.error(f"| {current_thread.name} | Insufficient stake. Failed in setting weights.")
+                bt.logging.error(f"| {current_thread} | Insufficient stake. Failed in setting weights.")
                 return False
 
             result = self.subtensor.set_weights(
@@ -162,10 +165,10 @@ class WeightSetter:
             success = result[0] if isinstance(result, tuple) and len(result) >= 1 else False
 
             if success:
-                bt.logging.info(f"| {current_thread.name} | ✅ Successfully set weights.")
+                bt.logging.info(f"| {current_thread} | ✅ Successfully set weights.")
             else:
-                bt.logging.error(f"| {current_thread.name} | ❗Failed to set weights. Result: {result}")
+                bt.logging.error(f"| {current_thread} | ❗Failed to set weights. Result: {result}")
 
         except Exception as e:
-            bt.logging.error(f"| {current_thread.name} | ❗Error setting weights: {str(e)}")
+            bt.logging.error(f"| {current_thread} | ❗Error setting weights: {str(e)}")
             bt.logging.error(traceback.format_exc())
