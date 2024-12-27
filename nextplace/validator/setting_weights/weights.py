@@ -134,10 +134,6 @@ class WeightSetter:
     @timeout_with_multiprocess(seconds=180)
     def set_weights(self):
         current_thread = threading.current_thread().name
-        # Sync the metagraph to get the latest data
-        bt.logging.info(f"| {current_thread} | 🪲 Syncing metagraph...")
-        self.metagraph.sync(subtensor=self.subtensor)
-        bt.logging.info(f"| {current_thread} | 🪲 Metagraph synced for weight setting, about to score miners")
 
         scores = self.calculate_miner_scores()
         weights = self.calculate_weights(scores)
