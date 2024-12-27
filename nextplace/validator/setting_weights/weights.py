@@ -136,9 +136,9 @@ class WeightSetter:
 
     def set_weights(self):
         current_thread = threading.current_thread().name
-        bt.logging.info(f"| {current_thread} | 🪲 Sleeping for 220 seconds...")
-        time.sleep(220)
-        bt.logging.info(f"| {current_thread} | 🪲 Done sleeping")
+        # bt.logging.info(f"| {current_thread} | 🪲 Sleeping for 220 seconds...")
+        # time.sleep(220)
+        # bt.logging.info(f"| {current_thread} | 🪲 Done sleeping")
 
         scores = self.calculate_miner_scores()
         weights = self.calculate_weights(scores)
