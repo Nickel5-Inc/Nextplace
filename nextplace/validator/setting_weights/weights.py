@@ -135,8 +135,10 @@ class WeightSetter:
             return torch.full_like(tier_scores, total_weight / len(tier_scores))
 
     def set_weights(self):
-        time.sleep(181)
         current_thread = threading.current_thread().name
+        bt.logging.info(f"| {current_thread} | 🪲 Sleeping for 220 seconds...")
+        time.sleep(220)
+        bt.logging.info(f"| {current_thread} | 🪲 Done sleeping")
 
         scores = self.calculate_miner_scores()
         weights = self.calculate_weights(scores)
@@ -145,9 +147,7 @@ class WeightSetter:
 
         try:
             uid = self.metagraph.hotkeys.index(self.wallet.hotkey.ss58_address)
-            bt.logging.debug(f"| {current_thread} | 🪲 Found uid '{uid}'")
             stake = float(self.metagraph.S[uid])
-            bt.logging.debug(f"| {current_thread} | 🪲 Found stake '{stake}'")
 
             if stake < 1000.0:
                 bt.logging.trace(f"| {current_thread} | ❗Insufficient stake. Failed in setting weights.")
