@@ -41,8 +41,8 @@ class TimeGatedScorer:
         calculated_score = ((consistency_window_score * consistency_window_percent) / 100) + ((non_consistency_window_score * non_consistency_window_percent) / 100)
         final_score = calculated_score * score_scalar
 
-        current_thread = threading.current_thread().name
-        bt.logging.debug(f"| {current_thread} | 🚩 Miner '{miner_hotkey}' received weighted score: {final_score}")
+        # current_thread = threading.current_thread().name
+        # bt.logging.debug(f"| {current_thread} | 🚩 Miner '{miner_hotkey}' received weighted score: {final_score}")
 
         return final_score
 
