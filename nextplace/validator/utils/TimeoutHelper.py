@@ -27,7 +27,7 @@ def run_with_timeout(func, timeout=180, *args, **kwargs):
                 return future.result(timeout=timeout)  # Wait for the result up to the timeout
             except TimeoutError:
                 func_name = getattr(func, "__name__", "<unknown>")
-                bt.logging.trace(f"| {current_thread} | ❗Function '{func_name}' timed out")
+                bt.logging.trace(f"| {current_thread} | ❗ Function '{func_name}' timed out")
                 return None  # Return None if the function times out
     except Exception as e:
-        bt.logging.error(f"| {current_thread} | 🪲 Caught exception for function {func} during timeout {e}, {traceback.format_exc()}")
+        bt.logging.error(f"| {current_thread} | ❗ Caught exception for function {func} during timeout {e}, {traceback.format_exc()}")
