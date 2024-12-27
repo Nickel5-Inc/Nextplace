@@ -1,5 +1,3 @@
-import time
-
 import torch
 import bittensor as bt
 import traceback
