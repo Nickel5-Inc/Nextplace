@@ -1,4 +1,7 @@
 import signal
+import threading
+
+import bittensor as bt
 
 
 # Exception for timeouts
@@ -24,6 +27,10 @@ def run_with_timeout(func, *args, timeout=180, **kwargs):
     Returns:
         Any: The result of the function, or None if the function timed out.
     """
+    current_thread = threading.current_thread().name
+    if func is None:
+        raise ValueError(f"| {current_thread} | ❗Function to run cannot be None.")
+    bt.logging.trace(f"| {current_thread} | 🏃 Running function with timeout: {func.__name__}")
     # Set the timeout handler
     signal.signal(signal.SIGALRM, timeout_handler)
     signal.alarm(timeout)  # Set the alarm
