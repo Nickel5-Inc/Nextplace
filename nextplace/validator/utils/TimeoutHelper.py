@@ -1,20 +1,7 @@
-import signal
-import threading
-
-import bittensor as bt
+from concurrent.futures import ThreadPoolExecutor, TimeoutError
 
 
-# Exception for timeouts
-class TimeoutException(Exception):
-    pass
-
-
-# Timeout handler
-def timeout_handler(signum, frame):
-    raise TimeoutException("Function execution exceeded the timeout limit.")
-
-
-def run_with_timeout(func, *args, timeout=180, **kwargs):
+def run_with_timeout(func, timeout=180, *args, **kwargs):
     """
     Runs a function with a timeout. If the function doesn't complete within the specified timeout, it returns None.
 
@@ -27,17 +14,9 @@ def run_with_timeout(func, *args, timeout=180, **kwargs):
     Returns:
         Any: The result of the function, or None if the function timed out.
     """
-    current_thread = threading.current_thread().name
-    if func is None:
-        raise ValueError(f"| {current_thread} | ❗Function to run cannot be None.")
-    bt.logging.trace(f"| {current_thread} | 🏃 Running function with timeout: {func.__name__}")
-    # Set the timeout handler
-    signal.signal(signal.SIGALRM, timeout_handler)
-    signal.alarm(timeout)  # Set the alarm
-
-    try:
-        result = func(*args, **kwargs)  # Run the function
-        signal.alarm(0)  # Disable the alarm
-        return result
-    except TimeoutException:
-        return None  # Return None if the function timed out
+    with ThreadPoolExecutor(max_workers=1) as executor:
+        future = executor.submit(func, *args, **kwargs)  # Run the function in a separate thread
+        try:
+            return future.result(timeout=timeout)  # Wait for the result up to the timeout
+        except TimeoutError:
+            return None  # Return None if the function times out
