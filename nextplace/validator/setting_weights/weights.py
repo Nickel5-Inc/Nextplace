@@ -1,3 +1,5 @@
+import time
+
 import torch
 import bittensor as bt
 import traceback
@@ -133,6 +135,7 @@ class WeightSetter:
             return torch.full_like(tier_scores, total_weight / len(tier_scores))
 
     def set_weights(self):
+        time.sleep(181)
         current_thread = threading.current_thread().name
 
         scores = self.calculate_miner_scores()
