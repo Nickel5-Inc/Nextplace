@@ -14,7 +14,7 @@ class WeightSetter:
         self.subtensor = subtensor
         self.config = config
         self.database_manager = database_manager
-        self.timer = datetime.now(timezone.utc) - timedelta(hours=2)  # For testing only
+        self.timer = datetime.now(timezone.utc)
 
     def is_time_to_set_weights(self) -> bool:
         """
