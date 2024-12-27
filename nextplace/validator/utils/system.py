@@ -33,7 +33,7 @@ def timeout_with_multiprocess(seconds):
                 return None
 
             if "exception" in result_dict:
-                bt.logging.warning("Exception in setting weights")
+                bt.logging.warning("Exception in setting weights", result_dict['exception'])
                 return None
 
             return result_dict.get("result", None)

@@ -7,7 +7,6 @@ import traceback
 from nextplace.validator.nextplace_validator import RealEstateValidator
 import configparser
 import os
-from nextplace.validator.utils.daily_score_table_manager import DailyScoreTableManager
 from nextplace.validator.website_data.website_communicator import WebsiteCommunicator
 
 SCORE_THREAD_NAME = "🏋🏻 ScoreThread 🏋"
@@ -17,10 +16,6 @@ async def main(validator):
     get_and_send_version()
     step = 1  # Initialize step
     current_thread = threading.current_thread().name
-
-    # Back-populate the daily_scores table
-    daily_score_table_manager = DailyScoreTableManager(validator.database_manager)
-    daily_score_table_manager.populate()
 
     # Start the scoring thread
     scoring_thread = threading.Thread(target=validator.scorer.run_score_thread, name=SCORE_THREAD_NAME)
@@ -37,18 +32,18 @@ async def main(validator):
             validator.sync_metagraph()  # Sync metagraph
             await validator.forward(step)  # Get predictions from the Miners
 
-            if step % 25 == 0:  # Check if any registrations/deregistrations have happened, make necessary updates
+            if step % 10 == 0:  # Check if any registrations/deregistrations have happened, make necessary updates
                 thread = threading.Thread(target=validator.miner_manager.manage_miner_data, name="📋 MinerManagementThread 📋")
                 thread.start()
 
-            if step % 200 == 0:  # Check that the scoring thread is running, if not, start it up
+            if step % 75 == 0:  # Check that the scoring thread is running, if not, start it up
                 scoring_thread_is_alive = validator.is_thread_running(SCORE_THREAD_NAME)
                 if not scoring_thread_is_alive:
                     bt.logging.info(f"| {current_thread} | ☢️ ScoreThread was found not running, restarting it...")
                     scoring_thread = threading.Thread(target=validator.scorer.run_score_thread, name=SCORE_THREAD_NAME)
                     scoring_thread.start()
 
-            if step % 250 == 0:  # Send score data to website
+            if step % 100 == 0:  # Send score data to website
                 thread = threading.Thread(target=validator.miner_score_sender.send_miner_scores_to_website, name="🌊 MinerScoresToWebsiteThread 🌊")
                 thread.start()
 

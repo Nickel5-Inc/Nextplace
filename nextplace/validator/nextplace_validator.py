@@ -62,6 +62,7 @@ class RealEstateValidator(BaseValidatorNeuron):
                 bt.logging.trace(f"| {self.current_thread} | 🍃 Another thread is holding the database_manager lock. Will check timer and set weights later. This is expected behavior 😊.")
                 return
             try:
+                self.sync_metagraph()
                 self.weight_setter.check_timer_set_weights()
             finally:
                 self.database_manager.lock.release()
@@ -183,5 +184,5 @@ class RealEstateValidator(BaseValidatorNeuron):
             axons=batch,
             synapse=synapse,
             deserialize=True,
-            timeout=30
+            timeout=150
         )

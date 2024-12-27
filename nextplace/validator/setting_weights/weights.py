@@ -5,7 +5,6 @@ import threading
 from datetime import datetime, timezone, timedelta
 from nextplace.validator.scoring.time_gated_scorer import TimeGatedScorer
 from nextplace.validator.utils.contants import build_miner_predictions_table_name
-from nextplace.validator.utils.system import timeout_with_multiprocess
 
 
 class WeightSetter:
@@ -26,7 +25,6 @@ class WeightSetter:
         now = datetime.now(timezone.utc)
         time_diff = now - self.timer
         return time_diff >= timedelta(hours=1)
-        # return time_diff >= timedelta(minutes=0)
 
     def check_timer_set_weights(self) -> None:
         """
@@ -34,7 +32,8 @@ class WeightSetter:
         Returns:
             None
         """
-        bt.logging.trace("📸 Time to set weights, resetting timer and setting weights.")
+        current_thread = threading.current_thread().name
+        bt.logging.trace(f"📸 | {current_thread} | Time to set weights, resetting timer and setting weights.")
         self.timer = datetime.now(timezone.utc)  # Reset the timer
         self.set_weights()  # Set weights
 
@@ -48,6 +47,8 @@ class WeightSetter:
             scores = torch.zeros(len(self.metagraph.hotkeys))
             hotkey_to_uid = {hk: uid for uid, hk in enumerate(self.metagraph.hotkeys)}
 
+            bt.logging.trace(f"| {current_thread} | ⏳ Iterating the metagraph and scoring miners...")
+
             for miner_hotkey in self.metagraph.hotkeys:
                 if miner_hotkey in hotkey_to_uid:
                     score = time_gated_scorer.score(miner_hotkey)
@@ -58,17 +59,19 @@ class WeightSetter:
                     if len(distinct_markets) > 0:
                         distinct_markets = distinct_markets[0][0]
                         if distinct_markets < int(average_markets * 0.5):
-                            bt.logging.trace(f"| {current_thread} | 🚩 Miner '{miner_hotkey}' has less than 50% markets predicted on in the last 5 days. Scaling their score.")
+                            # bt.logging.trace(f"| {current_thread} | 🚩 Miner '{miner_hotkey}' has less than 50% markets predicted on in the last 5 days. Scaling their score.")
                             score = score * 0.5
                         elif distinct_markets < int(average_markets * 0.75):
-                            bt.logging.trace(f"| {current_thread} | 🚩 Miner '{miner_hotkey}' has less than 75% markets predicted on in the last 5 days. Scaling their score.")
+                            # bt.logging.trace(f"| {current_thread} | 🚩 Miner '{miner_hotkey}' has less than 75% markets predicted on in the last 5 days. Scaling their score.")
                             score = score * 0.6
                         elif distinct_markets < int(average_markets * 0.9):
-                            bt.logging.trace(f"| {current_thread} | 🚩 Miner '{miner_hotkey}' has less than 90% markets predicted on in the last 5 days. Scaling their score.")
+                            # bt.logging.trace(f"| {current_thread} | 🚩 Miner '{miner_hotkey}' has less than 90% markets predicted on in the last 5 days. Scaling their score.")
                             score = score * 0.75
 
                     uid = hotkey_to_uid[miner_hotkey]
                     scores[uid] = score
+
+            bt.logging.trace(f"| {current_thread} | 🧾 Miner scores calculated.")
 
             return scores
 
@@ -131,23 +134,20 @@ class WeightSetter:
         else:
             return torch.full_like(tier_scores, total_weight / len(tier_scores))
 
-    @timeout_with_multiprocess(seconds=180)
     def set_weights(self):
-        current_thread = threading.current_thread()
-        # Sync the metagraph to get the latest data
-        self.metagraph.sync(subtensor=self.subtensor, lite=True)
+        current_thread = threading.current_thread().name
 
         scores = self.calculate_miner_scores()
         weights = self.calculate_weights(scores)
 
-        bt.logging.info(f"| {current_thread.name} | ⚖️ Calculated weights: {weights}")
+        bt.logging.info(f"| {current_thread} | ⚖️ Calculated weights: {weights}")
 
         try:
             uid = self.metagraph.hotkeys.index(self.wallet.hotkey.ss58_address)
             stake = float(self.metagraph.S[uid])
 
             if stake < 1000.0:
-                bt.logging.error(f"| {current_thread.name} | Insufficient stake. Failed in setting weights.")
+                bt.logging.trace(f"| {current_thread} | ❗Insufficient stake. Failed in setting weights.")
                 return False
 
             result = self.subtensor.set_weights(
@@ -162,10 +162,10 @@ class WeightSetter:
             success = result[0] if isinstance(result, tuple) and len(result) >= 1 else False
 
             if success:
-                bt.logging.info(f"| {current_thread.name} | ✅ Successfully set weights.")
+                bt.logging.info(f"| {current_thread} | ✅ Successfully set weights.")
             else:
-                bt.logging.error(f"| {current_thread.name} | ❗Failed to set weights. Result: {result}")
+                bt.logging.trace(f"| {current_thread} | ❗Failed to set weights. Result: {result}")
 
         except Exception as e:
-            bt.logging.error(f"| {current_thread.name} | ❗Error setting weights: {str(e)}")
+            bt.logging.error(f"| {current_thread} | ❗Error setting weights: {str(e)}")
             bt.logging.error(traceback.format_exc())
