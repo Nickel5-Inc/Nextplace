@@ -1,4 +1,7 @@
+import threading
 from concurrent.futures import ThreadPoolExecutor, TimeoutError
+import bittensor as bt
+import traceback
 
 
 def run_with_timeout(func, timeout=180, *args, **kwargs):
@@ -14,9 +17,15 @@ def run_with_timeout(func, timeout=180, *args, **kwargs):
     Returns:
         Any: The result of the function, or None if the function timed out.
     """
-    with ThreadPoolExecutor(max_workers=1) as executor:
-        future = executor.submit(func, *args, **kwargs)  # Run the function in a separate thread
-        try:
-            return future.result(timeout=timeout)  # Wait for the result up to the timeout
-        except TimeoutError:
-            return None  # Return None if the function times out
+    if func is None:
+        return None
+    try:
+        with ThreadPoolExecutor(max_workers=1) as executor:
+            future = executor.submit(func, *args, **kwargs)  # Run the function in a separate thread
+            try:
+                return future.result(timeout=timeout)  # Wait for the result up to the timeout
+            except TimeoutError:
+                return None  # Return None if the function times out
+    except Exception as e:
+        current_thread = threading.current_thread().name
+        bt.logging.error(f"| {current_thread} | 🪲 Caught exception for function {func} during timeout {e}, {traceback.format_exc()}")
