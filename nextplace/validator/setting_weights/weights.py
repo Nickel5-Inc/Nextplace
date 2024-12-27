@@ -37,8 +37,11 @@ class WeightSetter:
         current_thread = threading.current_thread().name
         bt.logging.trace(f"📸 | {current_thread} | Time to set weights, resetting timer and setting weights.")
         self.timer = datetime.now(timezone.utc)  # Reset the timer
-        # run_with_timeout(self.set_weights(), timeout=180)
-        self.set_weights()  # Set weights
+        try:
+            run_with_timeout(self.set_weights(), timeout=180)
+        except Exception as e:
+            bt.logging.error(f"| {current_thread} | 🪲 Caught exception during timeout {e}, {traceback.format_exc()}")
+        # self.set_weights()  # Set weights
 
     def calculate_miner_scores(self):
         current_thread = threading.current_thread().name
@@ -149,7 +152,7 @@ class WeightSetter:
             bt.logging.debug(f"| {current_thread} | 🪲 Found stake '{stake}'")
 
             if stake < 1000.0:
-                bt.logging.error(f"| {current_thread} | ❗Insufficient stake. Failed in setting weights.")
+                bt.logging.trace(f"| {current_thread} | ❗Insufficient stake. Failed in setting weights.")
                 return False
 
             result = self.subtensor.set_weights(
@@ -166,7 +169,7 @@ class WeightSetter:
             if success:
                 bt.logging.info(f"| {current_thread} | ✅ Successfully set weights.")
             else:
-                bt.logging.error(f"| {current_thread} | ❗Failed to set weights. Result: {result}")
+                bt.logging.trace(f"| {current_thread} | ❗Failed to set weights. Result: {result}")
 
         except Exception as e:
             bt.logging.error(f"| {current_thread} | ❗Error setting weights: {str(e)}")
