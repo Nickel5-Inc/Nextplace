@@ -38,7 +38,7 @@ class WeightSetter:
         current_thread = threading.current_thread().name
         bt.logging.trace(f"📸 | {current_thread} | Time to set weights, resetting timer and setting weights.")
         self.timer = datetime.now(timezone.utc)  # Reset the timer
-        run_with_timeout(self.set_weights(), timeout=180)
+        run_with_timeout(self.set_weights, timeout=180)
         # self.set_weights()  # Set weights
 
     def calculate_miner_scores(self):
