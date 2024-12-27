@@ -6,7 +6,6 @@ import traceback
 import threading
 from datetime import datetime, timezone, timedelta
 from nextplace.validator.scoring.time_gated_scorer import TimeGatedScorer
-from nextplace.validator.utils.TimeoutHelper import run_with_timeout
 from nextplace.validator.utils.contants import build_miner_predictions_table_name
 
 
@@ -38,8 +37,7 @@ class WeightSetter:
         current_thread = threading.current_thread().name
         bt.logging.trace(f"📸 | {current_thread} | Time to set weights, resetting timer and setting weights.")
         self.timer = datetime.now(timezone.utc)  # Reset the timer
-        run_with_timeout(self.set_weights, timeout=180)
-        # self.set_weights()  # Set weights
+        self.set_weights()  # Set weights
 
     def calculate_miner_scores(self):
         current_thread = threading.current_thread().name
@@ -136,9 +134,6 @@ class WeightSetter:
 
     def set_weights(self):
         current_thread = threading.current_thread().name
-        # bt.logging.info(f"| {current_thread} | 🪲 Sleeping for 220 seconds...")
-        # time.sleep(220)
-        # bt.logging.info(f"| {current_thread} | 🪲 Done sleeping")
 
         scores = self.calculate_miner_scores()
         weights = self.calculate_weights(scores)
