@@ -47,6 +47,8 @@ class WeightSetter:
             scores = torch.zeros(len(self.metagraph.hotkeys))
             hotkey_to_uid = {hk: uid for uid, hk in enumerate(self.metagraph.hotkeys)}
 
+            bt.logging.trace(f"| {current_thread} | ⏳ Iterating the metagraph and scoring miners...")
+
             for miner_hotkey in self.metagraph.hotkeys:
                 if miner_hotkey in hotkey_to_uid:
                     score = time_gated_scorer.score(miner_hotkey)
@@ -68,6 +70,8 @@ class WeightSetter:
 
                     uid = hotkey_to_uid[miner_hotkey]
                     scores[uid] = score
+
+            bt.logging.trace(f"| {current_thread} | 🧾 Miner scores calculated.")
 
             return scores
 
