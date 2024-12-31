@@ -5,7 +5,7 @@ import threading
 from datetime import datetime, timezone, timedelta
 from nextplace.validator.scoring.time_gated_scorer import TimeGatedScorer
 from nextplace.validator.utils.contants import build_miner_predictions_table_name
-
+from nextplace import __spec_version__
 
 class WeightSetter:
     def __init__(self, metagraph, wallet, subtensor, config, database_manager):
@@ -156,6 +156,7 @@ class WeightSetter:
                 uids=self.metagraph.uids,
                 weights=weights,
                 wait_for_inclusion=True,
+                version_key=__spec_version__,
                 wait_for_finalization=False,
             )
 
