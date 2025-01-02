@@ -72,13 +72,10 @@ class WeightSetter:
                     if len(distinct_markets) > 0:
                         distinct_markets = distinct_markets[0][0]
                         if distinct_markets < int(average_markets * 0.5):
-                            # bt.logging.trace(f"| {current_thread} | 🚩 Miner '{miner_hotkey}' has less than 50% markets predicted on in the last 5 days. Scaling their score.")
                             score = score * 0.5
                         elif distinct_markets < int(average_markets * 0.75):
-                            # bt.logging.trace(f"| {current_thread} | 🚩 Miner '{miner_hotkey}' has less than 75% markets predicted on in the last 5 days. Scaling their score.")
                             score = score * 0.6
                         elif distinct_markets < int(average_markets * 0.9):
-                            # bt.logging.trace(f"| {current_thread} | 🚩 Miner '{miner_hotkey}' has less than 90% markets predicted on in the last 5 days. Scaling their score.")
                             score = score * 0.75
 
                     uid = hotkey_to_uid[miner_hotkey]
