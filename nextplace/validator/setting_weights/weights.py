@@ -44,14 +44,11 @@ class WeightSetter:
 
         miner_hotkeys = [hotkey for uid, hotkey in enumerate(self.metagraph.hotkeys) if self.metagraph.S[uid] < 1000.0]
         validator_uids = [uid for uid, hotkey in enumerate(self.metagraph.hotkeys) if self.metagraph.S[uid] >= 1000.0]
-        bt.logging.debug(f"| {current_thread} | 🪲 Found {len(miner_hotkeys)} miners, {len(validator_uids)} validators, {len(self.metagraph.hotkeys)} total hotkeys")
-        bt.logging.debug(f"| {current_thread} | 🪲 Validator UIDS: {validator_uids}")
+        bt.logging.debug(f"| {current_thread} | 🔎 Found {len(miner_hotkeys)} miners, {len(validator_uids)} validators, {len(self.metagraph.hotkeys)} total hotkeys")
 
         try:  # database_manager lock is already acquire at this point
 
-            # ToDo This is for testing only!
-            # average_markets = self.get_average_markets_in_range()
-            average_markets = 100
+            average_markets = self.get_average_markets_in_range()
 
             scores = torch.zeros(len(self.metagraph.hotkeys))
             hotkey_to_uid = {hk: uid for uid, hk in enumerate(self.metagraph.hotkeys)}
@@ -78,8 +75,8 @@ class WeightSetter:
                     scores[uid] = score
 
             # Ensure validators don't get any weight
-            for uid in validator_uids:
-                scores[uid] = 0
+            for validator_uid in validator_uids:
+                scores[validator_uid] = 0
 
             bt.logging.trace(f"| {current_thread} | 🧾 Miner scores calculated.")
             return scores
