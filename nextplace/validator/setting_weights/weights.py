@@ -44,11 +44,14 @@ class WeightSetter:
 
         # ToDo Get list of miner-only hotkeys
         bt.logging.debug(f"| {current_thread} | 🪲 First metagraph hotkey: '{self.metagraph.hotkeys[0]}'")
+        bt.logging.debug(f"| {current_thread} | 🪲 Metagraph: '{self.metagraph}'")
         miner_hotkeys = []
 
         try:  # database_manager lock is already acquire at this point
 
-            average_markets = self.get_average_markets_in_range()
+            # ToDo This is for testing only!
+            # average_markets = self.get_average_markets_in_range()
+            average_markets = 100
 
             scores = torch.zeros(len(self.metagraph.hotkeys))
             hotkey_to_uid = {hk: uid for uid, hk in enumerate(self.metagraph.hotkeys)}
