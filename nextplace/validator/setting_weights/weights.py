@@ -125,23 +125,16 @@ class WeightSetter:
         """
         current_thread = threading.current_thread().name
         sorted_scores = list(sorted(scores.items(), key=lambda item: item[1], reverse=True))
-        bt.logging.debug(f"| {current_thread} | 🪲 Sorted Scores: {sorted_scores}")
 
         top_tier, middle_tier, bottom_tier = self.get_tiers(sorted_scores)
         weights = []
 
         for tier, weight in [(top_tier, 0.7), (middle_tier, 0.2), (bottom_tier, 0.1)]:
-            bt.logging.debug(f"| {current_thread} | 🪲 Calculating score for tier with weight {weight}: '{tier}'")
             tier_scores = self.apply_quadratic_scaling(tier)
-            bt.logging.debug(f"| {current_thread} | 🪲 Scaled tier: {tier_scores}")
             calculated_weights = self.calculate_tier_weights(tier_scores, weight)
-            bt.logging.debug(f"| {current_thread} | 🪲 Calculated: {calculated_weights}")
             weights.extend(calculated_weights)
 
-        bt.logging.debug(f"| {current_thread} | 🪲 Weights: {weights}")
-        normalized_weights = self.normalize_tuples(weights)
-        bt.logging.debug(f"| {current_thread} | 🪲 Normalized Weights: {normalized_weights}")
-        return normalized_weights
+        return weights
 
     def get_tiers(self, sorted_indices: list[tuple[int, float]]) -> tuple[list[tuple[int, float]], list[tuple[int, float]], list[tuple[int, float]]]:
         """
