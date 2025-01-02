@@ -43,13 +43,13 @@ class WeightSetter:
         time_gated_scorer = TimeGatedScorer(self.database_manager)
 
         # ToDo Get list of miner-only hotkeys
-        permit_1 = self.metagraph.validator_permit[0]
-        permit_2 = self.metagraph.validator_permit[1]
-        bt.logging.debug(f"| {current_thread} | 🪲 First metagraph hotkey: '{self.metagraph.hotkeys[0]}', validator_permit: {permit_1}")
-        bt.logging.debug(f"| {current_thread} | 🪲 Second metagraph hotkey: '{self.metagraph.hotkeys[1]}', validator_permit: {permit_2}")
-        miner_hotkeys = [hotkey for uid, hotkey in enumerate(self.metagraph.hotkeys) if not self.metagraph.validator_permit[uid]]
+        stake_uid_0 = self.metagraph.metagraph.S[0]
+        stake_uid_1 = self.metagraph.metagraph.S[1]
+        bt.logging.debug(f"| {current_thread} | 🪲 First metagraph hotkey: '{self.metagraph.hotkeys[0]}', stake: {stake_uid_0}")
+        bt.logging.debug(f"| {current_thread} | 🪲 Second metagraph hotkey: '{self.metagraph.hotkeys[1]}', stake: {stake_uid_1}")
+        miner_hotkeys = [hotkey for uid, hotkey in enumerate(self.metagraph.hotkeys) if self.metagraph.S[uid] < 1000.0]
 
-        bt.logging.debug(f"| {current_thread} | 🪲 Found {len(miner_hotkeys)} miner hotkeys")
+        bt.logging.debug(f"| {current_thread} | 🪲 Found {len(miner_hotkeys)} miner hotkeys, {len(self.metagraph.hotkeys)} miner hotkeys total hotkeys")
 
         try:  # database_manager lock is already acquire at this point
 
