@@ -1,7 +1,6 @@
 import configparser
-from os import path, environ
+from os import path
 from dotenv import load_dotenv
-import bittensor as bt
 
 load_dotenv()
 
