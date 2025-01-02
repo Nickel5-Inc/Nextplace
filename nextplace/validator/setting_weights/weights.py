@@ -114,40 +114,43 @@ class WeightSetter:
         bt.logging.trace(f"| {current_thread} | 🛒 Found {average} as the average number of markets predicted on in the last 5 days")
         return average
 
-    def calculate_weights(self, scores: dict[int, float]) -> torch.Tensor:
+    def calculate_weights(self, scores: dict[int, float]) -> list[tuple[int, float]]:
         """
         Calculate weights for all miners
         Args:
             scores: The calculated scores for all miners
 
         Returns:
-            Tensor of weights
+            List of tuples (uid, weight) for all miners
         """
         current_thread = threading.current_thread().name
-        n_miners = len(scores)
         sorted_scores = list(sorted(scores.items(), key=lambda item: item[1], reverse=True))
         bt.logging.debug(f"| {current_thread} | 🪲 Sorted Scores: {sorted_scores}")
-        # sorted_indices = torch.argsort(scores, descending=True)
-        weights = torch.zeros(n_miners)
 
-        top_indices, next_indices, bottom_indices = self.get_tier_indices(sorted_scores)
-        bt.logging.debug(f"| {current_thread} | 🪲 Indices: {top_indices} | {next_indices} | {bottom_indices}")
+        top_tier, middle_tier, bottom_tier = self.get_tiers(sorted_scores)
+        weights = []
 
-        for indices, weight in [(top_indices, 0.7), (next_indices, 0.2), (bottom_indices, 0.1)]:
-            tier_scores = self.apply_quadratic_scaling(scores[indices])
-            weights[indices] = self.calculate_tier_weights(tier_scores, weight)
+        for tier, weight in [(top_tier, 0.7), (middle_tier, 0.2), (bottom_tier, 0.1)]:
+            bt.logging.debug(f"| {current_thread} | 🪲 Calculating score for tier with weight {weight}: '{tier}'")
+            tier_scores = self.apply_quadratic_scaling(tier)
+            bt.logging.debug(f"| {current_thread} | 🪲 Scaled tier: {tier_scores}")
+            calculated_weights = self.calculate_tier_weights(tier_scores, weight)
+            bt.logging.debug(f"| {current_thread} | 🪲 Calculated: {calculated_weights}")
+            weights.extend(calculated_weights)
 
-        weights /= weights.sum()  # Normalize weights to sum to 1.0
+        bt.logging.debug(f"| {current_thread} | 🪲 Weights: {weights}")
+        normalized_weights = self.normalize_tuples(weights)
+        bt.logging.debug(f"| {current_thread} | 🪲 Normalized Weights: {normalized_weights}")
         return weights
 
-    def get_tier_indices(self, sorted_indices: list[tuple[int, float]]) -> tuple[list[tuple[int, float]], list[tuple[int, float]], list[tuple[int, float]]]:
+    def get_tiers(self, sorted_indices: list[tuple[int, float]]) -> tuple[list[tuple[int, float]], list[tuple[int, float]], list[tuple[int, float]]]:
         """
         Divide the (uid, score) tuples into 3 tiers
         Args:
             sorted_indices: Sorted list of tuples (sorted by score)
 
         Returns:
-            3 sublists representing the tiers
+            Sub lists representing the tiers
         """
         n_miners = len(sorted_indices)
         top_10_pct = max(1, int(0.1 * n_miners))
@@ -157,48 +160,95 @@ class WeightSetter:
         bottom_indices = sorted_indices[top_10_pct + next_40_pct:]
         return top_indices, next_indices, bottom_indices
 
-    def apply_quadratic_scaling(self, scores):
-        return scores ** 2
+    def apply_quadratic_scaling(self, tier: list[tuple[int, float]]) -> list[tuple[int, float]]:
+        """
+        Square each score
+        Args:
+            tier: The current tier
 
-    def calculate_tier_weights(self, tier_scores, total_weight):
-        sum_scores = tier_scores.sum()
+        Returns:
+            The update tier list
+        """
+        return [(miner[0], miner[1] ** 2) for miner in tier]
+
+    def calculate_tier_weights(self, tier: list[tuple[int, float]], total_weight: float) -> list[tuple[int, float]]:
+        """
+        Calculate weights for all miners
+        Args:
+            tier: The tier scores for this tier
+            total_weight: The weight for this tier
+
+        Returns:
+            Tensor of weights
+        """
+        tier_scores: list[float] = [x[1] for x in tier]
+        sum_scores: float = sum(tier_scores)
         if sum_scores > 0:
-            return (tier_scores / sum_scores) * total_weight
+            return [(miner[0], (miner[1] / sum_scores) * total_weight) for miner in tier]
+            # return (tier_scores / sum_scores) * total_weight
         else:
-            return torch.full_like(tier_scores, total_weight / len(tier_scores))
+            return [(miner[0], (miner[1] / total_weight) * len(tier_scores)) for miner in tier]
+            # return torch.full_like(tier_scores, total_weight / len(tier_scores))
+
+    def normalize_tuples(self, data: list[tuple[int, float]]) -> list[tuple[int, float]]:
+        """
+        Normalize the float values in a list of tuples to the range [0, 1].
+
+        Args:
+            data: A list of tuples where each tuple contains an int and a float.
+
+        Returns:
+            A new list of tuples with normalized float values.
+        """
+        # Extract the float values
+        floats = [item[1] for item in data]
+
+        # Find the min and max values
+        min_val = min(floats)
+        max_val = max(floats)
+
+        # Avoid division by zero if all floats are the same
+        if min_val == max_val:
+            return [(item[0], 0.5) for item in data]  # Default to 0.5 if all values are identical
+
+        # Normalize the floats and construct the new list of tuples
+        return [(item[0], (item[1] - min_val) / (max_val - min_val)) for item in data]
 
     def set_weights(self):
         current_thread = threading.current_thread().name
 
         scores: dict[int, float] = self.calculate_miner_scores()
-        weights: torch.Tensor = self.calculate_weights(scores)
+        weights: list[tuple[int, float]] = self.calculate_weights(scores)
 
-        bt.logging.info(f"| {current_thread} | ⚖️ Calculated weights: {weights}")
+        # ToDo Build a list where the index is the tuple[0] and the value is the tuples[1], account for validators
+        return
 
-        try:
-            uid = self.metagraph.hotkeys.index(self.wallet.hotkey.ss58_address)
-            stake = float(self.metagraph.S[uid])
-
-            if stake < 1000.0:
-                bt.logging.trace(f"| {current_thread} | ❗Insufficient stake. Failed in setting weights.")
-                return False
-
-            result = self.subtensor.set_weights(
-                netuid=self.config.netuid,
-                wallet=self.wallet,
-                uids=self.metagraph.uids,
-                weights=weights,
-                wait_for_inclusion=True,
-                wait_for_finalization=False,
-            )
-
-            success = result[0] if isinstance(result, tuple) and len(result) >= 1 else False
-
-            if success:
-                bt.logging.info(f"| {current_thread} | ✅ Successfully set weights.")
-            else:
-                bt.logging.trace(f"| {current_thread} | ❗Failed to set weights. Result: {result}")
-
-        except Exception as e:
-            bt.logging.error(f"| {current_thread} | ❗Error setting weights: {str(e)}")
-            bt.logging.error(traceback.format_exc())
+        # bt.logging.info(f"| {current_thread} | ⚖️ Calculated weights: {weights}")
+        #
+        # try:
+        #     uid = self.metagraph.hotkeys.index(self.wallet.hotkey.ss58_address)
+        #     stake = float(self.metagraph.S[uid])
+        #
+        #     if stake < 1000.0:
+        #         bt.logging.trace(f"| {current_thread} | ❗Insufficient stake. Failed in setting weights.")
+        #         return False
+        #
+        #     result = self.subtensor.set_weights(
+        #         netuid=self.config.netuid,
+        #         wallet=self.wallet,
+        #         uids=self.metagraph.uids,
+        #         weights=weights,
+        #         wait_for_inclusion=True,
+        #         wait_for_finalization=False,
+        #     )
+        #
+        #     success = result[0] if isinstance(result, tuple) and len(result) >= 1 else False
+        #
+        #     if success:
+        #         bt.logging.info(f"| {current_thread} | ✅ Successfully set weights.")
+        #     else:
+        #         bt.logging.trace(f"| {current_thread} | ❗Failed to set weights. Result: {result}")
+        #
+        # except Exception as e:
+        #     bt.logging.error(f"| {current_thread} | ❗Error setting weights: {str(e)}")
+        #     bt.logging.error(traceback.format_exc())
