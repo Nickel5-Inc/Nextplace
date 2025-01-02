@@ -141,7 +141,7 @@ class WeightSetter:
         bt.logging.debug(f"| {current_thread} | 🪲 Weights: {weights}")
         normalized_weights = self.normalize_tuples(weights)
         bt.logging.debug(f"| {current_thread} | 🪲 Normalized Weights: {normalized_weights}")
-        return weights
+        return normalized_weights
 
     def get_tiers(self, sorted_indices: list[tuple[int, float]]) -> tuple[list[tuple[int, float]], list[tuple[int, float]], list[tuple[int, float]]]:
         """
