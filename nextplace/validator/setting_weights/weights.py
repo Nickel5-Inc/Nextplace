@@ -225,7 +225,8 @@ class WeightSetter:
         for miner in miner_weights:
             weights[miner[0]] = miner[1]
 
-        bt.logging.info(f"| {current_thread} | ⚖️ Calculated weights: {list(weights)}")
+        list_weights = weights.tolist()
+        bt.logging.info(f"| {current_thread} | ⚖️ Calculated weights: {list_weights}")
 
         try:
             uid = self.metagraph.hotkeys.index(self.wallet.hotkey.ss58_address)
