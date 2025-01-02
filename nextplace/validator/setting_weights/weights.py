@@ -24,7 +24,8 @@ class WeightSetter:
         """
         now = datetime.now(timezone.utc)
         time_diff = now - self.timer
-        return time_diff >= timedelta(hours=1)
+        # return time_diff >= timedelta(hours=1)
+        return time_diff >= timedelta(minutes=0)
 
     def check_timer_set_weights(self) -> None:
         """
@@ -138,9 +139,11 @@ class WeightSetter:
         current_thread = threading.current_thread().name
 
         scores = self.calculate_miner_scores()
-        weights = self.calculate_weights(scores)
 
-        bt.logging.info(f"| {current_thread} | ⚖️ Calculated weights: {weights}")
+        weights = self.calculate_weights(scores)
+        weights_list = weights.tolist()
+
+        bt.logging.info(f"| {current_thread} | ⚖️ Calculated weights: {weights_list}")
 
         try:
             uid = self.metagraph.hotkeys.index(self.wallet.hotkey.ss58_address)
