@@ -42,14 +42,10 @@ class WeightSetter:
         current_thread = threading.current_thread().name
         time_gated_scorer = TimeGatedScorer(self.database_manager)
 
-        # ToDo Get list of miner-only hotkeys
-        stake_uid_0 = self.metagraph.S[0]
-        stake_uid_1 = self.metagraph.S[1]
-        bt.logging.debug(f"| {current_thread} | 🪲 First metagraph hotkey: '{self.metagraph.hotkeys[0]}', stake: {stake_uid_0}")
-        bt.logging.debug(f"| {current_thread} | 🪲 Second metagraph hotkey: '{self.metagraph.hotkeys[1]}', stake: {stake_uid_1}")
         miner_hotkeys = [hotkey for uid, hotkey in enumerate(self.metagraph.hotkeys) if self.metagraph.S[uid] < 1000.0]
-
-        bt.logging.debug(f"| {current_thread} | 🪲 Found {len(miner_hotkeys)} miner hotkeys, {len(self.metagraph.hotkeys)} miner hotkeys total hotkeys")
+        validator_uids = [uid for uid in range(self.metagraph.hotkeys) if self.metagraph.S[uid] >= 1000.0]
+        bt.logging.debug(f"| {current_thread} | 🪲 Found {len(miner_hotkeys)} miners, {len(validator_uids)} validators, {len(self.metagraph.hotkeys)} total hotkeys")
+        bt.logging.debug(f"| {current_thread} | 🪲 Validator UIDS: {validator_uids}")
 
         try:  # database_manager lock is already acquire at this point
 
@@ -81,8 +77,11 @@ class WeightSetter:
                     uid = hotkey_to_uid[miner_hotkey]
                     scores[uid] = score
 
-            bt.logging.trace(f"| {current_thread} | 🧾 Miner scores calculated.")
+            # Ensure validators don't get any weight
+            for uid in validator_uids:
+                scores[uid] = 0
 
+            bt.logging.trace(f"| {current_thread} | 🧾 Miner scores calculated.")
             return scores
 
         except Exception as e:
