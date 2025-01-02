@@ -185,10 +185,8 @@ class WeightSetter:
         sum_scores: float = sum(tier_scores)
         if sum_scores > 0:
             return [(miner[0], (miner[1] / sum_scores) * total_weight) for miner in tier]
-            # return (tier_scores / sum_scores) * total_weight
         else:
             return [(miner[0], (miner[1] / total_weight) * len(tier_scores)) for miner in tier]
-            # return torch.full_like(tier_scores, total_weight / len(tier_scores))
 
     def normalize_tuples(self, data: list[tuple[int, float]]) -> list[tuple[int, float]]:
         """
@@ -218,37 +216,41 @@ class WeightSetter:
         current_thread = threading.current_thread().name
 
         scores: dict[int, float] = self.calculate_miner_scores()
-        weights: list[tuple[int, float]] = self.calculate_weights(scores)
+        miner_weights: list[tuple[int, float]] = self.calculate_weights(scores)
 
-        # ToDo Build a list where the index is the tuple[0] and the value is the tuples[1], account for validators
-        return
+        # Initialize weights tensor to 0's
+        weights: torch.Tensor = torch.tensor([0.0 for _ in range(len(self.metagraph.hotkeys))])
 
-        # bt.logging.info(f"| {current_thread} | ⚖️ Calculated weights: {weights}")
-        #
-        # try:
-        #     uid = self.metagraph.hotkeys.index(self.wallet.hotkey.ss58_address)
-        #     stake = float(self.metagraph.S[uid])
-        #
-        #     if stake < 1000.0:
-        #         bt.logging.trace(f"| {current_thread} | ❗Insufficient stake. Failed in setting weights.")
-        #         return False
-        #
-        #     result = self.subtensor.set_weights(
-        #         netuid=self.config.netuid,
-        #         wallet=self.wallet,
-        #         uids=self.metagraph.uids,
-        #         weights=weights,
-        #         wait_for_inclusion=True,
-        #         wait_for_finalization=False,
-        #     )
-        #
-        #     success = result[0] if isinstance(result, tuple) and len(result) >= 1 else False
-        #
-        #     if success:
-        #         bt.logging.info(f"| {current_thread} | ✅ Successfully set weights.")
-        #     else:
-        #         bt.logging.trace(f"| {current_thread} | ❗Failed to set weights. Result: {result}")
-        #
-        # except Exception as e:
-        #     bt.logging.error(f"| {current_thread} | ❗Error setting weights: {str(e)}")
-        #     bt.logging.error(traceback.format_exc())
+        # Update the UID indices of the tensor with the corresponding scores
+        for miner in miner_weights:
+            weights[miner[0]] = miner[1]
+
+        bt.logging.info(f"| {current_thread} | ⚖️ Calculated weights: {weights}")
+
+        try:
+            uid = self.metagraph.hotkeys.index(self.wallet.hotkey.ss58_address)
+            stake = float(self.metagraph.S[uid])
+
+            if stake < 1000.0:
+                bt.logging.trace(f"| {current_thread} | ❗Insufficient stake. Failed in setting weights.")
+                return False
+
+            result = self.subtensor.set_weights(
+                netuid=self.config.netuid,
+                wallet=self.wallet,
+                uids=self.metagraph.uids,
+                weights=weights,
+                wait_for_inclusion=True,
+                wait_for_finalization=False,
+            )
+
+            success = result[0] if isinstance(result, tuple) and len(result) >= 1 else False
+
+            if success:
+                bt.logging.info(f"| {current_thread} | ✅ Successfully set weights.")
+            else:
+                bt.logging.trace(f"| {current_thread} | ❗Failed to set weights. Result: {result}")
+
+        except Exception as e:
+            bt.logging.error(f"| {current_thread} | ❗Error setting weights: {str(e)}")
+            bt.logging.error(traceback.format_exc())
