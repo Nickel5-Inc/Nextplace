@@ -43,7 +43,8 @@ class WeightSetter:
         time_gated_scorer = TimeGatedScorer(self.database_manager)
         try:  # database_manager lock is already acquire at this point
 
-            average_markets = self.get_average_markets_in_range()
+            # average_markets = self.get_average_markets_in_range()
+            average_markets = 100
 
             scores = torch.zeros(len(self.metagraph.hotkeys))
             hotkey_to_uid = {hk: uid for uid, hk in enumerate(self.metagraph.hotkeys)}
