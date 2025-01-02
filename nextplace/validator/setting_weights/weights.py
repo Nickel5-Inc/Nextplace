@@ -37,54 +37,60 @@ class WeightSetter:
         self.timer = datetime.now(timezone.utc)  # Reset the timer
         self.set_weights()  # Set weights
 
-    def calculate_miner_scores(self):
+    def calculate_miner_scores(self) -> dict[int, float]:
+        """
+        Calculate scores for miners
+        Returns:
+            Scores as a dict of UID: Score
+        """
         current_thread = threading.current_thread().name
         time_gated_scorer = TimeGatedScorer(self.database_manager)
 
-        miner_hotkeys = [hotkey for uid, hotkey in enumerate(self.metagraph.hotkeys) if self.metagraph.S[uid] < 1000.0]
-        validator_uids = [uid for uid, hotkey in enumerate(self.metagraph.hotkeys) if self.metagraph.S[uid] >= 1000.0]
-        bt.logging.debug(f"| {current_thread} | 🔎 Found {len(miner_hotkeys)} miners, {len(validator_uids)} validators, {len(self.metagraph.hotkeys)} total hotkeys")
+        miners = {uid: hotkey for uid, hotkey in enumerate(self.metagraph.hotkeys) if self.metagraph.S[uid] < 1000.0}
+        bt.logging.debug(f"| {current_thread} | 🔎 Found {len(miners)} miners")
+        scores = {uid: 0.0 for uid in miners}
 
         try:  # database_manager lock is already acquire at this point
 
-            average_markets = self.get_average_markets_in_range()
-
-            scores = torch.zeros(len(self.metagraph.hotkeys))
-            hotkey_to_uid = {hk: uid for uid, hk in enumerate(self.metagraph.hotkeys)}
+            # FIXME This is for testing only!
+            # average_markets = self.get_average_markets_in_range()
+            average_markets = 100
 
             bt.logging.trace(f"| {current_thread} | ⏳ Iterating the metagraph and scoring miners...")
 
-            for miner_hotkey in miner_hotkeys:
-                if miner_hotkey in hotkey_to_uid:
-                    score = time_gated_scorer.score(miner_hotkey)
-                    table_name = build_miner_predictions_table_name(miner_hotkey)
-                    # Handle the case where they're only targeting specific markets
-                    market_query = f"SELECT COUNT(DISTINCT(market)) FROM {table_name} WHERE prediction_timestamp >= datetime('now', '-5 days')"
-                    distinct_markets = self.database_manager.query(market_query)
-                    if len(distinct_markets) > 0:
-                        distinct_markets = distinct_markets[0][0]
-                        if distinct_markets < int(average_markets * 0.5):
-                            score = score * 0.5
-                        elif distinct_markets < int(average_markets * 0.75):
-                            score = score * 0.6
-                        elif distinct_markets < int(average_markets * 0.9):
-                            score = score * 0.75
+            for uid, hotkey in miners.items():
+                score = time_gated_scorer.score(hotkey)
+                table_name = build_miner_predictions_table_name(hotkey)
 
-                    uid = hotkey_to_uid[miner_hotkey]
-                    scores[uid] = score
+                # Handle the case where they're only targeting specific markets
+                market_query = f"SELECT COUNT(DISTINCT(market)) FROM {table_name} WHERE prediction_timestamp >= datetime('now', '-5 days')"
+                distinct_markets = self.database_manager.query(market_query)
 
-            # Ensure validators don't get any weight
-            for validator_uid in validator_uids:
-                scores[validator_uid] = 0
+                if len(distinct_markets) > 0:
+                    distinct_markets = distinct_markets[0][0]
+                    if distinct_markets < int(average_markets * 0.5):
+                        score = score * 0.5
+                    elif distinct_markets < int(average_markets * 0.75):
+                        score = score * 0.6
+                    elif distinct_markets < int(average_markets * 0.9):
+                        score = score * 0.75
+
+                scores[uid] = score
 
             bt.logging.trace(f"| {current_thread} | 🧾 Miner scores calculated.")
+            bt.logging.debug(f"| {current_thread} | 🪲 Miner Scores: {scores}")
             return scores
 
         except Exception as e:
             bt.logging.error(f" | {current_thread} |❗Error fetching miner scores: {str(e)}")
-            return torch.zeros(len(self.metagraph.hotkeys))
+            return {uid: 0.0 for uid in miners}
 
-    def get_average_markets_in_range(self):
+    def get_average_markets_in_range(self) -> float:
+        """
+        Calculate the average number of markets across all miners
+        Returns:
+            The mean number of markets across all miners
+        """
         current_thread = threading.current_thread().name
         bt.logging.trace(f"| {current_thread} | 🧮 Calculating market cutoff...")
         all_table_query = "SELECT name FROM sqlite_master WHERE type='table'"
@@ -107,12 +113,24 @@ class WeightSetter:
         bt.logging.trace(f"| {current_thread} | 🛒 Found {average} as the average number of markets predicted on in the last 5 days")
         return average
 
-    def calculate_weights(self, scores):
+    def calculate_weights(self, scores: dict[int, float]) -> torch.Tensor:
+        """
+        Calculate weights for all miners
+        Args:
+            scores: The calculated scores for all miners
+
+        Returns:
+            Tensor of weights
+        """
+        current_thread = threading.current_thread().name
         n_miners = len(scores)
-        sorted_indices = torch.argsort(scores, descending=True)
+        sorted_scores = dict(sorted(scores.items(), key=lambda item: item[1], reverse=True))
+        bt.logging.debug(f"| {current_thread} | 🪲 Sorted Scores: {sorted_scores}")
+        # sorted_indices = torch.argsort(scores, descending=True)
         weights = torch.zeros(n_miners)
 
-        top_indices, next_indices, bottom_indices = self.get_tier_indices(sorted_indices, n_miners)
+        top_indices, next_indices, bottom_indices = self.get_tier_indices(sorted_scores, n_miners)
+        bt.logging.debug(f"| {current_thread} | 🪲 Indices: {top_indices} | {next_indices} | {bottom_indices}")
 
         for indices, weight in [(top_indices, 0.7), (next_indices, 0.2), (bottom_indices, 0.1)]:
             tier_scores = self.apply_quadratic_scaling(scores[indices])
@@ -121,7 +139,7 @@ class WeightSetter:
         weights /= weights.sum()  # Normalize weights to sum to 1.0
         return weights
 
-    def get_tier_indices(self, sorted_indices, n_miners):
+    def get_tier_indices(self, sorted_indices: dict[int, float], n_miners: int):
         top_10_pct = max(1, int(0.1 * n_miners))
         next_40_pct = max(1, int(0.4 * n_miners))
         top_indices = sorted_indices[:top_10_pct]
@@ -142,8 +160,8 @@ class WeightSetter:
     def set_weights(self):
         current_thread = threading.current_thread().name
 
-        scores = self.calculate_miner_scores()
-        weights = self.calculate_weights(scores)
+        scores: dict[int, float] = self.calculate_miner_scores()
+        weights: torch.Tensor = self.calculate_weights(scores)
 
         bt.logging.info(f"| {current_thread} | ⚖️ Calculated weights: {weights}")
 
