@@ -125,12 +125,12 @@ class WeightSetter:
         """
         current_thread = threading.current_thread().name
         n_miners = len(scores)
-        sorted_scores = dict(sorted(scores.items(), key=lambda item: item[1], reverse=True))
+        sorted_scores = list(sorted(scores.items(), key=lambda item: item[1], reverse=True))
         bt.logging.debug(f"| {current_thread} | 🪲 Sorted Scores: {sorted_scores}")
         # sorted_indices = torch.argsort(scores, descending=True)
         weights = torch.zeros(n_miners)
 
-        top_indices, next_indices, bottom_indices = self.get_tier_indices(sorted_scores, n_miners)
+        top_indices, next_indices, bottom_indices = self.get_tier_indices(sorted_scores)
         bt.logging.debug(f"| {current_thread} | 🪲 Indices: {top_indices} | {next_indices} | {bottom_indices}")
 
         for indices, weight in [(top_indices, 0.7), (next_indices, 0.2), (bottom_indices, 0.1)]:
@@ -140,7 +140,16 @@ class WeightSetter:
         weights /= weights.sum()  # Normalize weights to sum to 1.0
         return weights
 
-    def get_tier_indices(self, sorted_indices: dict[int, float], n_miners: int):
+    def get_tier_indices(self, sorted_indices: list[tuple[int, float]]) -> tuple[list[tuple[int, float]], list[tuple[int, float]], list[tuple[int, float]]]:
+        """
+        Divide the (uid, score) tuples into 3 tiers
+        Args:
+            sorted_indices: Sorted list of tuples (sorted by score)
+
+        Returns:
+            3 sublists representing the tiers
+        """
+        n_miners = len(sorted_indices)
         top_10_pct = max(1, int(0.1 * n_miners))
         next_40_pct = max(1, int(0.4 * n_miners))
         top_indices = sorted_indices[:top_10_pct]
