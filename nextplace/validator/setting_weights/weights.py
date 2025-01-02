@@ -43,8 +43,8 @@ class WeightSetter:
         time_gated_scorer = TimeGatedScorer(self.database_manager)
 
         # ToDo Get list of miner-only hotkeys
-        stake_uid_0 = self.metagraph.metagraph.S[0]
-        stake_uid_1 = self.metagraph.metagraph.S[1]
+        stake_uid_0 = self.metagraph.S[0]
+        stake_uid_1 = self.metagraph.S[1]
         bt.logging.debug(f"| {current_thread} | 🪲 First metagraph hotkey: '{self.metagraph.hotkeys[0]}', stake: {stake_uid_0}")
         bt.logging.debug(f"| {current_thread} | 🪲 Second metagraph hotkey: '{self.metagraph.hotkeys[1]}', stake: {stake_uid_1}")
         miner_hotkeys = [hotkey for uid, hotkey in enumerate(self.metagraph.hotkeys) if self.metagraph.S[uid] < 1000.0]
