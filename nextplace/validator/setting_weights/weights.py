@@ -24,7 +24,8 @@ class WeightSetter:
         """
         now = datetime.now(timezone.utc)
         time_diff = now - self.timer
-        return time_diff >= timedelta(hours=1)
+        # return time_diff >= timedelta(hours=1)
+        return time_diff >= timedelta(minutes = 0)
 
     def check_timer_set_weights(self) -> None:
         """
@@ -40,6 +41,11 @@ class WeightSetter:
     def calculate_miner_scores(self):
         current_thread = threading.current_thread().name
         time_gated_scorer = TimeGatedScorer(self.database_manager)
+
+        # ToDo Get list of miner-only hotkeys
+        bt.logging.debug(f"| {current_thread} | 🪲 First metagraph hotkey: '{self.metagraph.hotkeys[0]}'")
+        miner_hotkeys = []
+
         try:  # database_manager lock is already acquire at this point
 
             average_markets = self.get_average_markets_in_range()
