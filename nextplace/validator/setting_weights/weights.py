@@ -43,7 +43,7 @@ class WeightSetter:
         time_gated_scorer = TimeGatedScorer(self.database_manager)
 
         miner_hotkeys = [hotkey for uid, hotkey in enumerate(self.metagraph.hotkeys) if self.metagraph.S[uid] < 1000.0]
-        validator_uids = [uid for uid in range(self.metagraph.hotkeys) if self.metagraph.S[uid] >= 1000.0]
+        validator_uids = [uid for uid, hotkey in enumerate(self.metagraph.hotkeys) if self.metagraph.S[uid] >= 1000.0]
         bt.logging.debug(f"| {current_thread} | 🪲 Found {len(miner_hotkeys)} miners, {len(validator_uids)} validators, {len(self.metagraph.hotkeys)} total hotkeys")
         bt.logging.debug(f"| {current_thread} | 🪲 Validator UIDS: {validator_uids}")
 
