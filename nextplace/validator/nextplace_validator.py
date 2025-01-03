@@ -123,14 +123,6 @@ class RealEstateValidator(BaseValidatorNeuron):
 
             synapse_ids = set([x.nextplace_id for x in synapse.real_estate_predictions.predictions])
 
-            # Filter out axons with IP 0.0.0.0
-            # valid_axons = [
-            #     axon for axon in self.metagraph.axons
-            #     if not (('/ipv0/0.0.0.0' in str(axon.ip_str())) or
-            #         ('/ipv4/0.0.0.0' in str(axon.ip_str())) or
-            #         axon.ip_str().endswith(':0'))
-            # ]
-
             all_responses = []
 
             # Split valid axons into batches of 42
