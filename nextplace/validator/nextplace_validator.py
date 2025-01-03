@@ -123,14 +123,21 @@ class RealEstateValidator(BaseValidatorNeuron):
 
             synapse_ids = set([x.nextplace_id for x in synapse.real_estate_predictions.predictions])
 
-            all_responses = []
+            all_responses = self.dendrite.query(
+                axons=self.metagraph.axons,
+                synapse=synapse,
+                deserialize=True,
+                timeout=150
+            )
 
-            # Split valid axons into batches of 42
-            batch_size = 42
-            axon_batches = [self.metagraph.axons[i:i + batch_size] for i in range(0, len(self.metagraph.axons), batch_size)]
-
-            # Asynchronously query the batches, gather the results
-            await self.query_batches(synapse, axon_batches, all_responses)
+            # all_responses = []
+            #
+            # # Split valid axons into batches of 42
+            # batch_size = 42
+            # axon_batches = [self.metagraph.axons[i:i + batch_size] for i in range(0, len(self.metagraph.axons), batch_size)]
+            #
+            # # Asynchronously query the batches, gather the results
+            # await self.query_batches(synapse, axon_batches, all_responses)
 
             # Handle responses
             self.prediction_manager.process_predictions(all_responses, synapse_ids)
