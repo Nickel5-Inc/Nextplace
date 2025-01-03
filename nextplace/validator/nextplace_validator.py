@@ -124,18 +124,18 @@ class RealEstateValidator(BaseValidatorNeuron):
             synapse_ids = set([x.nextplace_id for x in synapse.real_estate_predictions.predictions])
 
             # Filter out axons with IP 0.0.0.0
-            valid_axons = [
-                axon for axon in self.metagraph.axons
-                if not (('/ipv0/0.0.0.0' in str(axon.ip_str())) or
-                    ('/ipv4/0.0.0.0' in str(axon.ip_str())) or
-                    axon.ip_str().endswith(':0'))
-            ]
+            # valid_axons = [
+            #     axon for axon in self.metagraph.axons
+            #     if not (('/ipv0/0.0.0.0' in str(axon.ip_str())) or
+            #         ('/ipv4/0.0.0.0' in str(axon.ip_str())) or
+            #         axon.ip_str().endswith(':0'))
+            # ]
 
             all_responses = []
 
             # Split valid axons into batches of 42
             batch_size = 42
-            axon_batches = [valid_axons[i:i + batch_size] for i in range(0, len(valid_axons), batch_size)]
+            axon_batches = [self.metagraph.axons[i:i + batch_size] for i in range(0, len(self.metagraph.axons), batch_size)]
 
             # Asynchronously query the batches, gather the results
             await self.query_batches(synapse, axon_batches, all_responses)
