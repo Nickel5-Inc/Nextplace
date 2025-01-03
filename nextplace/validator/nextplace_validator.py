@@ -123,58 +123,15 @@ class RealEstateValidator(BaseValidatorNeuron):
 
             synapse_ids = set([x.nextplace_id for x in synapse.real_estate_predictions.predictions])
 
-            all_responses = []
-
-            # Split valid axons into batches of 42
-            batch_size = 42
-            axon_batches = [self.metagraph.axons[i:i + batch_size] for i in range(0, len(self.metagraph.axons), batch_size)]
-
-            # Asynchronously query the batches, gather the results
-            await self.query_batches(synapse, axon_batches, all_responses)
+            all_responses = self.dendrite.query(
+                axons=self.metagraph.axons,
+                synapse=synapse,
+                deserialize=True,
+                timeout=150
+            )
 
             # Handle responses
             self.prediction_manager.process_predictions(all_responses, synapse_ids)
 
         finally:
             self.database_manager.lock.release()  # Always release the lock
-
-    async def query_batches(self, synapse: bt.Synapse, axon_batches, responses) -> None:
-        """
-        Iterate all batches, gather results asynchronously
-        Args:
-            synapse: The Synapse object
-            axon_batches: List of all axon batches
-            responses: List of results to accumulate
-
-        Returns:
-            None
-        """
-        tasks = []  # List of async tasks
-
-        # Iterate batches
-        for batch_idx, axon_batch in enumerate(axon_batches):
-            bt.logging.info(f"| {self.current_thread} | 🔄 Querying batch {batch_idx + 1}/{len(axon_batches)} ({len(axon_batch)} miners)")
-            tasks.append(self.send_synapse(synapse, axon_batch))  # Create a task for each batch query
-
-        # Wait for all tasks to complete
-        results = await asyncio.gather(*tasks, return_exceptions=True)
-
-        # Collect all results, handling any exceptions
-        for result in results:
-            if isinstance(result, Exception):
-                bt.logging.error(f"| {self.current_thread} | ❗ Error during batch query: {result}")
-            else:
-                responses.extend(result)
-
-    async def send_synapse(self, synapse: bt.Synapse, batch):
-        """
-        Asynchronously send synapse to the network
-        Returns:
-            Results from the network
-        """
-        return self.dendrite.query(
-            axons=batch,
-            synapse=synapse,
-            deserialize=True,
-            timeout=150
-        )
