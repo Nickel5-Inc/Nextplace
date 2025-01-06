@@ -16,7 +16,7 @@ class MinerScoreSender:
         self.database_manager = database_manager
 
     def _get_empty_score_date_map(self, score_cutoff_date: datetime.date) -> dict:
-        end_date = datetime.today()
+        end_date = datetime.today().date()
         current_date = score_cutoff_date
         date_score_map = {}
         while current_date <= end_date:
