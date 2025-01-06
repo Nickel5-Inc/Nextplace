@@ -1,10 +1,10 @@
 from datetime import timezone, datetime, timedelta
-from sqlite3 import OperationalError, DatabaseError
+from sqlite3 import OperationalError
 
-from nextplace.validator.database.database_manager import DatabaseManager
 import threading
 import bittensor as bt
 
+from nextplace.validator.database.database_manager import DatabaseManager
 from nextplace.validator.scoring.time_gated_scorer import TimeGatedScorer
 from nextplace.validator.utils.contants import ISO8601
 from nextplace.validator.website_data.website_communicator import WebsiteCommunicator
@@ -24,6 +24,16 @@ class MinerScoreSender:
             current_date += timedelta(days=1)
         return date_score_map
 
+    def get_hotkeys(self) -> list[str]:
+        query = """
+            SELECT name 
+            FROM sqlite_master 
+            WHERE type='table' AND name LIKE 'predictions_%';
+        """
+        with self.database_manager.lock:
+            results = self.database_manager.query(query)
+        return [table[0][len("predictions_"):] for table in results]
+
     def send_miner_scores_to_website(self) -> None:
         """
         RUN IN THREAD
@@ -37,9 +47,7 @@ class MinerScoreSender:
         now = datetime.now(timezone.utc).strftime(ISO8601)
         time_gated_scorer = TimeGatedScorer(self.database_manager)
         score_cutoff_date = time_gated_scorer.get_score_cutoff_date()
-        with self.database_manager.lock:
-            hotkeys = self.database_manager.query("SELECT DISTINCT(miner_hotkey) FROM daily_scores")
-        hotkeys = [x[0] for x in hotkeys]
+        hotkeys = self.get_hotkeys()
         for hotkey in hotkeys:
             bt.logging.debug(f"| {current_thread} | 🪲 Gathering website data for hotkey '{hotkey}'")
             date_score_map = self._get_empty_score_date_map(score_cutoff_date)
