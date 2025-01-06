@@ -231,7 +231,7 @@ class TimeGatedScorer:
         Returns:
             list of relevant historic scores for the miner
         """
-        date_cutoff = self._get_score_cutoff_date()  # Calculate date cutoff
+        date_cutoff = self.get_score_cutoff_date()  # Calculate date cutoff
         consistency_window_cutoff = self._get_consistency_window_start_date()  # Calculate consistency window start
 
         # Query finds all scores between the date cutoff and the start of the consistency window
@@ -256,7 +256,7 @@ class TimeGatedScorer:
         today = datetime.now(timezone.utc).date()  # Today's date
         return today - timedelta(days=int(self.consistency_window_duration))
 
-    def _get_score_cutoff_date(self) -> datetime.date:
+    def get_score_cutoff_date(self) -> datetime.date:
         """
         Calculate the start date for the score window
         Returns:

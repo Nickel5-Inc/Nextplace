@@ -1,5 +1,5 @@
-from datetime import timezone, datetime
-from sqlite3 import OperationalError
+from datetime import timezone, datetime, timedelta
+from sqlite3 import OperationalError, DatabaseError
 
 from nextplace.validator.database.database_manager import DatabaseManager
 import threading
@@ -15,6 +15,15 @@ class MinerScoreSender:
     def __init__(self, database_manager: DatabaseManager):
         self.database_manager = database_manager
 
+    def _get_empty_score_date_map(self, score_cutoff_date: datetime.date) -> dict:
+        end_date = datetime.today()
+        current_date = score_cutoff_date
+        date_score_map = {}
+        while current_date <= end_date:
+            date_score_map[current_date.strftime("%Y-%m-%d")] = 0
+            current_date += timedelta(days=1)
+        return date_score_map
+
     def send_miner_scores_to_website(self) -> None:
         """
         RUN IN THREAD
@@ -27,28 +36,43 @@ class MinerScoreSender:
 
         now = datetime.now(timezone.utc).strftime(ISO8601)
         time_gated_scorer = TimeGatedScorer(self.database_manager)
+        score_cutoff_date = time_gated_scorer.get_score_cutoff_date()
         with self.database_manager.lock:
             hotkeys = self.database_manager.query("SELECT DISTINCT(miner_hotkey) FROM daily_scores")
         hotkeys = [x[0] for x in hotkeys]
         for hotkey in hotkeys:
+            bt.logging.debug(f"| {current_thread} | 🪲 Gathering website data for hotkey '{hotkey}'")
+            date_score_map = self._get_empty_score_date_map(score_cutoff_date)
+
             with self.database_manager.lock:
                 score = time_gated_scorer.score(hotkey)
-                results = self.database_manager.query(f"SELECT total_predictions FROM daily_scores WHERE miner_hotkey='{hotkey}'")
+                query = "SELECT date, total_predictions FROM daily_scores WHERE miner_hotkey= ? AND date >= ?"
+                values = (hotkey, score_cutoff_date)
+                results = self.database_manager.query_with_values(query, values)
                 num_predictions = 0
                 for result in results:
-                    num_predictions += result[0]
+                    date = result[0]
+                    total_scored = result[1]
+                    date_score_map[date] = total_scored
+                    num_predictions += result[1]
                 try:
                     total_predictions = self.database_manager.get_size_of_table(f"predictions_{hotkey}")
-                except OperationalError:
+                except OperationalError as e:
                     total_predictions = 0
-                data_to_send.append({
+                    bt.logging.debug(f"| {current_thread} | 🪲❗ Failed to get prediction volume: {e}")
+                scored_list = [{'date': key, 'total_scored': value} for key, value in date_score_map.items()]
+                scored_list.sort(key=lambda x: x['date'], reverse=True)
+                data = {
                     "minerHotKey": hotkey,
                     "minerColdKey": "N/A",
                     "minerScore": score,
                     "numPredictions": num_predictions,
                     "scoreGenerationDate": now,
                     "totalPredictions": total_predictions,
-                })
+                    "totalScored": scored_list
+                }
+                bt.logging.debug(f"| {current_thread} | 🪲 Build data: {data}")
+                data_to_send.append(data)
 
         bt.logging.info(f"| {current_thread} | ⛵ Sending {len(data_to_send)} miner scores to website")
         website_communicator = WebsiteCommunicator("/Miner/Scores")
