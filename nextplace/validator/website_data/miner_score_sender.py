@@ -49,7 +49,6 @@ class MinerScoreSender:
         score_cutoff_date = time_gated_scorer.get_score_cutoff_date()
         hotkeys = self.get_hotkeys()
         for hotkey in hotkeys:
-            bt.logging.debug(f"| {current_thread} | 🪲 Gathering website data for hotkey '{hotkey}'")
             date_score_map = self._get_empty_score_date_map(score_cutoff_date)
 
             with self.database_manager.lock:
@@ -67,7 +66,6 @@ class MinerScoreSender:
                     total_predictions = self.database_manager.get_size_of_table(f"predictions_{hotkey}")
                 except OperationalError as e:
                     total_predictions = 0
-                    bt.logging.debug(f"| {current_thread} | 🪲❗ Failed to get prediction volume: {e}")
                 scored_list = [{'date': key, 'total_scored': value} for key, value in date_score_map.items()]
                 scored_list.sort(key=lambda x: x['date'], reverse=True)
                 data = {
@@ -79,7 +77,6 @@ class MinerScoreSender:
                     "totalPredictions": total_predictions,
                     "totalScored": scored_list
                 }
-                bt.logging.debug(f"| {current_thread} | 🪲 Build data: {data}")
                 data_to_send.append(data)
 
         bt.logging.info(f"| {current_thread} | ⛵ Sending {len(data_to_send)} miner scores to website")
