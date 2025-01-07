@@ -26,30 +26,30 @@ async def main(validator):
         try:
             bt.logging.info(f"| {current_thread} | 🦶 Validator step: {step}")
 
-            if step % 5 == 0:  # See if it's time to set weights. If so, set weights.
-                validator.check_timer_set_weights()
-
-            validator.sync_metagraph()  # Sync metagraph
-            await validator.forward(step)  # Get predictions from the Miners
-
-            if step % 10 == 0:  # Check if any registrations/deregistrations have happened, make necessary updates
-                thread = threading.Thread(target=validator.miner_manager.manage_miner_data, name="📋 MinerManagementThread 📋")
-                thread.start()
-
-            if step % 75 == 0:  # Check that the scoring thread is running, if not, start it up
-                scoring_thread_is_alive = validator.is_thread_running(SCORE_THREAD_NAME)
-                if not scoring_thread_is_alive:
-                    bt.logging.info(f"| {current_thread} | ☢️ ScoreThread was found not running, restarting it...")
-                    scoring_thread = threading.Thread(target=validator.scorer.run_score_thread, name=SCORE_THREAD_NAME)
-                    scoring_thread.start()
+            # if step % 5 == 0:  # See if it's time to set weights. If so, set weights.
+            #     validator.check_timer_set_weights()
+            #
+            # validator.sync_metagraph()  # Sync metagraph
+            # await validator.forward(step)  # Get predictions from the Miners
+            #
+            # if step % 10 == 0:  # Check if any registrations/deregistrations have happened, make necessary updates
+            #     thread = threading.Thread(target=validator.miner_manager.manage_miner_data, name="📋 MinerManagementThread 📋")
+            #     thread.start()
+            #
+            # if step % 75 == 0:  # Check that the scoring thread is running, if not, start it up
+            #     scoring_thread_is_alive = validator.is_thread_running(SCORE_THREAD_NAME)
+            #     if not scoring_thread_is_alive:
+            #         bt.logging.info(f"| {current_thread} | ☢️ ScoreThread was found not running, restarting it...")
+            #         scoring_thread = threading.Thread(target=validator.scorer.run_score_thread, name=SCORE_THREAD_NAME)
+            #         scoring_thread.start()
 
             if step % 100 == 0:  # Send score data to website
                 thread = threading.Thread(target=validator.miner_score_sender.send_miner_scores_to_website, name="🌊 MinerScoresToWebsiteThread 🌊")
                 thread.start()
 
-            if step >= 1000:  # Reset the step
-                step = 1
-                validator.should_step = False
+            # if step >= 1000:  # Reset the step
+            #     step = 1
+            #     validator.should_step = False
 
             if validator.should_step:
                 step += 1  # Increment step
