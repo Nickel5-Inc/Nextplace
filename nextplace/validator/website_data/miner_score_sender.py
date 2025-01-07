@@ -78,6 +78,7 @@ class MinerScoreSender:
                     "totalPredictions": total_predictions,
                     "minerDatedScores": scored_list
                 }
+                bt.logging.debug(f"| {current_thread} | Built miner data: {data}")
                 data_to_send.append(data)
 
         bt.logging.info(f"| {current_thread} | ⛵ Sending {len(data_to_send)} miner scores to website")
