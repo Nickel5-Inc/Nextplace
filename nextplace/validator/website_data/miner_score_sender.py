@@ -43,6 +43,7 @@ class MinerScoreSender:
         """
         current_thread = threading.current_thread().name
         data_to_send = []
+        bt.logging.trace(f"| {current_thread} | 💾 Gathering miner data for web server")
 
         now = datetime.now(timezone.utc).strftime(ISO8601)
         time_gated_scorer = TimeGatedScorer(self.database_manager)

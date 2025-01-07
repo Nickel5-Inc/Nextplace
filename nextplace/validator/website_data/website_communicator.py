@@ -30,13 +30,13 @@ class WebsiteCommunicator:
                 }
             )
             response.raise_for_status()
-            bt.logging.info(f"| {current_thread} | ✅ Data sent to Nextplace site successfully.")
+            bt.logging.info(f"| {current_thread} | ✅ Data sent to Nextplace web server successfully.")
 
         except requests.exceptions.HTTPError as e:
             bt.logging.warning(f"| {current_thread} | ❗ HTTP error occurred: {e}. Data: {data}.")
             if e.response is not None:
                 bt.logging.warning(
-                    f"| {current_thread} | ❗ Error sending data to site. Response content: {e.response.text}")
+                    f"| {current_thread} | ❗ Error sending data to web server. Response content: {e.response.text}")
         except requests.exceptions.RequestException as e:
             bt.logging.warning(
-                f"| {current_thread} | ❗ Error sending data to site. An error occurred while sending data: {e}. No data was sent to the Nextplace site.")
+                f"| {current_thread} | ❗ Error sending data to web server. An error occurred while sending data: {e}. No data was sent to the Nextplace site.")
