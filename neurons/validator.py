@@ -14,7 +14,7 @@ SCORE_THREAD_NAME = "🏋🏻 ScoreThread 🏋"
 
 async def main(validator):
     get_and_send_version()
-    step = 100  # Initialize step
+    step = 1  # Initialize step
     current_thread = threading.current_thread().name
 
     # Start the scoring thread
