@@ -67,7 +67,7 @@ class MinerScoreSender:
                     total_predictions = self.database_manager.get_size_of_table(f"predictions_{hotkey}")
                 except OperationalError:
                     total_predictions = 0
-                scored_list = [{'date': key, 'total_scored': value} for key, value in date_score_map.items()]
+                scored_list = [{'date': key, 'totalScored': value} for key, value in date_score_map.items()]
                 scored_list.sort(key=lambda x: x['date'], reverse=True)
                 data = {
                     "minerHotKey": hotkey,
