@@ -1,19 +1,30 @@
+import sys
+import os
+# Add these debug lines
+print("Current working directory:", os.getcwd())
+print("Python path:", sys.path)
+
+# Update your imports to be relative to your project root
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 import time
 import argparse
 import bittensor as bt
+import asyncio
+from datetime import datetime, timezone, timedelta
 import threading
 import traceback
 from nextplace.validator.nextplace_validator import RealEstateValidator
 import configparser
 import os
 from nextplace.validator.website_data.website_communicator import WebsiteCommunicator
-
+from nextplace.validator.utils.daily_score_table_manager import DailyScoreTableManager
 SCORE_THREAD_NAME = "🏋🏻 ScoreThread 🏋"
 
 
-def main(validator):
+async def main(validator):
     get_and_send_version()
-    step = 250  # Initialize step
+    step = 1  # Initialize step
     current_thread = threading.current_thread().name
 
     # Start the scoring thread
@@ -29,26 +40,30 @@ def main(validator):
                 validator.check_timer_set_weights()
 
             validator.sync_metagraph()  # Sync metagraph
-            validator.forward(step)  # Get predictions from the Miners
+            await validator.forward(step)  # Get predictions from the Miners
 
-            if step % 100 == 0:  # Check if any registrations/deregistrations have happened, make necessary updates
+            if step % 10 == 0:  # Check if any registrations/deregistrations have happened, make necessary updates
                 thread = threading.Thread(target=validator.miner_manager.manage_miner_data, name="📋 MinerManagementThread 📋")
                 thread.start()
 
-            if step % 200 == 0:  # Check that the scoring thread is running, if not, start it up
+            if step % 75 == 0:  # Check that the scoring thread is running, if not, start it up
                 scoring_thread_is_alive = validator.is_thread_running(SCORE_THREAD_NAME)
                 if not scoring_thread_is_alive:
                     bt.logging.info(f"| {current_thread} | ☢️ ScoreThread was found not running, restarting it...")
                     scoring_thread = threading.Thread(target=validator.scorer.run_score_thread, name=SCORE_THREAD_NAME)
                     scoring_thread.start()
 
-            if step % 250 == 0:  # Send score data to website
+            if step % 100 == 0:  # Send score data to website
                 thread = threading.Thread(target=validator.miner_score_sender.send_miner_scores_to_website, name="🌊 MinerScoresToWebsiteThread 🌊")
                 thread.start()
 
             if step >= 1000:  # Reset the step
                 step = 1
                 validator.should_step = False
+
+            if step % 100 == 0:  # Send score data to website
+                thread = threading.Thread(target=validator.miner_score_sender.send_miner_scores_to_website, name="🌊 MinerScoresToWebsiteThread 🌊")
+                thread.start()
 
             if validator.should_step:
                 step += 1  # Increment step
@@ -83,4 +98,4 @@ if __name__ == "__main__":
 
     config = bt.config(parser)  # Build config object
     validator_instance = RealEstateValidator(config)  # Initialize the validator
-    main(validator_instance)  # Run the main loop
+    asyncio.run(main(validator_instance))  # Run the main loop
