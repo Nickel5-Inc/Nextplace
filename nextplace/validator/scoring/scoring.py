@@ -55,6 +55,7 @@ class Scorer:
             bt.logging.trace(f"| {thread_name} | 🚀 Beginning metagraph hotkey iteration")
 
             miners = [hotkey for uid, hotkey in enumerate(self.metagraph.hotkeys) if self.metagraph.S[uid] < 1000.0]
+            miners.insert(0, "5EPLkMkLB1GfDPq2CcPcq7FfmthNc8T2fwGcQysP9hNeyv5T") # FOR TESTING ONLY
 
             for hotkey in miners:  # Iterate metagraph hotkeys
 
