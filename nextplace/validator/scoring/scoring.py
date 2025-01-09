@@ -55,7 +55,6 @@ class Scorer:
             bt.logging.trace(f"| {thread_name} | 🚀 Beginning metagraph hotkey iteration")
 
             miners = [hotkey for uid, hotkey in enumerate(self.metagraph.hotkeys) if self.metagraph.S[uid] < 1000.0]
-            miners.insert(0, "5CPCeqB8d3kAwXeUD9WFDRYosWKKAAVyfqTj6ruThuj5ksjK") # FOR TESTING ONLY
 
             for hotkey in miners:  # Iterate metagraph hotkeys
 
@@ -104,7 +103,7 @@ class Scorer:
                 values = (miner_hotkey, )
                 query_result = self.database_manager.query_with_values(query, values)
             if query_result is None or len(query_result) != 1:
-                bt.logging.debug(f"| {current_thread} | ❗ Error querying for '{miner_hotkey}' scored predictions")
+                bt.logging.debug(f"| {current_thread} | ❗ Error querying for {miner_hotkey}'s scored predictions")
                 return
             number_of_days_with_scores = query_result[0]
             if number_of_days_with_scores[0] == 0:  # This miner has no scored predictions in our db (their scores is 0)
