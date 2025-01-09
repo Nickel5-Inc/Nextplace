@@ -44,7 +44,7 @@ class Scorer:
 
         while True:
 
-            # Refresh the `sales` table every 8ish hours
+            # Refresh the `sales` table every 12ish hours
             now = datetime.now(timezone.utc)
             if now - self.sales_timer > timedelta(hours=12):
                 bt.logging.trace(f"| {thread_name} | 🏷️ Time to refresh recently sold homes")
@@ -53,8 +53,9 @@ class Scorer:
                 self.sold_homes_api.get_sold_properties()  # Get recently sold homes
 
             bt.logging.trace(f"| {thread_name} | 🚀 Beginning metagraph hotkey iteration")
+            miners = [hotkey for uid, hotkey in enumerate(self.metagraph.hotkeys) if self.metagraph.S[uid] < 1000.0]
 
-            for hotkey in self.metagraph.hotkeys:  # Iterate metagraph hotkeys
+            for hotkey in miners:  # Iterate metagraph hotkeys
 
                 table_name = build_miner_predictions_table_name(hotkey)  # Get name of this miner's predictions table
 
@@ -95,19 +96,26 @@ class Scorer:
 
         # Check if they have any scored predictions. If not, check if *any* validator has scored predictions for them.
         else:
+            bt.logging.trace(f"| {current_thread} | 0️⃣ Found no new predictions to score")
             with self.database_manager.lock:
-                miner_score_result = self.database_manager.query(f"SELECT * FROM miner_scores WHERE miner_hotkey='{miner_hotkey}'")
-            if len(miner_score_result) == 0:  # This miner has no scored predictions in our db (their scores is 0)
-                bt.logging.trace(f"| {current_thread} | 🔊 Miner '{miner_hotkey}' has no scored predictions. Checking if another validator has any scored predictions for them.")
+                query = "SELECT COUNT(*) FROM daily_scores WHERE miner_hotkey = ?"
+                values = (miner_hotkey, )
+                query_result = self.database_manager.query_with_values(query, values)
+            if query_result is None or len(query_result) == 0:
+                bt.logging.debug(f"| {current_thread} | ❗ Error querying for {miner_hotkey}'s scored predictions")
+                return
+            number_of_days_with_scores = query_result[0][0]
+            if number_of_days_with_scores == 0:  # This miner has no scored predictions in our db (their scores is 0)
+                bt.logging.trace(f"| {current_thread} | 🔊 Found no scored predictions. Checking if another validator has any scored predictions.")
                 avg_score_from_other_valis = self._get_miner_score_data_from_webserver(miner_hotkey)
                 if avg_score_from_other_valis > 0:  # Other validators have scores for this miner
                     # Insert consensus score from other valis into our db for ONE SINGLE score
-                    now = datetime.now(timezone.utc).strftime(ISO8601)
+                    today = datetime.now(timezone.utc).date()  # Get today's date
                     query_str = f"""
-                        INSERT INTO miner_scores (miner_hotkey, lifetime_score, total_predictions, last_update_timestamp)
+                        INSERT INTO daily_scores (miner_hotkey, date, score, total_predictions)
                         VALUES (?, ?, ?, ?)
                     """
-                    values = (miner_hotkey, avg_score_from_other_valis, 1, now)
+                    values = (miner_hotkey, today, avg_score_from_other_valis, 1)
                     with self.database_manager.lock:
                         self.database_manager.query_and_commit_with_values(query_str, values)
 
