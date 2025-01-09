@@ -118,7 +118,6 @@ class WeightSetter:
         Returns:
             List of tuples (uid, weight) for all miners
         """
-        current_thread = threading.current_thread().name
         sorted_scores = list(sorted(scores.items(), key=lambda item: item[1], reverse=True))
 
         top_tier, middle_tier, bottom_tier = self.get_tiers(sorted_scores)

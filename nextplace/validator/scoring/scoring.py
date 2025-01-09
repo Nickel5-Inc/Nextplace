@@ -98,6 +98,7 @@ class Scorer:
 
         # Check if they have any scored predictions. If not, check if *any* validator has scored predictions for them.
         else:
+            bt.logging.trace(f"| {current_thread} | 0️⃣ Miner '{miner_hotkey}' had no predictions to score")
             with self.database_manager.lock:
                 query = "SELECT COUNT(*) FROM daily_scores WHERE miner_hotkey = ?"
                 values = (miner_hotkey, )
