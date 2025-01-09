@@ -98,8 +98,10 @@ class Scorer:
         # Check if they have any scored predictions. If not, check if *any* validator has scored predictions for them.
         else:
             with self.database_manager.lock:
-                miner_score_result = self.database_manager.query(f"SELECT * FROM daily_scores WHERE miner_hotkey='{miner_hotkey}'")
-            if len(miner_score_result) == 0:  # This miner has no scored predictions in our db (their scores is 0)
+                query = "SELECT COUNT(*) FROM daily_scores WHERE miner_hotkey = ?"
+                values = (miner_hotkey, )
+                number_of_days_with_scores = self.database_manager.query_with_values(query, values)
+            if number_of_days_with_scores == 0:  # This miner has no scored predictions in our db (their scores is 0)
                 bt.logging.trace(f"| {current_thread} | 🔊 Miner '{miner_hotkey}' has no scored predictions. Checking if another validator has any scored predictions for them.")
                 avg_score_from_other_valis = self._get_miner_score_data_from_webserver(miner_hotkey)
                 if avg_score_from_other_valis > 0:  # Other validators have scores for this miner
