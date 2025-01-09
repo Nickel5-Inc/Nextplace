@@ -53,9 +53,7 @@ class Scorer:
                 self.sold_homes_api.get_sold_properties()  # Get recently sold homes
 
             bt.logging.trace(f"| {thread_name} | 🚀 Beginning metagraph hotkey iteration")
-
             miners = [hotkey for uid, hotkey in enumerate(self.metagraph.hotkeys) if self.metagraph.S[uid] < 1000.0]
-            miners.insert(0, "5EPLkMkLB1GfDPq2CcPcq7FfmthNc8T2fwGcQysP9hNeyv5T") # FOR TESTING ONLY
 
             for hotkey in miners:  # Iterate metagraph hotkeys
 
@@ -98,7 +96,7 @@ class Scorer:
 
         # Check if they have any scored predictions. If not, check if *any* validator has scored predictions for them.
         else:
-            bt.logging.trace(f"| {current_thread} | 0️⃣ Found no predictions to score")
+            bt.logging.trace(f"| {current_thread} | 0️⃣ Found no new predictions to score")
             with self.database_manager.lock:
                 query = "SELECT COUNT(*) FROM daily_scores WHERE miner_hotkey = ?"
                 values = (miner_hotkey, )
@@ -108,7 +106,7 @@ class Scorer:
                 return
             number_of_days_with_scores = query_result[0]
             if number_of_days_with_scores[0] == 0:  # This miner has no scored predictions in our db (their scores is 0)
-                bt.logging.trace(f"| {current_thread} | 🔊 Checking if another validator has any scored predictions for '{miner_hotkey}'.")
+                bt.logging.trace(f"| {current_thread} | 🔊 Found no scored predictions. Checking if another validator has any scored predictions.")
                 avg_score_from_other_valis = self._get_miner_score_data_from_webserver(miner_hotkey)
                 if avg_score_from_other_valis > 0:  # Other validators have scores for this miner
                     # Insert consensus score from other valis into our db for ONE SINGLE score
