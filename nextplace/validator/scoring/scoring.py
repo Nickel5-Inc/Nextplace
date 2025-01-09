@@ -98,16 +98,17 @@ class Scorer:
 
         # Check if they have any scored predictions. If not, check if *any* validator has scored predictions for them.
         else:
-            bt.logging.trace(f"| {current_thread} | 0️⃣ Miner '{miner_hotkey}' had no predictions to score")
+            bt.logging.trace(f"| {current_thread} | 0️⃣ Found no predictions to score")
             with self.database_manager.lock:
                 query = "SELECT COUNT(*) FROM daily_scores WHERE miner_hotkey = ?"
                 values = (miner_hotkey, )
                 query_result = self.database_manager.query_with_values(query, values)
             if query_result is None or len(query_result) != 1:
+                bt.logging.debug(f"| {current_thread} | ❗ Error querying for '{miner_hotkey}' scored predictions")
                 return
             number_of_days_with_scores = query_result[0]
             if number_of_days_with_scores[0] == 0:  # This miner has no scored predictions in our db (their scores is 0)
-                bt.logging.trace(f"| {current_thread} | 🔊 Miner '{miner_hotkey}' has no scored predictions. Checking if another validator has any scored predictions for them.")
+                bt.logging.trace(f"| {current_thread} | 🔊 Checking if another validator has any scored predictions for '{miner_hotkey}'.")
                 avg_score_from_other_valis = self._get_miner_score_data_from_webserver(miner_hotkey)
                 if avg_score_from_other_valis > 0:  # Other validators have scores for this miner
                     # Insert consensus score from other valis into our db for ONE SINGLE score
