@@ -105,7 +105,6 @@ class Scorer:
                 bt.logging.debug(f"| {current_thread} | ❗ Error querying for {miner_hotkey}'s scored predictions")
                 return
             number_of_days_with_scores = query_result[0][0]
-            bt.logging.debug(f"| {current_thread} | 🪲 number_of_days_with_scores: {number_of_days_with_scores}")
             if number_of_days_with_scores == 0:  # This miner has no scored predictions in our db (their scores is 0)
                 bt.logging.trace(f"| {current_thread} | 🔊 Found no scored predictions. Checking if another validator has any scored predictions.")
                 avg_score_from_other_valis = self._get_miner_score_data_from_webserver(miner_hotkey)
