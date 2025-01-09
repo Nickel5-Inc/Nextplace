@@ -101,7 +101,7 @@ class Scorer:
                 query = "SELECT COUNT(*) FROM daily_scores WHERE miner_hotkey = ?"
                 values = (miner_hotkey, )
                 query_result = self.database_manager.query_with_values(query, values)
-            if query_result is None or len(query_result) != 1:
+            if query_result is None or len(query_result) == 0:
                 bt.logging.debug(f"| {current_thread} | ❗ Error querying for {miner_hotkey}'s scored predictions")
                 return
             number_of_days_with_scores = query_result[0]
