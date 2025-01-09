@@ -107,7 +107,7 @@ class Scorer:
                         INSERT INTO daily_scores (miner_hotkey, date, score, total_predictions)
                         VALUES (?, ?, ?, ?)
                     """
-                    values = (miner_hotkey, today, avg_score_from_other_valis,)
+                    values = (miner_hotkey, today, avg_score_from_other_valis, 1)
                     with self.database_manager.lock:
                         self.database_manager.query_and_commit_with_values(query_str, values)
 
