@@ -1,4 +1,4 @@
-bittensor==7.4.0
+bittensor==8.5.1
 starlette>=0.30.0
 pydantic>=2
 rich>=13
@@ -11,3 +11,4 @@ requests~=2.32.3
 prompting~=0.1.0
 python-dotenv~=1.0.1
 huggingface-hub~=0.24.5
+pytz

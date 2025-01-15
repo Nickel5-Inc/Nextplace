@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 from nextplace.protocol import RealEstatePredictions
 from nextplace.validator.utils.contants import ISO8601, build_miner_predictions_table_name
 from nextplace.validator.database.database_manager import DatabaseManager
+from nextplace.validator.forward_web_request.retrieve_web_query import WebsiteRequestsChecker
 
 """
 Helper class manages processing predictions from Miners
@@ -16,45 +17,51 @@ class PredictionManager:
     def __init__(self, database_manager: DatabaseManager, metagraph):
         self.database_manager = database_manager
         self.metagraph = metagraph
+        self.website_checker = WebsiteRequestsChecker(database_manager)
 
-    def process_predictions(self, responses: List[RealEstatePredictions]) -> None:
+    def process_predictions(self, responses: List[RealEstatePredictions], valid_synapse_ids: set[str]) -> None:
         """
         Process predictions from the Miners
         Args:
             responses (list): list of synapses from Miners
+            valid_synapse_ids (set): set of valid synapse ids
 
         Returns:
             None
         """
-
         current_thread = threading.current_thread().name
-        bt.logging.info(f'| {current_thread} | 📡 Processing Responses')
+        bt.logging.info(f'| {current_thread} | 📡 Processing {len(responses)} Responses')
 
         if responses is None or len(responses) == 0:
-            bt.logging.error(f'| {current_thread} | ❗No responses received')
+            bt.logging.trace(f'| {current_thread} | ❗No responses received')
             return
 
         current_utc_datetime = datetime.now(timezone.utc)
         timestamp = current_utc_datetime.strftime(ISO8601)
         valid_hotkeys = set()
+        
+        website_predictions_data: list[tuple] = []
 
         for idx, real_estate_predictions in enumerate(responses):  # Iterate responses
-
             try:
                 miner_hotkey = self.metagraph.hotkeys[idx]
 
                 if miner_hotkey is None:
-                    bt.logging.error(f"🪲 Failed to find miner_hotkey while processing predictions")
+                    bt.logging.trace(f" | {current_thread} | ❗ Failed to find miner_hotkey while processing predictions")
                     continue
 
                 valid_hotkeys.add(miner_hotkey)
 
                 table_name = build_miner_predictions_table_name(miner_hotkey)
+                website_predictions_table = "website_predictions"
                 replace_policy_data_for_ingestion: list[tuple] = []
                 ignore_policy_data_for_ingestion: list[tuple] = []
 
                 for prediction in real_estate_predictions.predictions:  # Iterate predictions in each response
-
+                    # Ignore predictions for houses not affiliated with this synapse
+                    if prediction.nextplace_id not in valid_synapse_ids:
+                        bt.logging.trace(f"| {current_thread} | 🐝 Found invalid nextplace_id for miner: '{miner_hotkey}'")
+                        continue
                     # Only process valid predictions
                     if prediction is None or prediction.predicted_sale_price is None or prediction.predicted_sale_date is None:
                         continue
@@ -68,13 +75,17 @@ class PredictionManager:
                         prediction.market,
                     )
 
-                    # Parse force update flag
-                    if prediction.force_update_past_predictions:
-                        replace_policy_data_for_ingestion.append(values)
+                    # Handle predictions for website (nextplace_id starts with "PVR-")
+                    if prediction.nextplace_id.startswith("PVR-"):
+                        website_predictions_data.append(values)
                     else:
-                        ignore_policy_data_for_ingestion.append(values)
+                        # Parse force update flag for regular predictions
+                        if prediction.force_update_past_predictions:
+                            replace_policy_data_for_ingestion.append(values)
+                        else:
+                            ignore_policy_data_for_ingestion.append(values)
 
-                # Store predictions in the database
+                # Store regular predictions in the miner's table
                 self._create_table_if_not_exists(table_name)
                 if len(ignore_policy_data_for_ingestion) > 0:
                     self._handle_ingestion('IGNORE', ignore_policy_data_for_ingestion, table_name)
@@ -82,9 +93,15 @@ class PredictionManager:
                     self._handle_ingestion('REPLACE', replace_policy_data_for_ingestion, table_name)
 
             except Exception as e:
-                bt.logging.error(f"| {current_thread} | ❗Failed to process prediction: {e}")
+                bt.logging.trace(f"| {current_thread} | ❗Failed to process prediction: {e}")
+
+        if website_predictions_data:
+            self._handle_ingestion_without_policy(website_predictions_data, "website_predictions")
 
         self._track_miners(valid_hotkeys)
+        bt.logging.info("Sending web queries to website")
+        self.website_checker.send_predictions_to_api()
+
 
     def _track_miners(self, valid_hotkeys: set[str]) -> None:
         formatted = [(x,) for x in valid_hotkeys]
@@ -138,3 +155,13 @@ class PredictionManager:
             VALUES (?, ?, ?, ?, ?, ?)
         """
         self.database_manager.query_and_commit_many(query_str, values)
+
+    def _handle_ingestion_without_policy(self, values: list[tuple], table_name: str) -> None:
+        query_str = f"""
+            INSERT OR IGNORE INTO {table_name} 
+            (nextplace_id, miner_hotkey, predicted_sale_price, predicted_sale_date, prediction_timestamp, market)
+            VALUES (?, ?, ?, ?, ?, ?)
+        """
+        self.database_manager.query_and_commit_many(query_str, values)
+
+

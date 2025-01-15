@@ -13,8 +13,10 @@ from nextplace.validator.setting_weights.weights import WeightSetter
 from nextplace.validator.website_data.miner_score_sender import MinerScoreSender
 from template.base.validator import BaseValidatorNeuron
 import threading
+import asyncio
 
 PROPERTIES_THREAD_NAME = "🏠 PropertiesThread 🏠"
+
 
 class RealEstateValidator(BaseValidatorNeuron):
     def __init__(self, config=None):
@@ -60,6 +62,7 @@ class RealEstateValidator(BaseValidatorNeuron):
                 bt.logging.trace(f"| {self.current_thread} | 🍃 Another thread is holding the database_manager lock. Will check timer and set weights later. This is expected behavior 😊.")
                 return
             try:
+                self.sync_metagraph()
                 self.weight_setter.check_timer_set_weights()
             finally:
                 self.database_manager.lock.release()
@@ -70,8 +73,7 @@ class RealEstateValidator(BaseValidatorNeuron):
                 return True
         return False
 
-    # OVERRIDE | Required
-    def forward(self, step: int) -> None:
+    async def forward(self, step: int) -> None:
         """
         Forward pass
         Returns:
@@ -119,14 +121,17 @@ class RealEstateValidator(BaseValidatorNeuron):
                 bt.logging.trace(f"| {self.current_thread} | ↻ No data for Synapse, returning.")
                 return
 
-            responses = self.dendrite.query(
+            synapse_ids = set([x.nextplace_id for x in synapse.real_estate_predictions.predictions])
+
+            all_responses = self.dendrite.query(
                 axons=self.metagraph.axons,
                 synapse=synapse,
                 deserialize=True,
-                timeout=30
+                timeout=150
             )
 
-            self.prediction_manager.process_predictions(responses)  # Process Miner predictions
+            # Handle responses
+            self.prediction_manager.process_predictions(all_responses, synapse_ids)
 
         finally:
             self.database_manager.lock.release()  # Always release the lock
