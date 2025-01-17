@@ -126,6 +126,10 @@ class PredictionManager:
                 for prediction in real_estate_predictions.predictions:
                     try:
                         predicted_sale_date = prediction.predicted_sale_date
+                        if predicted_sale_date is None or prediction.predicted_sale_price is None:
+                            continue
+
+                        bt.logging.trace(f"| {current_thread} | 🔨 Building data for miner '{miner_hotkey}'")
                         prediction_date = datetime.utcnow()
                         predicted_sale_date_parsed = self.parse_iso_datetime(predicted_sale_date)
 
