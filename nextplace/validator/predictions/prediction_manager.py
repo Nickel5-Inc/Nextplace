@@ -11,6 +11,8 @@ from nextplace.validator.website_data.website_communicator import WebsiteCommuni
 Helper class manages processing predictions from Miners
 """
 
+BATCH_SIZE = 10000
+
 
 class PredictionManager:
 
@@ -111,6 +113,8 @@ class PredictionManager:
         current_thread = threading.current_thread().name
         bt.logging.trace(f"| {current_thread} | 🏄 Starting thread")
 
+        all_predictions: list[dict] = []
+
         # Iterate responses
         for uid, real_estate_predictions in enumerate(predictions):  # Iterate responses
             try:
@@ -149,16 +153,32 @@ class PredictionManager:
                             "predictedSalePrice": prediction.predicted_sale_price,
                             "predictedSaleDate": predicted_sale_date_iso,
                         }
-                        data_to_send.append(data_dict)  # Add to list of this miner's prediction data
+                        all_predictions.append(data_dict)  # Add to list of this miner's prediction data
                     except Exception as e:
                         bt.logging.trace(f"| {current_thread} | ❗Failed to process prediction: {e}")
 
-                bt.logging.trace(f"| {current_thread} | 🪲 Sending data for miner '{miner_hotkey}'")
-                self.website_communicator.send_data(data_to_send)  # Send all of this miner's synapse data to web server
-
             except Exception as e:
                 bt.logging.trace(f"| {current_thread} | ❗Failed to process prediction: {e}")
+
+        self._send_batches(all_predictions)
         bt.logging.trace(f"| {current_thread} | 🛑 Finished sending synapse predictions.")
+
+
+    def _send_batches(self, all_predictions: List[dict]) -> None:
+        """
+        Batch and send the formatted predictions
+        Args:
+            all_predictions: Formatted predictions
+
+        Returns:
+            None
+        """
+        current_thread = threading.current_thread().name
+        batches = [all_predictions[i:i + BATCH_SIZE] for i in range(0, len(all_predictions), BATCH_SIZE)]
+        bt.logging.trace(f"| {current_thread} | 🏭 Generated {len(batches)} batches from {len(all_predictions)} predictions using batch size {BATCH_SIZE}")
+        for batch in batches:
+            self.website_communicator.send_data(batch)
+        bt.logging.trace(f"| {current_thread} | ✅ All batches sent.")
 
 
     def _track_miners(self, valid_hotkeys: set[str]) -> None:
