@@ -21,6 +21,9 @@ class WebsiteCommunicator:
             None
         """
         current_thread = threading.current_thread().name
+        if isinstance(data, list):
+            bt.logging.info(f"| {current_thread} | Trying to send {len(data)} datapoints to web server")
+
         try:
             response = requests.post(
                 self.endpoint,
