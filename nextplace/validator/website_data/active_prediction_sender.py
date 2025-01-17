@@ -30,7 +30,7 @@ class ActivePredictionSender:
                 self.website_communicator.send_data(batch)
 
             except queue.Empty:
-                bt.logging.trace(f"| {current_thread} | Queue was found empty, waiting...")
+                bt.logging.trace(f"| {current_thread} | Predictions queue was found empty, waiting...")
                 sleep(5)  # Wait for items to populate the queue
                 continue
 
