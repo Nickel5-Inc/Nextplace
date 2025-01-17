@@ -11,7 +11,7 @@ from nextplace.validator.website_data.website_communicator import WebsiteCommuni
 Helper class manages processing predictions from Miners
 """
 
-BATCH_SIZE = 10000
+BATCH_SIZE = 50000
 
 
 class PredictionManager:
@@ -19,7 +19,7 @@ class PredictionManager:
     def __init__(self, database_manager: DatabaseManager, metagraph):
         self.database_manager = database_manager
         self.metagraph = metagraph
-        self.website_communicator = WebsiteCommunicator("Predictions")
+        self.website_communicator = WebsiteCommunicator("Predictions", suppress_errors=True)
 
     def process_predictions(self, responses: List[RealEstatePredictions], valid_synapse_ids: set[str]) -> None:
         """
@@ -39,13 +39,13 @@ class PredictionManager:
             bt.logging.trace(f'| {current_thread} | ❗No responses received')
             return
 
-        # Start thread to send prediction data to web server
-        sender_thread = threading.Thread(target=self._send_predictions, args=(responses,), name="🛰 PredictionsTransmitter 🛰")
-        sender_thread.start()
-
         current_utc_datetime = datetime.now(timezone.utc)
         timestamp = current_utc_datetime.strftime(ISO8601)
         valid_hotkeys = set()
+
+        data_to_send: list[dict] = []
+        prediction_date = datetime.utcnow()
+        prediction_date_iso = prediction_date.strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3] + 'Z'
 
         for idx, real_estate_predictions in enumerate(responses):  # Iterate responses
 
@@ -73,6 +73,25 @@ class PredictionManager:
                     if prediction is None or prediction.predicted_sale_price is None or prediction.predicted_sale_date is None:
                         continue
 
+                    try:
+                        predicted_sale_date_parsed = self.parse_iso_datetime(prediction.predicted_sale_date)
+                        if predicted_sale_date_parsed is not None:
+                            predicted_sale_date_iso = predicted_sale_date_parsed.strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3] + 'Z'
+
+                            # Build data object, store it
+                            data_dict = {
+                                "nextplaceId": prediction.nextplace_id,
+                                "minerHotKey": miner_hotkey,
+                                "minerColdKey": "DummyColdKey",
+                                "predictionScore": -1,  # ToDo We should probably set this to `None` to indicate that it has not been scored yet, but need to update web server first
+                                "predictionDate": prediction_date_iso,
+                                "predictedSalePrice": prediction.predicted_sale_price,
+                                "predictedSaleDate": predicted_sale_date_iso,
+                            }
+                            data_to_send.append(data_dict)
+                    except Exception as e:
+                        bt.logging.trace(f"| {current_thread} | ❗Failed to build data for web server: {e}")
+
                     values = (
                         prediction.nextplace_id,
                         miner_hotkey,
@@ -98,74 +117,16 @@ class PredictionManager:
             except Exception as e:
                 bt.logging.trace(f"| {current_thread} | ❗Failed to process prediction: {e}")
 
+        # Start thread to send prediction data to web server
+        sender_thread = threading.Thread(target=self._send_batches, args=(data_to_send,), name="🛰 PredictionsTransmitter 🛰")
+        sender_thread.start()
+
+        # Track miners
         self._track_miners(valid_hotkeys)
-
-    def _send_predictions(self, predictions: List[RealEstatePredictions]) -> None:
-        """
-        RUN IN THREAD
-        Batch & send predictions to web server
-        Args:
-            predictions: list of predictions
-
-        Returns:
-            None
-        """
-        current_thread = threading.current_thread().name
-        bt.logging.trace(f"| {current_thread} | 🏄 Starting thread")
-
-        all_predictions: list[dict] = []
-
-        # Iterate responses
-        for uid, real_estate_predictions in enumerate(predictions):  # Iterate responses
-            try:
-
-                # Check & extract hotkey
-                miner_hotkey = self.metagraph.hotkeys[uid]
-                if miner_hotkey is None:
-                    continue
-
-                data_to_send: list[dict] = []
-                bt.logging.trace(f"| {current_thread} | 🔨 Building data for miner '{miner_hotkey}'")
-
-                # Iterate predictions for this miner
-                for prediction in real_estate_predictions.predictions:
-                    try:
-                        predicted_sale_date = prediction.predicted_sale_date
-                        if predicted_sale_date is None or prediction.predicted_sale_price is None:
-                            continue
-
-                        prediction_date = datetime.utcnow()
-                        predicted_sale_date_parsed = self.parse_iso_datetime(predicted_sale_date)
-
-                        if predicted_sale_date_parsed is None:
-                            continue
-
-                        prediction_date_iso = prediction_date.strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3] + 'Z'
-                        predicted_sale_date_iso = predicted_sale_date_parsed.strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3] + 'Z'
-
-                        # Build data object, store it
-                        data_dict = {
-                            "nextplaceId": prediction.nextplace_id,
-                            "minerHotKey": miner_hotkey,
-                            "minerColdKey": "DummyColdKey",
-                            "predictionScore": -1,  # ToDo We should probably set this to `None` to indicate that it has not been scored yet, but need to update web server first
-                            "predictionDate": prediction_date_iso,
-                            "predictedSalePrice": prediction.predicted_sale_price,
-                            "predictedSaleDate": predicted_sale_date_iso,
-                        }
-                        all_predictions.append(data_dict)  # Add to list of this miner's prediction data
-                    except Exception as e:
-                        bt.logging.trace(f"| {current_thread} | ❗Failed to process prediction: {e}")
-
-            except Exception as e:
-                bt.logging.trace(f"| {current_thread} | ❗Failed to process prediction: {e}")
-
-        self._send_batches(all_predictions)
-        bt.logging.trace(f"| {current_thread} | 🛑 Finished sending synapse predictions.")
-
 
     def _send_batches(self, all_predictions: List[dict]) -> None:
         """
+        RUN IN THREAD
         Batch and send the formatted predictions
         Args:
             all_predictions: Formatted predictions
@@ -248,5 +209,4 @@ class PredictionManager:
             else:
                 return datetime.fromisoformat(datetime_str)
         except ValueError as e:
-            bt.logging.info(f"| {thread_name} | ❗ Error in sending data. Trying to parse datetime string '{datetime_str}': {e}")
             return None
