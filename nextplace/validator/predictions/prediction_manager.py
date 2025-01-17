@@ -11,6 +11,7 @@ from nextplace.validator.website_data.website_communicator import WebsiteCommuni
 Helper class manages processing predictions from Miners
 """
 
+
 class PredictionManager:
 
     def __init__(self, database_manager: DatabaseManager, metagraph):
@@ -123,21 +124,27 @@ class PredictionManager:
 
                 # Iterate predictions for this miner
                 for prediction in real_estate_predictions.predictions:
-                    predicted_sale_date = prediction.predicted_sale_date
-                    prediction_date = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S")
-                    predicted_sale_date_parsed = self.parse_iso_datetime(predicted_sale_date) if isinstance(predicted_sale_date, str) else predicted_sale_date
+                    try:
+                        predicted_sale_date = prediction.predicted_sale_date
+                        prediction_date = datetime.utcnow()
+                        predicted_sale_date_parsed = self.parse_iso_datetime(predicted_sale_date)
 
-                    # Build data object, store it
-                    data_dict = {
-                        "nextplaceId": prediction.nextplace_id,
-                        "minerHotKey": miner_hotkey,
-                        "minerColdKey": "",
-                        "predictionScore": -1,  # ToDo We should probably set this to `None` to indicate that it has not been scored yet, but need to update web server first
-                        "predictionDate": prediction_date,
-                        "predictedSalePrice": prediction.predicted_sale_price,
-                        "predictedSaleDate": predicted_sale_date_parsed,
-                    }
-                    data_to_send.append(data_dict)  # Add to list of this miner's prediction data
+                        prediction_date_iso = prediction_date.strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3] + 'Z'
+                        predicted_sale_date_iso = predicted_sale_date_parsed.strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3] + 'Z'
+
+                        # Build data object, store it
+                        data_dict = {
+                            "nextplaceId": prediction.nextplace_id,
+                            "minerHotKey": miner_hotkey,
+                            "minerColdKey": "",
+                            "predictionScore": -1,  # ToDo We should probably set this to `None` to indicate that it has not been scored yet, but need to update web server first
+                            "predictionDate": prediction_date_iso,
+                            "predictedSalePrice": prediction.predicted_sale_price,
+                            "predictedSaleDate": predicted_sale_date_iso,
+                        }
+                        data_to_send.append(data_dict)  # Add to list of this miner's prediction data
+                    except Exception as e:
+                        bt.logging.trace(f"| {current_thread} | ❗Failed to process prediction: {e}")
 
                 bt.logging.trace(f"| {current_thread} | 🪲 Sending data for miner '{miner_hotkey}'")
                 self.website_communicator.send_data(data_to_send)  # Send all of this miner's synapse data to web server
@@ -200,7 +207,7 @@ class PredictionManager:
         """
         self.database_manager.query_and_commit_many(query_str, values)
 
-    def parse_iso_datetime(self, datetime_str: str):
+    def parse_iso_datetime(self, datetime_str: str) -> datetime or None:
         """
         Parses an ISO 8601 datetime string, handling strings that end with 'Z'.
         Returns a naive datetime object (without timezone info).
