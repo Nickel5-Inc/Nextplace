@@ -1,21 +1,22 @@
 import threading
-from typing import List, Tuple
+from typing import List
 import bittensor as bt
 from datetime import datetime, timezone
 from nextplace.protocol import RealEstatePredictions
 from nextplace.validator.utils.contants import ISO8601, build_miner_predictions_table_name
 from nextplace.validator.database.database_manager import DatabaseManager
+from nextplace.validator.website_data.website_communicator import WebsiteCommunicator
 
 """
 Helper class manages processing predictions from Miners
 """
-
 
 class PredictionManager:
 
     def __init__(self, database_manager: DatabaseManager, metagraph):
         self.database_manager = database_manager
         self.metagraph = metagraph
+        self.website_communicator = WebsiteCommunicator("Predictions")
 
     def process_predictions(self, responses: List[RealEstatePredictions], valid_synapse_ids: set[str]) -> None:
         """
@@ -34,6 +35,10 @@ class PredictionManager:
         if responses is None or len(responses) == 0:
             bt.logging.trace(f'| {current_thread} | ❗No responses received')
             return
+
+        # Start thread to send prediction data to web server
+        sender_thread = threading.Thread(target=self._send_predictions, args=(responses,), name="🛰 PredictionsTransmitter 🛰")
+        sender_thread.start()
 
         current_utc_datetime = datetime.now(timezone.utc)
         timestamp = current_utc_datetime.strftime(ISO8601)
@@ -92,6 +97,55 @@ class PredictionManager:
 
         self._track_miners(valid_hotkeys)
 
+    def _send_predictions(self, predictions: List[RealEstatePredictions]) -> None:
+        """
+        RUN IN THREAD
+        Batch & send predictions to web server
+        Args:
+            predictions: list of predictions
+
+        Returns:
+            None
+        """
+        current_thread = threading.current_thread().name
+        bt.logging.trace(f"| {current_thread} | 🏄 Starting thread")
+
+        # Iterate responses
+        for uid, real_estate_predictions in enumerate(predictions):  # Iterate responses
+            try:
+
+                # Check & extract hotkey
+                miner_hotkey = self.metagraph.hotkeys[uid]
+                if miner_hotkey is None:
+                    continue
+
+                data_to_send: list[dict] = []
+
+                # Iterate predictions for this miner
+                for prediction in real_estate_predictions.predictions:
+                    predicted_sale_date = prediction.predicted_sale_date
+                    prediction_date = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%S")
+                    predicted_sale_date_parsed = self.parse_iso_datetime(predicted_sale_date) if isinstance(predicted_sale_date, str) else predicted_sale_date
+
+                    # Build data object, store it
+                    data_dict = {
+                        "nextplaceId": prediction.nextplace_id,
+                        "minerHotKey": miner_hotkey,
+                        "minerColdKey": "",
+                        "predictionScore": -1,  # ToDo We should probably set this to `None` to indicate that it has not been scored yet, but need to update web server first
+                        "predictionDate": prediction_date,
+                        "predictedSalePrice": prediction.predicted_sale_price,
+                        "predictedSaleDate": predicted_sale_date_parsed,
+                    }
+                    data_to_send.append(data_dict)  # Add to list of this miner's prediction data
+
+                self.website_communicator.send_data(data_to_send)  # Send all of this miner's synapse data to web server
+
+            except Exception as e:
+                bt.logging.trace(f"| {current_thread} | ❗Failed to process prediction: {e}")
+        bt.logging.trace(f"| {current_thread} | 🛑 Finished sending synapse predictions.")
+
+
     def _track_miners(self, valid_hotkeys: set[str]) -> None:
         formatted = [(x,) for x in valid_hotkeys]
         query_str = """
@@ -144,3 +198,20 @@ class PredictionManager:
             VALUES (?, ?, ?, ?, ?, ?)
         """
         self.database_manager.query_and_commit_many(query_str, values)
+
+    def parse_iso_datetime(self, datetime_str: str):
+        """
+        Parses an ISO 8601 datetime string, handling strings that end with 'Z'.
+        Returns a naive datetime object (without timezone info).
+        """
+        thread_name = threading.current_thread().name
+        try:
+            if datetime_str.endswith('Z'):
+                datetime_str = datetime_str.rstrip('Z')
+                dt = datetime.strptime(datetime_str, '%Y-%m-%dT%H:%M:%S')
+                return dt
+            else:
+                return datetime.fromisoformat(datetime_str)
+        except ValueError as e:
+            bt.logging.info(f"| {thread_name} | ❗ Error in sending data. Trying to parse datetime string '{datetime_str}': {e}")
+            return None
