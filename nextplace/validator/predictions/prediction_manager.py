@@ -136,7 +136,7 @@ class PredictionManager:
                         data_dict = {
                             "nextplaceId": prediction.nextplace_id,
                             "minerHotKey": miner_hotkey,
-                            "minerColdKey": "",
+                            "minerColdKey": "DummyColdKey",
                             "predictionScore": -1,  # ToDo We should probably set this to `None` to indicate that it has not been scored yet, but need to update web server first
                             "predictionDate": prediction_date_iso,
                             "predictedSalePrice": prediction.predicted_sale_price,
