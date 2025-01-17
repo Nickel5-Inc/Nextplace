@@ -139,6 +139,7 @@ class PredictionManager:
                     }
                     data_to_send.append(data_dict)  # Add to list of this miner's prediction data
 
+                bt.logging.trace(f"| {current_thread} | 🪲 Sending data for miner '{miner_hotkey}'")
                 self.website_communicator.send_data(data_to_send)  # Send all of this miner's synapse data to web server
 
             except Exception as e:
