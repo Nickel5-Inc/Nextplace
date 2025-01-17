@@ -121,6 +121,7 @@ class PredictionManager:
                     continue
 
                 data_to_send: list[dict] = []
+                bt.logging.trace(f"| {current_thread} | 🔨 Building data for miner '{miner_hotkey}'")
 
                 # Iterate predictions for this miner
                 for prediction in real_estate_predictions.predictions:
@@ -129,9 +130,11 @@ class PredictionManager:
                         if predicted_sale_date is None or prediction.predicted_sale_price is None:
                             continue
 
-                        bt.logging.trace(f"| {current_thread} | 🔨 Building data for miner '{miner_hotkey}'")
                         prediction_date = datetime.utcnow()
                         predicted_sale_date_parsed = self.parse_iso_datetime(predicted_sale_date)
+
+                        if predicted_sale_date_parsed is None:
+                            continue
 
                         prediction_date_iso = prediction_date.strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3] + 'Z'
                         predicted_sale_date_iso = predicted_sale_date_parsed.strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3] + 'Z'
