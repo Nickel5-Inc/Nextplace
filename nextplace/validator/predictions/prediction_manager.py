@@ -11,7 +11,7 @@ from nextplace.validator.website_data.website_communicator import WebsiteCommuni
 Helper class manages processing predictions from Miners
 """
 
-BATCH_SIZE = 50000
+BATCH_SIZE = 10000
 
 
 class PredictionManager:
@@ -73,12 +73,14 @@ class PredictionManager:
                     if prediction is None or prediction.predicted_sale_price is None or prediction.predicted_sale_date is None:
                         continue
 
+                    # Format data for web server
                     try:
+                        # Format predicted sale price
                         predicted_sale_date_parsed = self.parse_iso_datetime(prediction.predicted_sale_date)
                         if predicted_sale_date_parsed is not None:
                             predicted_sale_date_iso = predicted_sale_date_parsed.strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3] + 'Z'
 
-                            # Build data object, store it
+                            # Build data object
                             data_dict = {
                                 "nextplaceId": prediction.nextplace_id,
                                 "minerHotKey": miner_hotkey,
@@ -88,7 +90,7 @@ class PredictionManager:
                                 "predictedSalePrice": prediction.predicted_sale_price,
                                 "predictedSaleDate": predicted_sale_date_iso,
                             }
-                            data_to_send.append(data_dict)
+                            data_to_send.append(data_dict)  # Store formatted data
                     except Exception as e:
                         bt.logging.trace(f"| {current_thread} | ❗Failed to build data for web server: {e}")
 
@@ -115,7 +117,7 @@ class PredictionManager:
                     self._handle_ingestion('REPLACE', replace_policy_data_for_ingestion, table_name)
 
             except Exception as e:
-                bt.logging.trace(f"| {current_thread} | ❗Failed to process prediction: {e}")
+                bt.logging.trace(f"| {current_thread} | ❗Failed to process miner's predictions: {e}")
 
         # Start thread to send prediction data to web server
         sender_thread = threading.Thread(target=self._send_batches, args=(data_to_send,), name="🛰 PredictionsTransmitter 🛰")
