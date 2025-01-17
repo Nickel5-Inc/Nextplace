@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 from nextplace.protocol import RealEstatePredictions
 from nextplace.validator.utils.contants import ISO8601, build_miner_predictions_table_name
 from nextplace.validator.database.database_manager import DatabaseManager
-from nextplace.validator.website_data.website_communicator import WebsiteCommunicator
+import queue
 
 """
 Helper class manages processing predictions from Miners
@@ -16,10 +16,10 @@ BATCH_SIZE = 10000
 
 class PredictionManager:
 
-    def __init__(self, database_manager: DatabaseManager, metagraph):
+    def __init__(self, database_manager: DatabaseManager, metagraph, predictions_queue: queue.LifoQueue):
         self.database_manager = database_manager
         self.metagraph = metagraph
-        self.website_communicator = WebsiteCommunicator("Predictions", suppress_errors=True)
+        self.predictions_queue = predictions_queue
 
     def process_predictions(self, responses: List[RealEstatePredictions], valid_synapse_ids: set[str]) -> None:
         """
@@ -43,7 +43,6 @@ class PredictionManager:
         timestamp = current_utc_datetime.strftime(ISO8601)
         valid_hotkeys = set()
 
-        data_to_send: list[dict] = []
         prediction_date = datetime.utcnow()
         prediction_date_iso = prediction_date.strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3] + 'Z'
 
@@ -90,7 +89,7 @@ class PredictionManager:
                                 "predictedSalePrice": prediction.predicted_sale_price,
                                 "predictedSaleDate": predicted_sale_date_iso,
                             }
-                            data_to_send.append(data_dict)  # Store formatted data
+                            self.predictions_queue.put(data_dict)  # Store formatted data
                     except Exception as e:
                         bt.logging.trace(f"| {current_thread} | ❗Failed to build data for web server: {e}")
 
@@ -119,30 +118,8 @@ class PredictionManager:
             except Exception as e:
                 bt.logging.trace(f"| {current_thread} | ❗Failed to process miner's predictions: {e}")
 
-        # Start thread to send prediction data to web server
-        sender_thread = threading.Thread(target=self._send_batches, args=(data_to_send,), name="🛰 PredictionsTransmitter 🛰")
-        sender_thread.start()
-
         # Track miners
         self._track_miners(valid_hotkeys)
-
-    def _send_batches(self, all_predictions: List[dict]) -> None:
-        """
-        RUN IN THREAD
-        Batch and send the formatted predictions
-        Args:
-            all_predictions: Formatted predictions
-
-        Returns:
-            None
-        """
-        current_thread = threading.current_thread().name
-        batches = [all_predictions[i:i + BATCH_SIZE] for i in range(0, len(all_predictions), BATCH_SIZE)]
-        bt.logging.trace(f"| {current_thread} | 🏭 Generated {len(batches)} batches from {len(all_predictions)} predictions using batch size {BATCH_SIZE}")
-        for batch in batches:
-            self.website_communicator.send_data(batch)
-        bt.logging.trace(f"| {current_thread} | ✅ All batches sent.")
-
 
     def _track_miners(self, valid_hotkeys: set[str]) -> None:
         formatted = [(x,) for x in valid_hotkeys]
