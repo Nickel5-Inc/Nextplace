@@ -4,7 +4,7 @@ from nextplace.validator.website_data.website_communicator import WebsiteCommuni
 import queue
 from time import sleep
 
-MAX_BATCH_SIZE = 50000
+MAX_BATCH_SIZE = 100000
 
 
 class ActivePredictionSender:
