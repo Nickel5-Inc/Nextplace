@@ -26,8 +26,8 @@ class ActivePredictionSender:
                     batch.append(item)  # Put item into the batch
                     self.data_queue.task_done()  # Mark item as processed
 
-                # Send the batch after collecting enough items
-                self.website_communicator.send_data(batch)
+                # Send the batch asynchronously after collecting enough items
+                self.website_communicator.send_data_async(batch)
 
             except queue.Empty:
                 bt.logging.trace(f"| {current_thread} | Predictions queue was found empty, waiting...")
