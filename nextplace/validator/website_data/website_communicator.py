@@ -75,7 +75,7 @@ class WebsiteCommunicator:
                         }
                 ) as response:
                     response_text = await response.text()
-                    if response.status == 200:
+                    if response.status == 200 or response.status == 201:
                         bt.logging.info(f"| {current_thread} | ✅ Data sent to Nextplace web server successfully.")
                     else:
                         if not self.suppress_errors:
