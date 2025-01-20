@@ -1,5 +1,4 @@
 import threading
-import bittensor as bt
 from nextplace.validator.website_data.website_communicator import WebsiteCommunicator
 import queue
 from time import sleep
@@ -9,6 +8,7 @@ MAX_BATCH_SIZE = 20000
 
 
 class ActivePredictionSender:
+
     def __init__(self, data_queue: queue.LifoQueue):
         self.website_communicator = WebsiteCommunicator('Predictions')
         self.data_queue = data_queue
@@ -23,8 +23,6 @@ class ActivePredictionSender:
         self.loop.run_forever()
 
     def run(self):
-        current_thread = threading.current_thread().name
-
         while self.running:  # Infinite loop
             batch = []  # Current batch
 
@@ -38,7 +36,6 @@ class ActivePredictionSender:
                 asyncio.run_coroutine_threadsafe(self.website_communicator.send_data_async(batch), self.loop)
 
             except queue.Empty:
-                bt.logging.trace(f"| {current_thread} | Predictions queue was found empty, waiting...")
                 sleep(5)  # Wait for items to populate the queue
                 continue
 
