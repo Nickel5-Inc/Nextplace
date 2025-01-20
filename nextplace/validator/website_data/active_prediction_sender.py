@@ -3,6 +3,7 @@ import bittensor as bt
 from nextplace.validator.website_data.website_communicator import WebsiteCommunicator
 import queue
 from time import sleep
+import asyncio
 
 MAX_BATCH_SIZE = 20000
 
@@ -27,7 +28,7 @@ class ActivePredictionSender:
                     self.data_queue.task_done()  # Mark item as processed
 
                 # Send the batch asynchronously after collecting enough items
-                self.website_communicator.send_data_async(batch)
+                asyncio.run(self.website_communicator.send_data_async(batch))
 
             except queue.Empty:
                 bt.logging.trace(f"| {current_thread} | Predictions queue was found empty, waiting...")
