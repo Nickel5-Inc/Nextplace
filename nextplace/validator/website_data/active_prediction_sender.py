@@ -13,12 +13,19 @@ class ActivePredictionSender:
         self.website_communicator = WebsiteCommunicator('Predictions')
         self.data_queue = data_queue
         self.running = True  # Flag for graceful shutdown
+        self.loop = asyncio.new_event_loop()  # Create a new event loop for async tasks
+        self.thread = threading.Thread(target=self.start_event_loop, daemon=True)
+        self.thread.start()
+
+    def start_event_loop(self):
+        """Run the asyncio event loop in a separate thread."""
+        asyncio.set_event_loop(self.loop)
+        self.loop.run_forever()
 
     def run(self):
         current_thread = threading.current_thread().name
 
         while self.running:  # Infinite loop
-
             batch = []  # Current batch
 
             try:
@@ -27,8 +34,8 @@ class ActivePredictionSender:
                     batch.append(item)  # Put item into the batch
                     self.data_queue.task_done()  # Mark item as processed
 
-                # Send the batch asynchronously after collecting enough items
-                asyncio.run(self.website_communicator.send_data_async(batch))
+                # Schedule the async call without blocking
+                asyncio.run_coroutine_threadsafe(self.website_communicator.send_data_async(batch), self.loop)
 
             except queue.Empty:
                 bt.logging.trace(f"| {current_thread} | Predictions queue was found empty, waiting...")
@@ -38,3 +45,6 @@ class ActivePredictionSender:
     def stop(self):
         """Gracefully stop the sender."""
         self.running = False
+        if self.loop.is_running():
+            self.loop.call_soon_threadsafe(self.loop.stop)
+        self.thread.join()
