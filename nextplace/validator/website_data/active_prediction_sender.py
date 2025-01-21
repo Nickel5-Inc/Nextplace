@@ -14,7 +14,7 @@ class ActivePredictionSender:
         self.data_queue = data_queue
         self.running = True  # Flag for graceful shutdown
         self.loop = asyncio.new_event_loop()  # Create a new event loop for async tasks
-        self.thread = threading.Thread(target=self.start_event_loop, daemon=True)
+        self.thread = threading.Thread(target=self.start_event_loop, daemon=True, name="🧶 PredictionSenderEventLoop 🧶")
         self.thread.start()
 
     def start_event_loop(self):

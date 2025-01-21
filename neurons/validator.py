@@ -41,6 +41,10 @@ async def main(validator):
                 thread = threading.Thread(target=validator.miner_manager.manage_miner_data, name="📋 MinerManagementThread 📋")
                 thread.start()
 
+            if step % 50 == 0:  # Send score data to website
+                thread = threading.Thread(target=validator.miner_score_sender.send_miner_scores_to_website, name="🌊 MinerScoresToWebsiteThread 🌊")
+                thread.start()
+
             # Check if threads are alive, restart if not
             if step % 75 == 0:
                 scoring_thread_is_alive = validator.is_thread_running(SCORE_THREAD_NAME)
@@ -54,12 +58,6 @@ async def main(validator):
                     bt.logging.info(f"| {current_thread} | ☢️ PredictionSender was found not running, restarting it...")
                     prediction_thread = threading.Thread(target=validator.prediction_sender.run, name=PREDICTION_SENDER_THREAD_NAME)
                     prediction_thread.start()
-
-
-
-            if step % 100 == 0:  # Send score data to website
-                thread = threading.Thread(target=validator.miner_score_sender.send_miner_scores_to_website, name="🌊 MinerScoresToWebsiteThread 🌊")
-                thread.start()
 
             if step >= 1000:  # Reset the step
                 step = 1
