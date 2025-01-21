@@ -54,7 +54,7 @@ class WebsiteCommunicator:
             None
         """
         current_thread = threading.current_thread().name
-        bt.logging.info(f"| {current_thread} | Trying to send {len(data)} datapoints to the web server asynchronously.")
+        bt.logging.info(f"| {current_thread} | 🛰 Trying to send {len(data)} datapoints to the web server asynchronously.")
 
         async with aiohttp.ClientSession() as session:
             try:
