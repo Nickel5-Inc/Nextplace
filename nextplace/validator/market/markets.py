@@ -514,5 +514,121 @@ real_estate_markets = [
     {
         "name": "Sparks",
         "id": "6_17527"
+    },
+    {
+        "name": "Kissimmee",
+        "id": "6_9399"
+    },
+    {
+        "name": "Conroe",
+        "id": "6_4274"
+    },
+    {
+        "name": "West Palm Beach",
+        "id": "6_19373"
+    },
+    {
+        "name": "Miami Beach",
+        "id": "6_11467"
+    },
+    {
+        "name": "Hollywood",
+        "id": "6_8176"
+    },
+    {
+        "name": "Palm Bay",
+        "id": "6_13979"
+    },
+    {
+        "name": "Lubbock",
+        "id": "6_11455"
+    },
+    {
+        "name": "Delray Beach",
+        "id": "6_4456"
+    },
+    {
+        "name": "Boynton Beach",
+        "id": "6_2034"
+    },
+    {
+        "name": "Amarillo",
+        "id": "6_779"
+    },
+    {
+        "name": "Daytona Beach",
+        "id": "6_4302"
+    },
+    {
+        "name": "Pompano Beach",
+        "id": "6_15042"
+    },
+    {
+        "name": "McKinney",
+        "id": "6_11666"
+    },
+    {
+        "name": "Pueblo",
+        "id": "6_15932"
+    },
+    {
+        "name": "Galveston",
+        "id": "6_7178"
+    },
+    {
+        "name": "Albuquerque",
+        "id": "6_513"
+    },
+    {
+        "name": "Buckeye",
+        "id": "6_2047"
+    },
+    {
+        "name": "Columbia",
+        "id": "6_4149"
+    },
+    {
+        "name": "Chattanooga",
+        "id": "6_3641"
+    },
+    {
+        "name": "Lincoln",
+        "id": "6_7163"
+    },
+    {
+        "name": "Melbourne",
+        "id": "6_11199"
+    },
+    {
+        "name": "Prescott",
+        "id": "6_14874"
+    },
+    {
+        "name": "Peoria",
+        "id": "6_14000"
+    },
+    {
+        "name": "Fayetteville",
+        "id": "6_5903"
+    },
+    {
+        "name": "Maricopa",
+        "id": "6_11323"
+    },
+    {
+        "name": "Boston",
+        "id": "6_1826"
+    },
+    {
+        "name": "Mission",
+        "id": "6_12485"
+    },
+    {
+        "name": "Killeen",
+        "id": "6_9939"
+    },
+    {
+        "name": "Montgomery",
+        "id": "6_13134"
     }
 ]
