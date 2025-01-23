@@ -1,5 +1,5 @@
 """
-Current real estate markets we're supporting
+Current markets we're supporting
 """
 
 real_estate_markets = [
