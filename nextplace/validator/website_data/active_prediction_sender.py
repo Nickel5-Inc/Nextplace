@@ -4,7 +4,7 @@ import queue
 from time import sleep
 import asyncio
 
-MAX_BATCH_SIZE = 20000
+MAX_BATCH_SIZE = 500
 
 
 class ActivePredictionSender:
