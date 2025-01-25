@@ -10,10 +10,11 @@ from nextplace.validator.predictions.prediction_manager import PredictionManager
 from nextplace.validator.scoring.scoring import Scorer
 from nextplace.validator.synapse.synapse_manager import SynapseManager
 from nextplace.validator.setting_weights.weights import WeightSetter
+from nextplace.validator.website_data.active_prediction_sender import ActivePredictionSender
 from nextplace.validator.website_data.miner_score_sender import MinerScoreSender
 from template.base.validator import BaseValidatorNeuron
 import threading
-import asyncio
+import queue
 
 PROPERTIES_THREAD_NAME = "🏠 PropertiesThread 🏠"
 
@@ -21,6 +22,8 @@ PROPERTIES_THREAD_NAME = "🏠 PropertiesThread 🏠"
 class RealEstateValidator(BaseValidatorNeuron):
     def __init__(self, config=None):
         super(RealEstateValidator, self).__init__(config=config)
+        self.predictions_queue = queue.LifoQueue()
+
         self.subtensor = bt.subtensor(config=self.config)
         self.markets = real_estate_markets
         self.database_manager = DatabaseManager()
@@ -29,12 +32,13 @@ class RealEstateValidator(BaseValidatorNeuron):
         self.market_manager = MarketManager(self.database_manager, self.markets)
         self.scorer = Scorer(self.database_manager, self.markets, self.metagraph)
         self.synapse_manager = SynapseManager(self.database_manager)
-        self.prediction_manager = PredictionManager(self.database_manager, self.metagraph)
+        self.prediction_manager = PredictionManager(self.database_manager, self.metagraph, self.predictions_queue)
         self.netuid = self.config.netuid
         self.should_step = True
         self.current_thread = threading.current_thread().name
         self.miner_manager = MinerManager(self.database_manager, self.metagraph)
         self.miner_score_sender = MinerScoreSender(self.database_manager)
+        self.prediction_sender = ActivePredictionSender(self.predictions_queue)
 
         self.weight_setter = WeightSetter(
             metagraph=self.metagraph,

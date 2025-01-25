@@ -10,6 +10,7 @@ import os
 from nextplace.validator.website_data.website_communicator import WebsiteCommunicator
 
 SCORE_THREAD_NAME = "🏋🏻 ScoreThread 🏋"
+PREDICTION_SENDER_THREAD_NAME = "🛰 PredictionsTransmitter 🛰"
 
 
 async def main(validator):
@@ -20,6 +21,10 @@ async def main(validator):
     # Start the scoring thread
     scoring_thread = threading.Thread(target=validator.scorer.run_score_thread, name=SCORE_THREAD_NAME)
     scoring_thread.start()
+
+    # Start the prediction sender thread
+    prediction_sender_thread = threading.Thread(target=validator.prediction_sender.run, name=PREDICTION_SENDER_THREAD_NAME)
+    prediction_sender_thread.start()
 
     while True:
         validator.should_step = True
@@ -36,16 +41,23 @@ async def main(validator):
                 thread = threading.Thread(target=validator.miner_manager.manage_miner_data, name="📋 MinerManagementThread 📋")
                 thread.start()
 
-            if step % 75 == 0:  # Check that the scoring thread is running, if not, start it up
+            if step % 50 == 0:  # Send score data to website
+                thread = threading.Thread(target=validator.miner_score_sender.send_miner_scores_to_website, name="🌊 MinerScoresToWebsiteThread 🌊")
+                thread.start()
+
+            # Check if threads are alive, restart if not
+            if step % 75 == 0:
                 scoring_thread_is_alive = validator.is_thread_running(SCORE_THREAD_NAME)
                 if not scoring_thread_is_alive:
                     bt.logging.info(f"| {current_thread} | ☢️ ScoreThread was found not running, restarting it...")
                     scoring_thread = threading.Thread(target=validator.scorer.run_score_thread, name=SCORE_THREAD_NAME)
                     scoring_thread.start()
 
-            if step % 100 == 0:  # Send score data to website
-                thread = threading.Thread(target=validator.miner_score_sender.send_miner_scores_to_website, name="🌊 MinerScoresToWebsiteThread 🌊")
-                thread.start()
+                prediction_sender_thread_is_alive = validator.is_thread_running(PREDICTION_SENDER_THREAD_NAME)
+                if not prediction_sender_thread_is_alive:
+                    bt.logging.info(f"| {current_thread} | ☢️ PredictionSender was found not running, restarting it...")
+                    prediction_thread = threading.Thread(target=validator.prediction_sender.run, name=PREDICTION_SENDER_THREAD_NAME)
+                    prediction_thread.start()
 
             if step >= 1000:  # Reset the step
                 step = 1

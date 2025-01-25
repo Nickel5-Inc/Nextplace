@@ -1,21 +1,25 @@
 import threading
-from typing import List, Tuple
+from typing import List
 import bittensor as bt
 from datetime import datetime, timezone
 from nextplace.protocol import RealEstatePredictions
 from nextplace.validator.utils.contants import ISO8601, build_miner_predictions_table_name
 from nextplace.validator.database.database_manager import DatabaseManager
+import queue
 
 """
 Helper class manages processing predictions from Miners
 """
 
+BATCH_SIZE = 10000
+
 
 class PredictionManager:
 
-    def __init__(self, database_manager: DatabaseManager, metagraph):
+    def __init__(self, database_manager: DatabaseManager, metagraph, predictions_queue: queue.LifoQueue):
         self.database_manager = database_manager
         self.metagraph = metagraph
+        self.predictions_queue = predictions_queue
 
     def process_predictions(self, responses: List[RealEstatePredictions], valid_synapse_ids: set[str]) -> None:
         """
@@ -38,6 +42,9 @@ class PredictionManager:
         current_utc_datetime = datetime.now(timezone.utc)
         timestamp = current_utc_datetime.strftime(ISO8601)
         valid_hotkeys = set()
+
+        prediction_date = datetime.utcnow()
+        prediction_date_iso = prediction_date.strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3] + 'Z'
 
         for idx, real_estate_predictions in enumerate(responses):  # Iterate responses
 
@@ -65,6 +72,27 @@ class PredictionManager:
                     if prediction is None or prediction.predicted_sale_price is None or prediction.predicted_sale_date is None:
                         continue
 
+                    # Format data for web server
+                    try:
+                        # Format predicted sale price
+                        predicted_sale_date_parsed = self.parse_iso_datetime(prediction.predicted_sale_date)
+                        if predicted_sale_date_parsed is not None:
+                            predicted_sale_date_iso = predicted_sale_date_parsed.strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3] + 'Z'
+
+                            # Build data object
+                            data_dict = {
+                                "nextplaceId": prediction.nextplace_id,
+                                "minerHotKey": miner_hotkey,
+                                "minerColdKey": "DummyColdKey",
+                                "predictionScore": -1,  # ToDo We should probably set this to `None` to indicate that it has not been scored yet, but need to update web server first
+                                "predictionDate": prediction_date_iso,
+                                "predictedSalePrice": prediction.predicted_sale_price,
+                                "predictedSaleDate": predicted_sale_date_iso,
+                            }
+                            self.predictions_queue.put(data_dict)  # Store formatted data
+                    except Exception as e:
+                        bt.logging.trace(f"| {current_thread} | ❗Failed to build data for web server: {e}")
+
                     values = (
                         prediction.nextplace_id,
                         miner_hotkey,
@@ -88,8 +116,9 @@ class PredictionManager:
                     self._handle_ingestion('REPLACE', replace_policy_data_for_ingestion, table_name)
 
             except Exception as e:
-                bt.logging.trace(f"| {current_thread} | ❗Failed to process prediction: {e}")
+                bt.logging.trace(f"| {current_thread} | ❗Failed to process miner's predictions: {e}")
 
+        # Track miners
         self._track_miners(valid_hotkeys)
 
     def _track_miners(self, valid_hotkeys: set[str]) -> None:
@@ -144,3 +173,19 @@ class PredictionManager:
             VALUES (?, ?, ?, ?, ?, ?)
         """
         self.database_manager.query_and_commit_many(query_str, values)
+
+    def parse_iso_datetime(self, datetime_str: str) -> datetime or None:
+        """
+        Parses an ISO 8601 datetime string, handling strings that end with 'Z'.
+        Returns a naive datetime object (without timezone info).
+        """
+        thread_name = threading.current_thread().name
+        try:
+            if datetime_str.endswith('Z'):
+                datetime_str = datetime_str.rstrip('Z')
+                dt = datetime.strptime(datetime_str, '%Y-%m-%dT%H:%M:%S')
+                return dt
+            else:
+                return datetime.fromisoformat(datetime_str)
+        except ValueError as e:
+            return None
