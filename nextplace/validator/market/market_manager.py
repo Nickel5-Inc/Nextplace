@@ -63,14 +63,16 @@ class MarketManager:
         market_index = self._find_initial_market_index()
         
         # Keep at least (x) synapses worth of properties in the table at all times
-        number_of_stored_synapse_data_items = 5
-        min_properties_table_size = NUMBER_OF_PROPERTIES_PER_SYNAPSE * number_of_stored_synapse_data_items
+        number_of_synapses = 5
+        min_properties_table_size = NUMBER_OF_PROPERTIES_PER_SYNAPSE * number_of_synapses
         
         while True:
             
             # Get size of properties table
             with self.database_manager.lock:
                 size_of_properties_table = self.database_manager.get_size_of_table('properties')
+
+            bt.logging.info(f"| {current_thread} | {size_of_properties_table} items in property table")
                 
             # If size is less than our min, get more properties
             if size_of_properties_table < min_properties_table_size:
