@@ -78,7 +78,7 @@ class RealEstateValidator(BaseValidatorNeuron):
                 return True
         return False
 
-    async def forward(self, step: int) -> None:
+    def forward(self, step: int) -> None:
         """
         Forward pass
         Returns:

@@ -1,6 +1,5 @@
 import time
 import argparse
-import asyncio
 import bittensor as bt
 import threading
 import traceback
@@ -14,7 +13,7 @@ PREDICTION_SENDER_THREAD_NAME = "🛰 PredictionsTransmitter 🛰"
 PROPERTIES_THREAD_NAME = "🏠 PropertiesThread 🏠"
 
 
-async def main(validator):
+def main(validator):
     get_and_send_version()
     step = 1  # Initialize step
     current_thread = threading.current_thread().name
@@ -40,7 +39,7 @@ async def main(validator):
                 validator.check_timer_set_weights()
 
             validator.sync_metagraph()  # Sync metagraph
-            await validator.forward(step)  # Get predictions from the Miners
+            validator.forward(step)  # Get predictions from the Miners
 
             if step % 10 == 0:  # Check if any registrations/deregistrations have happened, make necessary updates
                 thread = threading.Thread(target=validator.miner_manager.manage_miner_data, name="📋 MinerManagementThread 📋")
@@ -50,25 +49,8 @@ async def main(validator):
                 thread = threading.Thread(target=validator.miner_score_sender.send_miner_scores_to_website, name="🌊 MinerScoresToWebsiteThread 🌊")
                 thread.start()
 
-            # Check if threads are alive, restart if not
-            if step % 75 == 0:
-                scoring_thread_is_alive = validator.is_thread_running(SCORE_THREAD_NAME)
-                if not scoring_thread_is_alive:
-                    bt.logging.info(f"| {current_thread} | ☢️ ScoreThread was found not running, restarting it...")
-                    scoring_thread = threading.Thread(target=validator.scorer.run_score_thread, name=SCORE_THREAD_NAME)
-                    scoring_thread.start()
-
-                properties_thread_is_alive = validator.is_thread_running(PROPERTIES_THREAD_NAME)
-                if not properties_thread_is_alive:
-                    bt.logging.info(f"| {current_thread} | ☢️ PropertiesThread was found not running, restarting it...")
-                    properties_thread = threading.Thread(target=validator.market_manager.ingest_properties, name=PROPERTIES_THREAD_NAME)
-                    properties_thread.start()
-
-                prediction_sender_thread_is_alive = validator.is_thread_running(PREDICTION_SENDER_THREAD_NAME)
-                if not prediction_sender_thread_is_alive:
-                    bt.logging.info(f"| {current_thread} | ☢️ PredictionSender was found not running, restarting it...")
-                    prediction_thread = threading.Thread(target=validator.prediction_sender.run, name=PREDICTION_SENDER_THREAD_NAME)
-                    prediction_thread.start()
+            if step % 75 == 0:  # Check if threads are alive, restart if not
+                _check_restart_threads(validator)
 
             if step >= 1000:  # Reset the step
                 step = 1
@@ -84,6 +66,26 @@ async def main(validator):
             stack_trace = traceback.format_exc()
             bt.logging.error(f"| {current_thread} | Stack Trace: {stack_trace}")
             time.sleep(10)
+
+def _check_restart_threads(validator):
+    current_thread = threading.current_thread().name
+    scoring_thread_is_alive = validator.is_thread_running(SCORE_THREAD_NAME)
+    if not scoring_thread_is_alive:
+        bt.logging.info(f"| {current_thread} | ☢️ ScoreThread was found not running, restarting it...")
+        scoring_thread = threading.Thread(target=validator.scorer.run_score_thread, name=SCORE_THREAD_NAME)
+        scoring_thread.start()
+
+    properties_thread_is_alive = validator.is_thread_running(PROPERTIES_THREAD_NAME)
+    if not properties_thread_is_alive:
+        bt.logging.info(f"| {current_thread} | ☢️ PropertiesThread was found not running, restarting it...")
+        properties_thread = threading.Thread(target=validator.market_manager.ingest_properties, name=PROPERTIES_THREAD_NAME)
+        properties_thread.start()
+
+    prediction_sender_thread_is_alive = validator.is_thread_running(PREDICTION_SENDER_THREAD_NAME)
+    if not prediction_sender_thread_is_alive:
+        bt.logging.info(f"| {current_thread} | ☢️ PredictionSender was found not running, restarting it...")
+        prediction_thread = threading.Thread(target=validator.prediction_sender.run, name=PREDICTION_SENDER_THREAD_NAME)
+        prediction_thread.start()
 
 def get_and_send_version():
     current_thread = threading.current_thread().name
@@ -107,4 +109,4 @@ if __name__ == "__main__":
 
     config = bt.config(parser)  # Build config object
     validator_instance = RealEstateValidator(config)  # Initialize the validator
-    asyncio.run(main(validator_instance))  # Run the main loop
+    main(validator_instance)  # Run the main loop
