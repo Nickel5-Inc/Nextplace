@@ -88,10 +88,11 @@ class RealEstateValidator(BaseValidatorNeuron):
 
         with self.database_manager.lock:
             synapse: RealEstateSynapse or None = self.synapse_manager.get_synapse()  # Prepare data for miners
-            if synapse is None or len(synapse.real_estate_predictions.predictions) == 0:  # No data in Properties table yet
-                bt.logging.trace(f"| {self.current_thread} | ↻ No data in Synapse. Waiting for PropertiesThread to update the Properties table.")
-                self.should_step = False
-                return
+
+        if synapse is None or len(synapse.real_estate_predictions.predictions) == 0:  # No data in Properties table yet
+            bt.logging.trace(f"| {self.current_thread} | ↻ No data in Synapse. Waiting for PropertiesThread to update the Properties table.")
+            self.should_step = False
+            return
 
         # Get list of all nextplace IDs in this synapse
         synapse_ids = set([x.nextplace_id for x in synapse.real_estate_predictions.predictions])
