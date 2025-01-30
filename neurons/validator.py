@@ -11,6 +11,7 @@ from nextplace.validator.website_data.website_communicator import WebsiteCommuni
 
 SCORE_THREAD_NAME = "🏋🏻 ScoreThread 🏋"
 PREDICTION_SENDER_THREAD_NAME = "🛰 PredictionsTransmitter 🛰"
+PROPERTIES_THREAD_NAME = "🏠 PropertiesThread 🏠"
 
 
 async def main(validator):
@@ -21,6 +22,10 @@ async def main(validator):
     # Start the scoring thread
     scoring_thread = threading.Thread(target=validator.scorer.run_score_thread, name=SCORE_THREAD_NAME)
     scoring_thread.start()
+
+    # Start the properties thread
+    properties_thread = threading.Thread(target=validator.market_manager.ingest_properties, name=PROPERTIES_THREAD_NAME)
+    properties_thread.start()
 
     # Start the prediction sender thread
     prediction_sender_thread = threading.Thread(target=validator.prediction_sender.run, name=PREDICTION_SENDER_THREAD_NAME)
@@ -52,6 +57,12 @@ async def main(validator):
                     bt.logging.info(f"| {current_thread} | ☢️ ScoreThread was found not running, restarting it...")
                     scoring_thread = threading.Thread(target=validator.scorer.run_score_thread, name=SCORE_THREAD_NAME)
                     scoring_thread.start()
+
+                properties_thread_is_alive = validator.is_thread_running(PROPERTIES_THREAD_NAME)
+                if not properties_thread_is_alive:
+                    bt.logging.info(f"| {current_thread} | ☢️ PropertiesThread was found not running, restarting it...")
+                    properties_thread = threading.Thread(target=validator.market_manager.ingest_properties, name=PROPERTIES_THREAD_NAME)
+                    properties_thread.start()
 
                 prediction_sender_thread_is_alive = validator.is_thread_running(PREDICTION_SENDER_THREAD_NAME)
                 if not prediction_sender_thread_is_alive:
