@@ -86,34 +86,23 @@ class RealEstateValidator(BaseValidatorNeuron):
         """
         bt.logging.info(f"| {self.current_thread} | ⏩ Running forward pass")
 
-        # Need database lock to handle synapse creation and prediction management
-        if not self.database_manager.lock.acquire(blocking=True, timeout=10):
-            # If the lock is held by another thread, wait for 10 seconds, if still not available, return
-            bt.logging.trace(f"| {self.current_thread} | 🍃 Another thread is holding the database_manager lock, waiting for that thread to complete. This is expected behavior 😊.")
-            self.should_step = False
-            time.sleep(10)
-            return
-
-        try:
+        with self.database_manager.lock:
             synapse: RealEstateSynapse or None = self.synapse_manager.get_synapse()  # Prepare data for miners
             if synapse is None or len(synapse.real_estate_predictions.predictions) == 0:  # No data in Properties table yet
                 bt.logging.trace(f"| {self.current_thread} | ↻ No data in Synapse. Waiting for PropertiesThread to update the Properties table.")
                 self.should_step = False
                 return
 
-            # Get list of all nextplace IDs in this synapse
-            synapse_ids = set([x.nextplace_id for x in synapse.real_estate_predictions.predictions])
+        # Get list of all nextplace IDs in this synapse
+        synapse_ids = set([x.nextplace_id for x in synapse.real_estate_predictions.predictions])
 
-            # Query the metagraph
-            all_responses = self.dendrite.query(
-                axons=self.metagraph.axons,
-                synapse=synapse,
-                deserialize=True,
-                timeout=SYNAPSE_TIMEOUT
-            )
+        # Query the metagraph
+        all_responses = self.dendrite.query(
+            axons=self.metagraph.axons,
+            synapse=synapse,
+            deserialize=True,
+            timeout=SYNAPSE_TIMEOUT
+        )
 
-            # Handle responses
-            self.prediction_manager.process_predictions(all_responses, synapse_ids)
-
-        finally:
-            self.database_manager.lock.release()  # Always release the lock
+        # Handle responses
+        self.prediction_manager.process_predictions(all_responses, synapse_ids)
