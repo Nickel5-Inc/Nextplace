@@ -19,13 +19,13 @@ async def main(validator):
     step = 1  # Initialize step
     current_thread = threading.current_thread().name
 
-    # Start the scoring thread
-    scoring_thread = threading.Thread(target=validator.scorer.run_score_thread, name=SCORE_THREAD_NAME)
-    scoring_thread.start()
-
     # Start the properties thread
     properties_thread = threading.Thread(target=validator.market_manager.ingest_properties, name=PROPERTIES_THREAD_NAME)
     properties_thread.start()
+
+    # Start the scoring thread
+    scoring_thread = threading.Thread(target=validator.scorer.run_score_thread, name=SCORE_THREAD_NAME)
+    scoring_thread.start()
 
     # Start the prediction sender thread
     prediction_sender_thread = threading.Thread(target=validator.prediction_sender.run, name=PREDICTION_SENDER_THREAD_NAME)
