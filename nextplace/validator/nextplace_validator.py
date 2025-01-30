@@ -95,16 +95,10 @@ class RealEstateValidator(BaseValidatorNeuron):
             return
 
         try:
-            # If we don't have any properties AND we aren't getting them yet, start thread to get properties
-            number_of_properties = self.database_manager.get_size_of_table('properties')
-            if number_of_properties == 0:
-                bt.logging.info(f"| {self.current_thread} | 🏘️ No properties in the properties table. PropertiesThread should be updating this table.")
+            synapse: RealEstateSynapse or None = self.synapse_manager.get_synapse()  # Prepare data for miners
+            if synapse is None or len(synapse.real_estate_predictions.predictions) == 0:  # No data in Properties table yet
+                bt.logging.trace(f"| {self.current_thread} | ↻ No data in Synapse. Waiting for PropertiesThread to update the Properties table.")
                 self.should_step = False
-                return
-
-            synapse: RealEstateSynapse = self.synapse_manager.get_synapse()  # Prepare data for miners
-            if synapse is None or len(synapse.real_estate_predictions.predictions) == 0:
-                bt.logging.trace(f"| {self.current_thread} | ↻ No data for Synapse, returning.")
                 return
 
             synapse_ids = set([x.nextplace_id for x in synapse.real_estate_predictions.predictions])
