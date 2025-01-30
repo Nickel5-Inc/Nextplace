@@ -101,8 +101,10 @@ class RealEstateValidator(BaseValidatorNeuron):
                 self.should_step = False
                 return
 
+            # Get list of all nextplace IDs in this synapse
             synapse_ids = set([x.nextplace_id for x in synapse.real_estate_predictions.predictions])
 
+            # Query the metagraph
             all_responses = self.dendrite.query(
                 axons=self.metagraph.axons,
                 synapse=synapse,
