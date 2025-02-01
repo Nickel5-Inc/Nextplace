@@ -128,7 +128,8 @@ class PredictionManager:
             (miner_hotkey)
             VALUES (?)
         """
-        self.database_manager.query_and_commit_many(query_str, formatted)
+        with self.database_manager.lock:
+            self.database_manager.query_and_commit_many(query_str, formatted)
 
     def _create_table_if_not_exists(self, table_name: str) -> None:
         """
@@ -152,9 +153,10 @@ class PredictionManager:
                 """
         idx_str = f"CREATE INDEX IF NOT EXISTS idx_prediction_timestamp ON {table_name}(prediction_timestamp)"
         idx_str_market = f"CREATE INDEX IF NOT EXISTS idx_market ON {table_name}(market)"
-        self.database_manager.query_and_commit(create_str)
-        self.database_manager.query_and_commit(idx_str)
-        self.database_manager.query_and_commit(idx_str_market)
+        with self.database_manager.lock:
+            self.database_manager.query_and_commit(create_str)
+            self.database_manager.query_and_commit(idx_str)
+            self.database_manager.query_and_commit(idx_str_market)
 
     def _handle_ingestion(self, conflict_policy: str, values: list[tuple], table_name: str) -> None:
         """
@@ -172,14 +174,14 @@ class PredictionManager:
             (nextplace_id, miner_hotkey, predicted_sale_price, predicted_sale_date, prediction_timestamp, market)
             VALUES (?, ?, ?, ?, ?, ?)
         """
-        self.database_manager.query_and_commit_many(query_str, values)
+        with self.database_manager.lock:
+            self.database_manager.query_and_commit_many(query_str, values)
 
     def parse_iso_datetime(self, datetime_str: str) -> datetime or None:
         """
         Parses an ISO 8601 datetime string, handling strings that end with 'Z'.
         Returns a naive datetime object (without timezone info).
         """
-        thread_name = threading.current_thread().name
         try:
             if datetime_str.endswith('Z'):
                 datetime_str = datetime_str.rstrip('Z')
@@ -187,5 +189,5 @@ class PredictionManager:
                 return dt
             else:
                 return datetime.fromisoformat(datetime_str)
-        except ValueError as e:
+        except ValueError:
             return None

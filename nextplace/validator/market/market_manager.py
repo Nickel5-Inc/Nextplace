@@ -2,6 +2,9 @@ import bittensor as bt
 from nextplace.validator.api.properties_api import PropertiesAPI
 from nextplace.validator.database.database_manager import DatabaseManager
 import threading
+from time import sleep
+
+from nextplace.validator.utils.contants import SYNAPSE_TIMEOUT, NUMBER_OF_PROPERTIES_PER_SYNAPSE
 
 """
 Helper class manages the real estate market
@@ -9,15 +12,11 @@ Helper class manages the real estate market
 
 
 class MarketManager:
+
     def __init__(self, database_manager: DatabaseManager, markets: list[dict[str, str]]):
         self.database_manager = database_manager
         self.markets = markets
         self.properties_api = PropertiesAPI(database_manager, markets)
-        self.lock = threading.RLock()  # Reentrant lock for thread safety
-        current_thread = threading.current_thread().name
-        initial_market_index = self._find_initial_market_index()
-        bt.logging.info(f"| {current_thread} | 🏁 Initial market index: {initial_market_index}")
-        self.market_index = initial_market_index  # Index into self.markets. The current market
 
     def _find_initial_market_index(self) -> int:
         """
@@ -42,6 +41,8 @@ class MarketManager:
         some_property = self.database_manager.query("""
             SELECT market
             FROM properties
+            ORDER BY query_date
+            DESC
             LIMIT 1
         """)
         if some_property:
@@ -51,17 +52,35 @@ class MarketManager:
         return 0
 
 
-    def get_properties_for_market(self) -> None:
+    def ingest_properties(self) -> None:
         """
         RUN IN THREAD
-        Hit the API, update the database
+        Populate the properties table with properties
         Returns:
             None
         """
-        current_thread = threading.current_thread().name
-        bt.logging.info(f"| {current_thread} | 🔑 No properties were found, getting the next market and updating properties")
-        current_market = self.markets[self.market_index]  # Extract market object
-        self.properties_api.process_region_market(current_market)  # Populate database with this market
-        with self.lock:  # Acquire lock
-            bt.logging.info(f"| {current_thread} | ✅ Finished ingesting properties in {current_market['name']}")
-            self.market_index = self.market_index + 1 if self.market_index < len(self.markets) - 1 else 0 # Wrap index around
+        current_thread = threading.current_thread().name  # Get thread name
+        market_index = self._find_initial_market_index()
+        
+        # Keep at least (x) synapses worth of properties in the table at all times
+        number_of_synapses = 5
+        min_properties_table_size = NUMBER_OF_PROPERTIES_PER_SYNAPSE * number_of_synapses
+        
+        while True:
+            
+            # Get size of properties table
+            with self.database_manager.lock:
+                size_of_properties_table = self.database_manager.get_size_of_table('properties')
+
+            bt.logging.info(f"| {current_thread} | {size_of_properties_table} items in property table")
+                
+            # If size is less than our min, get more properties
+            if size_of_properties_table < min_properties_table_size:
+                current_market = self.markets[market_index]  # Extract market object
+                self.properties_api.process_region_market(current_market)  # Populate database with this market
+                bt.logging.info(f"| {current_thread} | ✅ Finished ingesting properties in {current_market['name']}")
+                market_index = market_index + 1 if market_index < len(self.markets) - 1 else 0  # Wrap index around
+                
+            # If we're still good on size, just sleep until another synapse goes out
+            else:
+                sleep(SYNAPSE_TIMEOUT)

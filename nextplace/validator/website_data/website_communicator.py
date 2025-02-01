@@ -54,7 +54,6 @@ class WebsiteCommunicator:
             None
         """
         current_thread = threading.current_thread().name
-        bt.logging.info(f"| {current_thread} | 🛰 Trying to send {len(data)} datapoints to the web server asynchronously.")
 
         async with aiohttp.ClientSession() as session:
             try:
@@ -65,7 +64,7 @@ class WebsiteCommunicator:
                 ) as response:
                     response_text = await response.text()
                     if response.status == 200 or response.status == 201:
-                        bt.logging.info(f"| {current_thread} | ✅ Data sent to Nextplace web server successfully.")
+                        pass
                     else:
                         if not self.suppress_errors:
                             bt.logging.warning(

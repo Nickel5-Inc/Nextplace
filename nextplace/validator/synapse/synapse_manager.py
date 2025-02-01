@@ -59,8 +59,8 @@ class SynapseManager:
 
             real_estate_predictions = RealEstatePredictions(predictions=outgoing_data)
             synapse = RealEstateSynapse.create(real_estate_predictions=real_estate_predictions)
-            market_index = 20
-            market = property_data[0][market_index]
+            market_name_index = 20
+            market = property_data[0][market_name_index]
             bt.logging.trace(f"| {current_thread} | ✉️ Created Synapse with {len(outgoing_data)} properties in {market}")
             return synapse
 
