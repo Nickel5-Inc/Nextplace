@@ -7,6 +7,7 @@ from nextplace.validator.nextplace_validator import RealEstateValidator
 import configparser
 import os
 from nextplace.validator.website_data.website_communicator import WebsiteCommunicator
+import subprocess
 
 SCORE_THREAD_NAME = "🏋🏻 ScoreThread 🏋"
 PREDICTION_SENDER_THREAD_NAME = "🛰 PredictionsTransmitter 🛰"
@@ -14,6 +15,7 @@ PROPERTIES_THREAD_NAME = "🏠 PropertiesThread 🏠"
 
 
 def main(validator):
+    _print_btcli_version()
     get_and_send_version()
     step = 1  # Initialize step
     current_thread = threading.current_thread().name
@@ -66,6 +68,14 @@ def main(validator):
             stack_trace = traceback.format_exc()
             bt.logging.error(f"| {current_thread} | Stack Trace: {stack_trace}")
             time.sleep(10)
+
+def _print_btcli_version():
+    try:
+        result = subprocess.run(["btcli", "--version"], capture_output=True, text=True)
+        version = result.stdout.split("version:")[-1].strip()
+        bt.logging.trace(f"🕹️ Using btcli --version {version}")
+    except Exception as e:
+        bt.logging.trace(f"❗ Failed to find btcli version: {str(e)}")
 
 def _check_restart_threads(validator):
     current_thread = threading.current_thread().name
