@@ -72,7 +72,7 @@ def main(validator):
 def _print_btcli_version():
     try:
         result = subprocess.run(["btcli", "--version"], capture_output=True, text=True)
-        version = result.stdout.split(":")[-1].strip()
+        version = result.stdout.split("version:")[-1].strip()
         bt.logging.trace(f"🕹️ Using btcli --version {version}")
     except Exception as e:
         bt.logging.trace(f"❗ Failed to find btcli version: {str(e)}")
