@@ -7,6 +7,7 @@ from nextplace.validator.nextplace_validator import RealEstateValidator
 import configparser
 import os
 from nextplace.validator.website_data.website_communicator import WebsiteCommunicator
+import subprocess
 
 SCORE_THREAD_NAME = "🏋🏻 ScoreThread 🏋"
 PREDICTION_SENDER_THREAD_NAME = "🛰 PredictionsTransmitter 🛰"
@@ -14,6 +15,9 @@ PROPERTIES_THREAD_NAME = "🏠 PropertiesThread 🏠"
 
 
 def main(validator):
+    result = subprocess.run(["btcli", "--version"], capture_output=True, text=True)
+    bt.logging.trace(f"🕹️ Using bittensor version #{result}")
+
     get_and_send_version()
     step = 1  # Initialize step
     current_thread = threading.current_thread().name
