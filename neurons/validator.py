@@ -16,7 +16,8 @@ PROPERTIES_THREAD_NAME = "🏠 PropertiesThread 🏠"
 
 def main(validator):
     result = subprocess.run(["btcli", "--version"], capture_output=True, text=True)
-    bt.logging.trace(f"🕹️ Using bittensor version #{result}")
+    version = result.stdout.split(":")[-1].strip()
+    bt.logging.trace(f"🕹️ Using bittensor version #{version}")
 
     get_and_send_version()
     step = 1  # Initialize step
