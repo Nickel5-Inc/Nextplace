@@ -53,7 +53,7 @@ class Scorer:
                 self.sold_homes_api.get_sold_properties()  # Get recently sold homes
 
             miners = get_miner_hotkeys(self.metagraph)
-            bt.logging.trace(f"| {thread_name} | 🚀 Beginning metagraph hotkey iteration with {len(miners)} miners: {miners}")
+            bt.logging.trace(f"| {thread_name} | 🚀 Beginning metagraph hotkey iteration with {len(miners)} miner")
 
             for hotkey in miners:  # Iterate metagraph hotkeys
 
