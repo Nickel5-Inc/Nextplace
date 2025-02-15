@@ -8,5 +8,5 @@ SYNAPSE_TIMEOUT = 150
 def build_miner_predictions_table_name(miner_hotkey):
     return f"predictions_{miner_hotkey}"
 
-def get_miner_uids_from_metagraph(metagraph: bt.metagraph.Metagraph):
+def get_miner_uids_from_metagraph(metagraph: bt.metagraph):
     return [uid for uid, dividend in enumerate(metagraph.dividends) if dividend == 0]
