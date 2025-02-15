@@ -55,6 +55,12 @@ class Scorer:
             bt.logging.trace(f"| {thread_name} | 🚀 Beginning metagraph hotkey iteration")
             miners = [hotkey for uid, hotkey in enumerate(self.metagraph.hotkeys) if self.metagraph.S[uid] < 1000.0]
 
+            validators = [
+                uid for uid, dividend in enumerate(self.metagraph.dividends) if dividend > 0
+            ]
+
+            bt.logging.trace(f"| {thread_name} | 🪲 VALIDATOR UIDS: {validators}")
+
             for hotkey in miners:  # Iterate metagraph hotkeys
 
                 table_name = build_miner_predictions_table_name(hotkey)  # Get name of this miner's predictions table
