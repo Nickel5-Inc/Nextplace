@@ -48,8 +48,8 @@ class WeightSetter:
         current_thread = threading.current_thread().name
         time_gated_scorer = TimeGatedScorer(self.database_manager)
 
-        miner_set = set(get_miner_uids_from_metagraph(self.metagraph))
-        miners = {uid: hotkey for uid, hotkey in enumerate(self.metagraph.hotkeys) if uid in miner_set}
+        miner_uids = set(get_miner_uids_from_metagraph(self.metagraph))
+        miners = {uid: hotkey for uid, hotkey in enumerate(self.metagraph.hotkeys) if uid in miner_uids}
         bt.logging.debug(f"| {current_thread} | 🔎 Found {len(miners)} miners")
         scores = {uid: 0.0 for uid in miners}
 

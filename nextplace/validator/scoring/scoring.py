@@ -6,7 +6,7 @@ import threading
 from nextplace.validator.scoring.scoring_calculator import ScoringCalculator
 from nextplace.validator.api.sold_homes_api import SoldHomesAPI
 from nextplace.validator.database.database_manager import DatabaseManager
-from nextplace.validator.utils.contants import ISO8601, build_miner_predictions_table_name, get_miner_uids_from_metagraph
+from nextplace.validator.utils.contants import ISO8601, build_miner_predictions_table_name, get_miner_hotkeys
 from nextplace.validator.website_data.website_communicator import WebsiteCommunicator
 import requests
 
@@ -52,9 +52,8 @@ class Scorer:
                 self.database_manager.delete_all_sales()  # Clear out sales table
                 self.sold_homes_api.get_sold_properties()  # Get recently sold homes
 
-            miners = get_miner_uids_from_metagraph(self.metagraph)
+            miners = get_miner_hotkeys(self.metagraph)
             bt.logging.trace(f"| {thread_name} | 🚀 Beginning metagraph hotkey iteration with {len(miners)} miners: {miners}")
-
 
             for hotkey in miners:  # Iterate metagraph hotkeys
 
