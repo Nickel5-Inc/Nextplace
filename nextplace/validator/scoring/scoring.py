@@ -52,8 +52,9 @@ class Scorer:
                 self.database_manager.delete_all_sales()  # Clear out sales table
                 self.sold_homes_api.get_sold_properties()  # Get recently sold homes
 
-            bt.logging.trace(f"| {thread_name} | 🚀 Beginning metagraph hotkey iteration")
             miners = get_miner_uids_from_metagraph(self.metagraph)
+            bt.logging.trace(f"| {thread_name} | 🚀 Beginning metagraph hotkey iteration with {len(miners)} miners: {miners}")
+
 
             for hotkey in miners:  # Iterate metagraph hotkeys
 
