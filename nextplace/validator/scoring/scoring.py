@@ -17,7 +17,7 @@ Helper class manages scoring Miner predictions
 
 class Scorer:
 
-    def __init__(self, database_manager: DatabaseManager, markets: list[dict[str, str]], metagraph):
+    def __init__(self, database_manager: DatabaseManager, markets: list[dict[str, str]], metagraph: bt.metagraph):
         self.metagraph = metagraph
         self.database_manager = database_manager
         self.markets = markets
@@ -54,7 +54,6 @@ class Scorer:
 
             bt.logging.trace(f"| {thread_name} | 🚀 Beginning metagraph hotkey iteration")
             miners = get_miner_uids_from_metagraph(self.metagraph)
-            bt.logging.trace(f"| {thread_name} | 🪲 Found {len(miners)} miners")
 
             for hotkey in miners:  # Iterate metagraph hotkeys
 

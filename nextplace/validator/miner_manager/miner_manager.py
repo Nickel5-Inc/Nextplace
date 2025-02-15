@@ -6,7 +6,7 @@ from nextplace.validator.utils.contants import build_miner_predictions_table_nam
 
 class MinerManager:
 
-    def __init__(self, database_manager: DatabaseManager, metagraph):
+    def __init__(self, database_manager: DatabaseManager, metagraph: bt.metagraph):
         self.database_manager = database_manager
         self.metagraph = metagraph
 

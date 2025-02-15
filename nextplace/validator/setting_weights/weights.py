@@ -3,12 +3,14 @@ import bittensor as bt
 import traceback
 import threading
 from datetime import datetime, timezone, timedelta
+
+from nextplace.validator.database.database_manager import DatabaseManager
 from nextplace.validator.scoring.time_gated_scorer import TimeGatedScorer
 from nextplace.validator.utils.contants import build_miner_predictions_table_name, get_miner_uids_from_metagraph
 from nextplace import __spec_version__
 
 class WeightSetter:
-    def __init__(self, metagraph, wallet, subtensor, config, database_manager):
+    def __init__(self, metagraph: bt.metagraph, wallet, subtensor, config, database_manager: DatabaseManager):
         self.metagraph = metagraph
         self.wallet = wallet
         self.subtensor = subtensor

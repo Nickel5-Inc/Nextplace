@@ -16,7 +16,7 @@ BATCH_SIZE = 10000
 
 class PredictionManager:
 
-    def __init__(self, database_manager: DatabaseManager, metagraph, predictions_queue: queue.LifoQueue):
+    def __init__(self, database_manager: DatabaseManager, metagraph: bt.metagraph, predictions_queue: queue.LifoQueue):
         self.database_manager = database_manager
         self.metagraph = metagraph
         self.predictions_queue = predictions_queue
