@@ -26,7 +26,8 @@ class WeightSetter:
         """
         now = datetime.now(timezone.utc)
         time_diff = now - self.timer
-        return time_diff >= timedelta(hours=1)
+        # return time_diff >= timedelta(hours=1)
+        return time_diff >= timedelta(minutes=0)
 
     def check_timer_set_weights(self) -> None:
         """
@@ -51,6 +52,7 @@ class WeightSetter:
         miner_uids = set(get_miner_uids_from_metagraph(self.metagraph))
         miners = {uid: hotkey for uid, hotkey in enumerate(self.metagraph.hotkeys) if uid in miner_uids}
         bt.logging.debug(f"| {current_thread} | 🔎 Found {len(miners)} miners")
+        bt.logging.debug(f"| {current_thread} | 🪲 {miners}")
         scores = {uid: 0.0 for uid in miners}
 
         try:  # database_manager lock is already acquire at this point
@@ -78,6 +80,7 @@ class WeightSetter:
                 scores[uid] = score
 
             bt.logging.trace(f"| {current_thread} | 🧾 Miner scores calculated.")
+            bt.logging.trace(f"| {current_thread} | 🪲 {scores}")
             return scores
 
         except Exception as e:
