@@ -26,8 +26,7 @@ class WeightSetter:
         """
         now = datetime.now(timezone.utc)
         time_diff = now - self.timer
-        # return time_diff >= timedelta(hours=1)
-        return time_diff >= timedelta(minutes=0)
+        return time_diff >= timedelta(hours=1)
 
     def check_timer_set_weights(self) -> None:
         """
@@ -52,7 +51,6 @@ class WeightSetter:
         miner_uids = set(get_miner_uids_from_metagraph(self.metagraph))
         miners = {uid: hotkey for uid, hotkey in enumerate(self.metagraph.hotkeys) if uid in miner_uids}
         bt.logging.debug(f"| {current_thread} | 🔎 Found {len(miners)} miners")
-        bt.logging.debug(f"| {current_thread} | 🪲 {miners}")
         scores = {uid: 0.0 for uid in miners}
 
         try:  # database_manager lock is already acquire at this point
@@ -80,7 +78,6 @@ class WeightSetter:
                 scores[uid] = score
 
             bt.logging.trace(f"| {current_thread} | 🧾 Miner scores calculated.")
-            bt.logging.trace(f"| {current_thread} | 🪲 {scores}")
             return scores
 
         except Exception as e:
@@ -220,10 +217,6 @@ class WeightSetter:
 
         list_weights = weights.tolist()
         bt.logging.info(f"| {current_thread} | ⚖️ Calculated weights: {list_weights}")
-        bt.logging.info(f"| {current_thread} | 🪲️ 238: {list_weights[238]}")
-        bt.logging.info(f"| {current_thread} | 🪲️ 251: {list_weights[251]}")
-        bt.logging.info(f"| {current_thread} | 🪲️ 76: {list_weights[76]}")
-        bt.logging.info(f"| {current_thread} | 🪲️ 248: {list_weights[248]}")
 
         try:
             uid = self.metagraph.hotkeys.index(self.wallet.hotkey.ss58_address)

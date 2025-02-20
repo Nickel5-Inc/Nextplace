@@ -49,6 +49,7 @@ class MinerScoreSender:
         time_gated_scorer = TimeGatedScorer(self.database_manager)
         score_cutoff_date = time_gated_scorer.get_score_cutoff_date()
         hotkeys = self.get_hotkeys()
+        bt.logging.debug(f"| {current_thread} | 🪲 Hotkeys: {hotkeys}")
         for hotkey in hotkeys:
             date_score_map = self._get_empty_score_date_map(score_cutoff_date)
 
@@ -69,6 +70,7 @@ class MinerScoreSender:
                     total_predictions = 0
                 scored_list = [{'date': key, 'totalScored': value} for key, value in date_score_map.items()]
                 scored_list.sort(key=lambda x: x['date'], reverse=True)
+                bt.logging.debug(f"| {current_thread} | 🪲 Hotkey: {hotkey} | Score: {score} | Score List: {scored_list}")
                 data = {
                     "minerHotKey": hotkey,
                     "minerColdKey": "N/A",
