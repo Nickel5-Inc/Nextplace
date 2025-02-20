@@ -220,6 +220,10 @@ class WeightSetter:
 
         list_weights = weights.tolist()
         bt.logging.info(f"| {current_thread} | ⚖️ Calculated weights: {list_weights}")
+        bt.logging.info(f"| {current_thread} | 🪲️ 238: {list_weights[238]}")
+        bt.logging.info(f"| {current_thread} | 🪲️ 251: {list_weights[251]}")
+        bt.logging.info(f"| {current_thread} | 🪲️ 76: {list_weights[76]}")
+        bt.logging.info(f"| {current_thread} | 🪲️ 248: {list_weights[248]}")
 
         try:
             uid = self.metagraph.hotkeys.index(self.wallet.hotkey.ss58_address)
