@@ -39,17 +39,15 @@ def get_sizes_of_predictions_tables() -> dict[str, int]:
 
 
 def write_to_csv(tables_and_sizes: dict, formatted_scores: list):
-    with open("output.csv", mode="w", newline="") as file:
-        writer = csv.writer(file)
 
-        # Write tables_and_sizes
+    with open("prediction_tables.csv", mode="w", newline="") as file:
+        writer = csv.writer(file)
         writer.writerow(["Table Name", "Size"])
         for table, size in tables_and_sizes.items():
             writer.writerow([table, size])
 
-        writer.writerow([])  # Empty row for separation
-
-        # Write formatted_scores
+    with open("daily_scores.csv", mode="w", newline="") as file:
+        writer = csv.writer(file)
         writer.writerow(["Hotkey", "Date", "Score", "Total Predictions"])
         for row in formatted_scores:
             writer.writerow([row['hotkey'], row['date'], row['score'], row['total_predictions']])
