@@ -30,7 +30,7 @@ def query(query_str: str) -> list[tuple]:
 def get_sizes_of_predictions_tables() -> dict[str, int]:
     predictions_tables_query = query("SELECT name FROM sqlite_master WHERE type='table' AND name LIKE 'predictions_%'")
     print(predictions_tables_query)
-    predictions_tables = [table[0][len("predictions_"):] for table in predictions_tables_query]
+    predictions_tables = [table[0] for table in predictions_tables_query]
     print(predictions_tables)
     tables_and_sizes = {}
     for table in predictions_tables:
