@@ -3,12 +3,14 @@ import bittensor as bt
 import traceback
 import threading
 from datetime import datetime, timezone, timedelta
+
+from nextplace.validator.database.database_manager import DatabaseManager
 from nextplace.validator.scoring.time_gated_scorer import TimeGatedScorer
-from nextplace.validator.utils.contants import build_miner_predictions_table_name
+from nextplace.validator.utils.contants import build_miner_predictions_table_name, get_miner_uids_from_metagraph
 from nextplace import __spec_version__
 
 class WeightSetter:
-    def __init__(self, metagraph, wallet, subtensor, config, database_manager):
+    def __init__(self, metagraph: bt.metagraph, wallet, subtensor, config, database_manager: DatabaseManager):
         self.metagraph = metagraph
         self.wallet = wallet
         self.subtensor = subtensor
@@ -46,7 +48,8 @@ class WeightSetter:
         current_thread = threading.current_thread().name
         time_gated_scorer = TimeGatedScorer(self.database_manager)
 
-        miners = {uid: hotkey for uid, hotkey in enumerate(self.metagraph.hotkeys) if self.metagraph.S[uid] < 1000.0}
+        miner_uids = set(get_miner_uids_from_metagraph(self.metagraph))
+        miners = {uid: hotkey for uid, hotkey in enumerate(self.metagraph.hotkeys) if uid in miner_uids}
         bt.logging.debug(f"| {current_thread} | 🔎 Found {len(miners)} miners")
         scores = {uid: 0.0 for uid in miners}
 
