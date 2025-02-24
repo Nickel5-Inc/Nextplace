@@ -41,7 +41,6 @@ class PredictionManager:
 
         current_utc_datetime = datetime.now(timezone.utc)
         timestamp = current_utc_datetime.strftime(ISO8601)
-        valid_hotkeys = set()
 
         prediction_date = datetime.utcnow()
         prediction_date_iso = prediction_date.strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3] + 'Z'
@@ -54,8 +53,6 @@ class PredictionManager:
                 if miner_hotkey is None:
                     bt.logging.trace(f" | {current_thread} | ❗ Failed to find miner_hotkey while processing predictions")
                     continue
-
-                valid_hotkeys.add(miner_hotkey)
 
                 table_name = build_miner_predictions_table_name(miner_hotkey)
                 replace_policy_data_for_ingestion: list[tuple] = []
@@ -117,19 +114,6 @@ class PredictionManager:
 
             except Exception as e:
                 bt.logging.trace(f"| {current_thread} | ❗Failed to process miner's predictions: {e}")
-
-        # Track miners
-        self._track_miners(valid_hotkeys)
-
-    def _track_miners(self, valid_hotkeys: set[str]) -> None:
-        formatted = [(x,) for x in valid_hotkeys]
-        query_str = """
-            INSERT OR IGNORE INTO active_miners
-            (miner_hotkey)
-            VALUES (?)
-        """
-        with self.database_manager.lock:
-            self.database_manager.query_and_commit_many(query_str, formatted)
 
     def _create_table_if_not_exists(self, table_name: str) -> None:
         """

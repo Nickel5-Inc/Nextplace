@@ -6,7 +6,8 @@ import threading
 from nextplace.validator.scoring.scoring_calculator import ScoringCalculator
 from nextplace.validator.api.sold_homes_api import SoldHomesAPI
 from nextplace.validator.database.database_manager import DatabaseManager
-from nextplace.validator.utils.contants import ISO8601, build_miner_predictions_table_name
+from nextplace.validator.utils.contants import ISO8601, build_miner_predictions_table_name, \
+    get_miner_hotkeys_from_predictions_tables
 from nextplace.validator.website_data.website_communicator import WebsiteCommunicator
 import requests
 
@@ -53,7 +54,7 @@ class Scorer:
                 self.sold_homes_api.get_sold_properties()  # Get recently sold homes
 
             bt.logging.trace(f"| {thread_name} | 🚀 Beginning metagraph hotkey iteration")
-            miners = [hotkey for uid, hotkey in enumerate(self.metagraph.hotkeys) if self.metagraph.S[uid] < 1000.0]
+            miners = get_miner_hotkeys_from_predictions_tables(self.database_manager)
 
             for hotkey in miners:  # Iterate metagraph hotkeys
 

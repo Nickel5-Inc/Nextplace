@@ -20,7 +20,6 @@ class TableInitializer:
         self._create_scored_predictions_table(cursor)
         self._create_sales_table(cursor)
         self._create_miner_scores_table(cursor)
-        self._create_active_miners_table(cursor)
         self._create_daily_scores_table(cursor)
         db_connection.commit()
         cursor.close()
@@ -147,21 +146,5 @@ class TableInitializer:
                 score REAL,
                 total_predictions INTEGER,
                 PRIMARY KEY (miner_hotkey, date)
-            )
-        ''')
-
-
-    def _create_active_miners_table(self, cursor) -> None:
-        """
-        Create the active miners table
-        Args:
-            cursor: a database cursor
-
-        Returns:
-            None
-        """
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS active_miners (
-                miner_hotkey TEXT PRIMARY KEY
             )
         ''')
