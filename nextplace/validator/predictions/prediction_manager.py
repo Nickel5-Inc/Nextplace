@@ -36,12 +36,11 @@ class PredictionManager:
         bt.logging.info(f'| {current_thread} | 📡 Processing {len(responses)} Responses')
 
         if responses is None or len(responses) == 0:
-            bt.logging.trace(f'| {current_thread} | ❗No responses received')
+            bt.logging.info(f'| {current_thread} | ❗No responses received')
             return
 
         current_utc_datetime = datetime.now(timezone.utc)
         timestamp = current_utc_datetime.strftime(ISO8601)
-        valid_hotkeys = set()
 
         prediction_date = datetime.utcnow()
         prediction_date_iso = prediction_date.strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3] + 'Z'
@@ -52,10 +51,8 @@ class PredictionManager:
                 miner_hotkey = self.metagraph.hotkeys[idx]
 
                 if miner_hotkey is None:
-                    bt.logging.trace(f" | {current_thread} | ❗ Failed to find miner_hotkey while processing predictions")
+                    bt.logging.info(f" | {current_thread} | ❗ Failed to find miner_hotkey while processing predictions")
                     continue
-
-                valid_hotkeys.add(miner_hotkey)
 
                 table_name = build_miner_predictions_table_name(miner_hotkey)
                 replace_policy_data_for_ingestion: list[tuple] = []
@@ -65,7 +62,7 @@ class PredictionManager:
 
                     # Ignore predictions for houses not affiliated with this synapse
                     if prediction.nextplace_id not in valid_synapse_ids:
-                        bt.logging.trace(f"| {current_thread} | 🐝 Found invalid nextplace_id for miner: '{miner_hotkey}'")
+                        bt.logging.info(f"| {current_thread} | 🐝 Found invalid nextplace_id for miner: '{miner_hotkey}'")
                         continue
 
                     # Only process valid predictions
@@ -91,7 +88,7 @@ class PredictionManager:
                             }
                             self.predictions_queue.put(data_dict)  # Store formatted data
                     except Exception as e:
-                        bt.logging.trace(f"| {current_thread} | ❗Failed to build data for web server: {e}")
+                        bt.logging.info(f"| {current_thread} | ❗Failed to build data for web server: {e}")
 
                     values = (
                         prediction.nextplace_id,
@@ -116,20 +113,7 @@ class PredictionManager:
                     self._handle_ingestion('REPLACE', replace_policy_data_for_ingestion, table_name)
 
             except Exception as e:
-                bt.logging.trace(f"| {current_thread} | ❗Failed to process miner's predictions: {e}")
-
-        # Track miners
-        self._track_miners(valid_hotkeys)
-
-    def _track_miners(self, valid_hotkeys: set[str]) -> None:
-        formatted = [(x,) for x in valid_hotkeys]
-        query_str = """
-            INSERT OR IGNORE INTO active_miners
-            (miner_hotkey)
-            VALUES (?)
-        """
-        with self.database_manager.lock:
-            self.database_manager.query_and_commit_many(query_str, formatted)
+                bt.logging.info(f"| {current_thread} | ❗Failed to process miner's predictions: {e}")
 
     def _create_table_if_not_exists(self, table_name: str) -> None:
         """

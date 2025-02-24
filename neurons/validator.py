@@ -17,7 +17,7 @@ PROPERTIES_THREAD_NAME = "🏠 PropertiesThread 🏠"
 def main(validator):
     _print_btcli_version()
     get_and_send_version()
-    step = 1  # Initialize step
+    step = 10  # Initialize step
     current_thread = threading.current_thread().name
 
     # Start the properties thread

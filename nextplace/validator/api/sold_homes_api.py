@@ -24,12 +24,12 @@ class SoldHomesAPI(ApiBase):
         """
         current_thread = threading.current_thread().name
         num_markets = len(self.markets)
-        bt.logging.trace(f"| {current_thread} | 🕵🏻 Looking for recently sold homes'")
+        bt.logging.info(f"| {current_thread} | 🕵🏻 Looking for recently sold homes'")
         for idx, market in enumerate(self.markets):
-            bt.logging.trace(f"| {current_thread} | 🔍 Getting sold homes in {market['name']}")
+            bt.logging.info(f"| {current_thread} | 🔍 Getting sold homes in {market['name']}")
             self._process_region_sold_homes(market)
             percent_done = round(((idx + 1) / num_markets) * 100, 2)
-            bt.logging.trace(f"| {current_thread} | {percent_done}% of markets processed")
+            bt.logging.info(f"| {current_thread} | {percent_done}% of markets processed")
 
     def _process_region_sold_homes(self, market: dict) -> None:
         """
@@ -83,7 +83,7 @@ class SoldHomesAPI(ApiBase):
 
             page += 1  # Increment page
 
-        bt.logging.trace(f"| {current_thread} | 📣 Found {invalid_results['date']} homes with invalid dates, {invalid_results['price']} homes with invalid prices, {invalid_results['timezone']} homes with invalid timezones")
+        bt.logging.info(f"| {current_thread} | 📣 Found {invalid_results['date']} homes with invalid dates, {invalid_results['price']} homes with invalid prices, {invalid_results['timezone']} homes with invalid timezones")
         self._ingest_valid_homes(valid_results)
 
     def _process_home(self, home: any, result_tuples: list[tuple], invalid_results: dict[str, int]) -> None:

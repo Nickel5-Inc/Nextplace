@@ -4,7 +4,8 @@ import traceback
 import threading
 from datetime import datetime, timezone, timedelta
 from nextplace.validator.scoring.time_gated_scorer import TimeGatedScorer
-from nextplace.validator.utils.contants import build_miner_predictions_table_name
+from nextplace.validator.utils.contants import build_miner_predictions_table_name, \
+    get_miner_hotkeys_from_predictions_tables
 from nextplace import __spec_version__
 
 class WeightSetter:
@@ -33,7 +34,7 @@ class WeightSetter:
             None
         """
         current_thread = threading.current_thread().name
-        bt.logging.trace(f"📸 | {current_thread} | Time to set weights, resetting timer and setting weights.")
+        bt.logging.info(f"📸 | {current_thread} | Time to set weights, resetting timer and setting weights.")
         self.timer = datetime.now(timezone.utc)  # Reset the timer
         self.set_weights()  # Set weights
 
@@ -46,14 +47,15 @@ class WeightSetter:
         current_thread = threading.current_thread().name
         time_gated_scorer = TimeGatedScorer(self.database_manager)
 
-        miners = {uid: hotkey for uid, hotkey in enumerate(self.metagraph.hotkeys) if self.metagraph.S[uid] < 1000.0}
+        miner_hotkeys = set(get_miner_hotkeys_from_predictions_tables(self.database_manager))
+        miners = {uid: hotkey for uid, hotkey in enumerate(self.metagraph.hotkeys) if hotkey in miner_hotkeys}
         bt.logging.debug(f"| {current_thread} | 🔎 Found {len(miners)} miners")
         scores = {uid: 0.0 for uid in miners}
 
         try:  # database_manager lock is already acquire at this point
 
             average_markets = self.get_average_markets_in_range()
-            bt.logging.trace(f"| {current_thread} | ⏳ Iterating the metagraph and scoring miners...")
+            bt.logging.info(f"| {current_thread} | ⏳ Iterating the metagraph and scoring miners...")
 
             for uid, hotkey in miners.items():
                 score = time_gated_scorer.score(hotkey)
@@ -74,7 +76,7 @@ class WeightSetter:
 
                 scores[uid] = score
 
-            bt.logging.trace(f"| {current_thread} | 🧾 Miner scores calculated.")
+            bt.logging.info(f"| {current_thread} | 🧾 Miner scores calculated.")
             return scores
 
         except Exception as e:
@@ -88,7 +90,7 @@ class WeightSetter:
             The mean number of markets across all miners
         """
         current_thread = threading.current_thread().name
-        bt.logging.trace(f"| {current_thread} | 🧮 Calculating market cutoff...")
+        bt.logging.info(f"| {current_thread} | 🧮 Calculating market cutoff...")
         all_table_query = "SELECT name FROM sqlite_master WHERE type='table'"
         all_tables = [x[0] for x in self.database_manager.query(all_table_query)]  # Get all tables in database
         predictions_tables = [s for s in all_tables if s.startswith("predictions_")]
@@ -106,7 +108,7 @@ class WeightSetter:
         if count == 0:
             bt.logging.debug(f"| {current_thread} | ❗ ERROR Found no predictions tables!")
         average = total / count
-        bt.logging.trace(f"| {current_thread} | 🛒 Found {average} as the average number of markets predicted on in the last 5 days")
+        bt.logging.info(f"| {current_thread} | 🛒 Found {average} as the average number of markets predicted on in the last 5 days")
         return average
 
     def calculate_weights(self, scores: dict[int, float]) -> list[tuple[int, float]]:
@@ -220,7 +222,7 @@ class WeightSetter:
             stake = float(self.metagraph.S[uid])
 
             if stake < 1000.0:
-                bt.logging.trace(f"| {current_thread} | ❗Insufficient stake. Failed in setting weights.")
+                bt.logging.info(f"| {current_thread} | ❗Insufficient stake. Failed in setting weights.")
                 return False
 
             result = self.subtensor.set_weights(
@@ -238,7 +240,7 @@ class WeightSetter:
             if success:
                 bt.logging.info(f"| {current_thread} | ✅ Successfully set weights.")
             else:
-                bt.logging.trace(f"| {current_thread} | ❗Failed to set weights. Result: {result}")
+                bt.logging.info(f"| {current_thread} | ❗Failed to set weights. Result: {result}")
 
         except Exception as e:
             bt.logging.error(f"| {current_thread} | ❗Error setting weights: {str(e)}")
