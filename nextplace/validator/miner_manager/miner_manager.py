@@ -23,7 +23,7 @@ class MinerManager:
         metagraph_hotkeys = set(self.metagraph.hotkeys)  # Get hotkeys in metagraph
         hotkeys_with_pred_tables = set(get_miner_hotkeys_from_predictions_tables(self.database_manager))
 
-        bt.logging.trace(
+        bt.logging.info(
             f"| {current_thread} | Managing active miners. Found {len(hotkeys_with_pred_tables)} tracked miners and {len(metagraph_hotkeys)} metagraph hotkeys")
 
         # Set operation
@@ -32,7 +32,7 @@ class MinerManager:
 
         # If we have recently deregistered miners
         if len(deregistered_hotkeys) > 0:
-            bt.logging.trace(
+            bt.logging.info(
                 f"| {current_thread} | 🚨 Found {len(deregistered_hotkeys)} deregistered hotkeys. Cleaning out their data.")
             # For all deregistered miners, clear out their predictions & scores. Remove from active_miners table
             tuples = [(x,) for x in deregistered_hotkeys]
@@ -46,4 +46,4 @@ class MinerManager:
                 self.database_manager.query_and_commit_many("DELETE FROM daily_scores WHERE miner_hotkey = ?", tuples)
                 self.database_manager.query_and_commit_many("DELETE FROM scored_predictions WHERE miner_hotkey = ?", tuples)
 
-        bt.logging.trace(f"| {current_thread} | Thread terminating")
+        bt.logging.info(f"| {current_thread} | Thread terminating")

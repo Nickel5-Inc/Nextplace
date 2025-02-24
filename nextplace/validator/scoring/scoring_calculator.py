@@ -108,7 +108,7 @@ class ScoringCalculator:
         try:
             predicted_date = datetime.strptime(predicted_date, "%Y-%m-%d").date()
         except ValueError:
-            bt.logging.trace(f"| {current_thread} | Received invalid date format from '{miner_hotkey}'. Ignoring prediction.")
+            bt.logging.info(f"| {current_thread} | Received invalid date format from '{miner_hotkey}'. Ignoring prediction.")
             return None
 
         # Calculate the absolute difference in days

@@ -33,7 +33,7 @@ class Scorer:
             None
         """
         thread_name = threading.current_thread().name
-        bt.logging.trace(f"| {thread_name} | 🏁 Beginning scoring thread")
+        bt.logging.info(f"| {thread_name} | 🏁 Beginning scoring thread")
 
         # If no sales, get them
         with self.database_manager.lock:
@@ -48,13 +48,13 @@ class Scorer:
             # Refresh the `sales` table every 12ish hours
             now = datetime.now(timezone.utc)
             if now - self.sales_timer > timedelta(hours=12):
-                bt.logging.trace(f"| {thread_name} | 🏷️ Time to refresh recently sold homes")
+                bt.logging.info(f"| {thread_name} | 🏷️ Time to refresh recently sold homes")
                 self.sales_timer = now
                 self.database_manager.delete_all_sales()  # Clear out sales table
                 self.sold_homes_api.get_sold_properties()  # Get recently sold homes
 
             miners = get_miner_hotkeys_from_predictions_tables(self.database_manager)
-            bt.logging.trace(f"| {thread_name} | 🚀 Beginning metagraph hotkey iteration with {len(miners)} miners")
+            bt.logging.info(f"| {thread_name} | 🚀 Beginning metagraph hotkey iteration with {len(miners)} miners")
 
             for hotkey in miners:  # Iterate metagraph hotkeys
 
@@ -66,13 +66,13 @@ class Scorer:
                 if not table_exists:
                     continue
 
-                bt.logging.trace(f"| {thread_name} | ⛏️ Scoring miner with hotkey '{hotkey}'")
+                bt.logging.info(f"| {thread_name} | ⛏️ Scoring miner with hotkey '{hotkey}'")
 
                 try:
                     self.score_predictions(table_name, hotkey)  # Score predictions
                     self._clear_out_old_predictions(table_name)  # Remove old predictions from miner's table
                 except sqlite3.OperationalError as e:
-                    bt.logging.trace(f"| {thread_name} | 🏖️ SQLITE operational error: {e}. Note that this is may be caused by miner deregistration while trying to score the deregistered miner, in which case it is not a bug.")
+                    bt.logging.info(f"| {thread_name} | 🏖️ SQLITE operational error: {e}. Note that this is may be caused by miner deregistration while trying to score the deregistered miner, in which case it is not a bug.")
 
                 sleep(120)  # Sleep thread for 2 minutes
 
@@ -88,7 +88,7 @@ class Scorer:
         current_thread = threading.current_thread().name
         scorable_predictions = self._get_scorable_predictions(table_name)
         if len(scorable_predictions) > 0:
-            bt.logging.trace(f"| {current_thread} | 🏅 Found {len(scorable_predictions)} predictions to score")
+            bt.logging.info(f"| {current_thread} | 🏅 Found {len(scorable_predictions)} predictions to score")
             scoring_data = [(x[1], x[2], x[3], x[6], x[7]) for x in scorable_predictions]
             self.scoring_calculator.process_scorable_predictions(scoring_data, miner_hotkey)  # Score predictions for this home
             self._send_data_to_website(scorable_predictions)  # Send data to website
@@ -97,7 +97,7 @@ class Scorer:
 
         # Check if they have any scored predictions. If not, check if *any* validator has scored predictions for them.
         else:
-            bt.logging.trace(f"| {current_thread} | 0️⃣ Found no new predictions to score")
+            bt.logging.info(f"| {current_thread} | 0️⃣ Found no new predictions to score")
             with self.database_manager.lock:
                 query = "SELECT COUNT(*) FROM daily_scores WHERE miner_hotkey = ?"
                 values = (miner_hotkey, )
@@ -107,7 +107,7 @@ class Scorer:
                 return
             number_of_days_with_scores = query_result[0][0]
             if number_of_days_with_scores == 0:  # This miner has no scored predictions in our db (their scores is 0)
-                bt.logging.trace(f"| {current_thread} | 🔊 Found no scored predictions. Checking if another validator has any scored predictions.")
+                bt.logging.info(f"| {current_thread} | 🔊 Found no scored predictions. Checking if another validator has any scored predictions.")
                 avg_score_from_other_valis = self._get_miner_score_data_from_webserver(miner_hotkey)
                 if avg_score_from_other_valis > 0:  # Other validators have scores for this miner
                     # Insert consensus score from other valis into our db for ONE SINGLE score
@@ -135,14 +135,14 @@ class Scorer:
                 return 0
             try:
                 avg_score = int(data[0]["miner"]["avgScore"])
-                bt.logging.trace(f"| {current_thread} | 📌 Found score consensus from other valis: {avg_score}")
+                bt.logging.info(f"| {current_thread} | 📌 Found score consensus from other valis: {avg_score}")
                 return avg_score
             except (KeyError, TypeError, IndexError) as e:
-                bt.logging.trace(f"| {current_thread} | ❗ Failed to parse response: {data}\nError: {e}")
+                bt.logging.info(f"| {current_thread} | ❗ Failed to parse response: {data}\nError: {e}")
                 return 0
         else:
-            bt.logging.trace(f"| {current_thread} | ❗ Failed to retrieve data. Status code: {response.status_code}")
-            bt.logging.trace(f"| {current_thread} | ❗ Response:", response.text)
+            bt.logging.info(f"| {current_thread} | ❗ Failed to retrieve data. Status code: {response.status_code}")
+            bt.logging.info(f"| {current_thread} | ❗ Response:", response.text)
             return 0
 
     def _get_scorable_predictions(self, table_name: str) -> list[tuple]:
@@ -175,7 +175,7 @@ class Scorer:
             None
         """
         thread_name = threading.current_thread().name
-        bt.logging.trace(f"| {thread_name} | 🎢 Attempting to send {len(scored_predictions)} scored predictions to NextPlace website")
+        bt.logging.info(f"| {thread_name} | 🎢 Attempting to send {len(scored_predictions)} scored predictions to NextPlace website")
 
         formatted_predictions = [(x[0], x[1], None, x[4], x[2], x[3], x[6], x[7]) for x in scored_predictions]
         data_to_send = []
@@ -188,7 +188,7 @@ class Scorer:
             predicted_sale_date_parsed = self.parse_iso_datetime(predicted_sale_date) if isinstance(predicted_sale_date, str) else predicted_sale_date
 
             if prediction_date_parsed is None or predicted_sale_date_parsed is None:
-                bt.logging.trace(f"| {thread_name} | 🏃🏻‍♂️ Skipping prediction {nextplace_id} due to date parsing error.")
+                bt.logging.info(f"| {thread_name} | 🏃🏻‍♂️ Skipping prediction {nextplace_id} due to date parsing error.")
                 continue
 
             prediction_date_iso = prediction_date_parsed.strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3] + 'Z'
@@ -206,7 +206,7 @@ class Scorer:
             data_to_send.append(data_dict)
 
         if not data_to_send:
-            bt.logging.trace(f"| {thread_name} | Ø No valid predictions to send to Nextplace site after parsing.")
+            bt.logging.info(f"| {thread_name} | Ø No valid predictions to send to Nextplace site after parsing.")
             return
 
         website_communicator = WebsiteCommunicator("Predictions")
@@ -267,7 +267,7 @@ class Scorer:
         max_days = 21
         today = datetime.now(timezone.utc)
         min_date = (today - timedelta(days=max_days)).strftime(ISO8601)
-        bt.logging.trace(f"| {current_thread} | ✘ Deleting predictions older than {min_date} from table '{table_name}'")
+        bt.logging.info(f"| {current_thread} | ✘ Deleting predictions older than {min_date} from table '{table_name}'")
 
         # Clear out predictions table
         query_str = f"""

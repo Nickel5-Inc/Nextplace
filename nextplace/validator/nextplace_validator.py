@@ -53,7 +53,7 @@ class RealEstateValidator(BaseValidatorNeuron):
         """Sync the metagraph with the latest state from the network"""
         bt.logging.info(f"| {self.current_thread} | 🔗 Syncing metagraph")
         self.metagraph.sync(subtensor=self.subtensor)
-        bt.logging.trace(f"| {self.current_thread} | 📈 Metagraph has {len(self.metagraph.hotkeys)} hotkeys")
+        bt.logging.info(f"| {self.current_thread} | 📈 Metagraph has {len(self.metagraph.hotkeys)} hotkeys")
 
     def check_timer_set_weights(self) -> None:
         """
@@ -64,7 +64,7 @@ class RealEstateValidator(BaseValidatorNeuron):
         if self.weight_setter.is_time_to_set_weights():
             if not self.database_manager.lock.acquire(blocking=True, timeout=10):
                 # If the lock is held by another thread, wait for 10 seconds, if still not available, return
-                bt.logging.trace(f"| {self.current_thread} | 🍃 Another thread is holding the database_manager lock. Will check timer and set weights later. This is expected behavior 😊.")
+                bt.logging.info(f"| {self.current_thread} | 🍃 Another thread is holding the database_manager lock. Will check timer and set weights later. This is expected behavior 😊.")
                 return
             try:
                 self.sync_metagraph()
@@ -90,7 +90,7 @@ class RealEstateValidator(BaseValidatorNeuron):
             synapse: RealEstateSynapse or None = self.synapse_manager.get_synapse()  # Prepare data for miners
 
         if synapse is None or len(synapse.real_estate_predictions.predictions) == 0:  # No data in Properties table yet
-            bt.logging.trace(f"| {self.current_thread} | ↻ No data in Synapse. Waiting for PropertiesThread to update the Properties table.")
+            bt.logging.info(f"| {self.current_thread} | ↻ No data in Synapse. Waiting for PropertiesThread to update the Properties table.")
             self.should_step = False
             return
 

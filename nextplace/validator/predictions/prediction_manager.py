@@ -36,7 +36,7 @@ class PredictionManager:
         bt.logging.info(f'| {current_thread} | 📡 Processing {len(responses)} Responses')
 
         if responses is None or len(responses) == 0:
-            bt.logging.trace(f'| {current_thread} | ❗No responses received')
+            bt.logging.info(f'| {current_thread} | ❗No responses received')
             return
 
         current_utc_datetime = datetime.now(timezone.utc)
@@ -51,7 +51,7 @@ class PredictionManager:
                 miner_hotkey = self.metagraph.hotkeys[idx]
 
                 if miner_hotkey is None:
-                    bt.logging.trace(f" | {current_thread} | ❗ Failed to find miner_hotkey while processing predictions")
+                    bt.logging.info(f" | {current_thread} | ❗ Failed to find miner_hotkey while processing predictions")
                     continue
 
                 table_name = build_miner_predictions_table_name(miner_hotkey)
@@ -62,7 +62,7 @@ class PredictionManager:
 
                     # Ignore predictions for houses not affiliated with this synapse
                     if prediction.nextplace_id not in valid_synapse_ids:
-                        bt.logging.trace(f"| {current_thread} | 🐝 Found invalid nextplace_id for miner: '{miner_hotkey}'")
+                        bt.logging.info(f"| {current_thread} | 🐝 Found invalid nextplace_id for miner: '{miner_hotkey}'")
                         continue
 
                     # Only process valid predictions
@@ -88,7 +88,7 @@ class PredictionManager:
                             }
                             self.predictions_queue.put(data_dict)  # Store formatted data
                     except Exception as e:
-                        bt.logging.trace(f"| {current_thread} | ❗Failed to build data for web server: {e}")
+                        bt.logging.info(f"| {current_thread} | ❗Failed to build data for web server: {e}")
 
                     values = (
                         prediction.nextplace_id,
@@ -113,7 +113,7 @@ class PredictionManager:
                     self._handle_ingestion('REPLACE', replace_policy_data_for_ingestion, table_name)
 
             except Exception as e:
-                bt.logging.trace(f"| {current_thread} | ❗Failed to process miner's predictions: {e}")
+                bt.logging.info(f"| {current_thread} | ❗Failed to process miner's predictions: {e}")
 
     def _create_table_if_not_exists(self, table_name: str) -> None:
         """
