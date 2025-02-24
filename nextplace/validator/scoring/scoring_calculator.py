@@ -16,18 +16,12 @@ class ScoringCalculator:
         Score miner predictions in bulk
         """
         current_thread = threading.current_thread().name
-        miner_score = self._fetch_current_miner_score(miner_hotkey)
         new_scores = self._calculate_new_scores(scorable_predictions)
         if new_scores['new_predictions'] == 0:
             bt.logging.info(f"| {current_thread} | 📰 Miner '{miner_hotkey}' had only invalid scores, likely due to invalid date formatting.")
             return
 
         self._add_to_daily_scores(new_scores, miner_hotkey)
-
-        if miner_score is not None:
-            self._update_miner_score(miner_score, new_scores, miner_hotkey)
-        else:
-            self._handle_new_miner_score(miner_hotkey, new_scores)
         bt.logging.info(f"| {current_thread} | 🎯 Scored {len(scorable_predictions)} predictions for hotkey '{miner_hotkey}'")
 
     def _add_to_daily_scores(self, new_scores: dict, miner_hotkey: str) -> None:
@@ -85,78 +79,6 @@ class ScoringCalculator:
             with self.database_manager.lock:
                 self.database_manager.query_and_commit_with_values(insert_query, insert_values)
             bt.logging.info(f"| {current_thread} | ⭐ Added daily score. Score: {score}, Total Scored: {new_scores['new_predictions']}")
-
-    def _update_miner_score(self, miner_score: Dict[str, float], new_scores: Dict[str, float], miner_hotkey: str) -> None:
-        """
-        Update scores for a miner
-        Args:
-            miner_score: Miner's existing score data
-            new_scores: Miner's new score data
-            miner_hotkey: Miner's hotkey
-
-        Returns:
-            None
-        """
-        now = datetime.now(timezone.utc).strftime(ISO8601)
-        old_score = miner_score['lifetime_score']
-        old_predictions = miner_score['total_predictions']
-        new_total_score = (old_score * old_predictions) + new_scores['total_score']
-        new_total_predictions = old_predictions + new_scores['new_predictions']
-        new_lifetime_score = new_total_score / new_total_predictions
-
-        values = (new_lifetime_score, new_total_predictions, now)
-        with self.database_manager.lock:
-            self.database_manager.query_and_commit_with_values(f'''
-                UPDATE miner_scores 
-                SET lifetime_score = ?, total_predictions = ?, last_update_timestamp = ?
-                WHERE miner_hotkey = '{miner_hotkey}'
-            ''', values)
-
-    def _handle_new_miner_score(self, miner_hotkey: str, new_scores: dict) -> None:
-        """
-        Add scores for a miner without any scores yet
-        Args:
-            miner_hotkey: Hotkey of the miner
-            new_scores: Miner's new score data
-
-        Returns:
-            None
-        """
-        now = datetime.now(timezone.utc).strftime(ISO8601)
-        lifetime_score = new_scores['total_score'] / new_scores['new_predictions']
-        query_str = f"""
-                        INSERT INTO miner_scores (miner_hotkey, lifetime_score, total_predictions, last_update_timestamp)
-                        VALUES (?, ?, ?, ?)
-                    """
-        values = (miner_hotkey, lifetime_score, new_scores['new_predictions'], now)
-        with self.database_manager.lock:
-            self.database_manager.query_and_commit_with_values(query_str, values)
-
-    def _fetch_current_miner_score(self, miner_hotkey: str) -> Dict[str, float] or None:
-        """
-        Retrieve scores for a miner
-        Args:
-            miner_hotkey: Hotkey of the miner
-
-        Returns:
-            Miners scores or None
-        """
-        current_thread = threading.current_thread().name
-        query_str = f"""
-            SELECT miner_hotkey, lifetime_score, total_predictions
-            FROM miner_scores
-            WHERE miner_hotkey = '{miner_hotkey}'
-            LIMIT 1
-        """
-        with self.database_manager.lock:
-            results = self.database_manager.query(query_str)
-        if len(results) > 0:  # Update existing Miner score
-            bt.logging.debug(f"| {current_thread} | 🦉 Found existing scores for miner with hotkey '{miner_hotkey}'")
-            result = results[0]
-            return {'lifetime_score': result[1], 'total_predictions': result[2]}
-        else:  # No scores for this Miner yet
-            bt.logging.debug(f"| {current_thread} | 🐦‍⬛ Found no existing scores for miner with hotkey '{miner_hotkey}'")
-            return None
 
     def _get_num_sold_homes(self) -> int:
 
