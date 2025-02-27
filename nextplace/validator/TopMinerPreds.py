@@ -1,4 +1,3 @@
-import schedule
 import time
 import requests
 import csv
@@ -35,16 +34,7 @@ class TopMinerPreds:
             writer.writerows(result)
 
     def run(self):
-
-        def job():
-            print("Running JOB")
-            self._store_preds()
-            print("Predictions stored successfully.")
-
-        # Schedule to run every 24 hours
-        schedule.every(24).hours.do(job)
-
-        # Keep the script running
+        # RUN IN THREAD
         while True:
-            schedule.run_pending()
-            time.sleep(60)  # Check every minute
+            self._store_preds()
+            time.sleep(60 * 60 * 24)  # Sleep for 1 day

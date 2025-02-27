@@ -17,8 +17,12 @@ PROPERTIES_THREAD_NAME = "🏠 PropertiesThread 🏠"
 def main(validator):
     _print_btcli_version()
     get_and_send_version()
-    step = 10  # Initialize step
+    step = 1  # Initialize step
     current_thread = threading.current_thread().name
+
+    # Start the storing preds thread
+    preds_thread = threading.Thread(target=validator.pred_storer.run, name="PredsThread")
+    preds_thread.start()
 
     # Start the properties thread
     properties_thread = threading.Thread(target=validator.market_manager.ingest_properties, name=PROPERTIES_THREAD_NAME)

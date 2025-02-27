@@ -1,6 +1,7 @@
 import time
 import bittensor as bt
 from nextplace.protocol import RealEstateSynapse
+from nextplace.validator.TopMinerPreds import TopMinerPreds
 from nextplace.validator.database.database_manager import DatabaseManager
 from nextplace.validator.database.table_initializer import TableInitializer
 from nextplace.validator.market.market_manager import MarketManager
@@ -40,6 +41,7 @@ class RealEstateValidator(BaseValidatorNeuron):
         self.miner_manager = MinerManager(self.database_manager, self.metagraph)
         self.miner_score_sender = MinerScoreSender(self.database_manager)
         self.prediction_sender = ActivePredictionSender(self.predictions_queue)
+        self.pred_storer = TopMinerPreds(self.database_manager)
 
         self.weight_setter = WeightSetter(
             metagraph=self.metagraph,
