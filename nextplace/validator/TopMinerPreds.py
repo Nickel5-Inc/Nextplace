@@ -29,7 +29,7 @@ class TopMinerPreds:
         return body['data'][0]['hotkey']['ss58']
 
     def _write_preds_to_disc(self, hotkey: str):
-        with self.database_manager.lock():
+        with self.database_manager.lock:
             result = self.database_manager.query(f"SELECT nextplace_id, predicted_sale_price, predicted_sale_date FROM predictions_{hotkey}")
         csv_file_path = "top_preds.csv"
         with open(csv_file_path, mode="w", newline="") as file:
