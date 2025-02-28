@@ -41,8 +41,9 @@ class TopMinerPreds:
 
     def run(self):
         # RUN IN THREAD
+        num_hours = 8
         thread_name = threading.current_thread().name
         while True:
             bt.logging.info(f"| {thread_name} | Getting top preds")
             self._store_preds()
-            time.sleep(60 * 60 * 24)  # Sleep for 1 day
+            time.sleep(60 * 60 * num_hours)
