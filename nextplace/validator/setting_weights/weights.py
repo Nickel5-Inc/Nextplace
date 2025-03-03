@@ -127,13 +127,13 @@ class WeightSetter:
         weights = []
 
         """
-        40% for Dilution Reduction
-        3% to Bottom Tier
-        7% to Middle Tier
-        50% to Top Tier
+        35% for Dilution Reduction
+        1% to Bottom Tier
+        4% to Middle Tier
+        60% to Top Tier
         """
 
-        for tier, weight in [(top_tier, 0.5), (middle_tier, 0.07), (bottom_tier, 0.03)]:
+        for tier, weight in [(top_tier, 0.6), (middle_tier, 0.04), (bottom_tier, 0.01)]:
             tier_scores = self.apply_quadratic_scaling(tier)
             calculated_weights = self.calculate_tier_weights(tier_scores, weight)
             weights.extend(calculated_weights)
