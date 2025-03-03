@@ -218,7 +218,7 @@ class WeightSetter:
         sum_of_incentives = 0
         for miner in miner_weights:
             sum_of_incentives += miner[1]
-        bt.logging.trace(f"| {current_thread} | 🪲 sum of incentives: {sum_of_incentives}")
+        bt.logging.trace(f"| {current_thread} | 🪲 sum of all miner incentives: {sum_of_incentives}")
         incentive_for_reduction = 1 - sum_of_incentives
         bt.logging.trace(f"| {current_thread} | 🪲 incentive for reduction: {incentive_for_reduction}")
 
