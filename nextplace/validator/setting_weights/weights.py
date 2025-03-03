@@ -25,7 +25,8 @@ class WeightSetter:
         """
         now = datetime.now(timezone.utc)
         time_diff = now - self.timer
-        return time_diff >= timedelta(hours=1)
+        # return time_diff >= timedelta(hours=1)
+        return time_diff >= timedelta(minutes=0)
 
     def check_timer_set_weights(self) -> None:
         """
@@ -125,7 +126,14 @@ class WeightSetter:
         top_tier, middle_tier, bottom_tier = self.get_tiers(sorted_scores)
         weights = []
 
-        for tier, weight in [(top_tier, 0.7), (middle_tier, 0.2), (bottom_tier, 0.1)]:
+        """
+        40% for Dilution Reduction
+        3% to Bottom Tier
+        7% to Middle Tier
+        50% to Top Tier
+        """
+
+        for tier, weight in [(top_tier, 0.5), (middle_tier, 0.07), (bottom_tier, 0.03)]:
             tier_scores = self.apply_quadratic_scaling(tier)
             calculated_weights = self.calculate_tier_weights(tier_scores, weight)
             weights.extend(calculated_weights)
@@ -207,6 +215,13 @@ class WeightSetter:
         scores: dict[int, float] = self.calculate_miner_scores()
         miner_weights: list[tuple[int, float]] = self.calculate_weights(scores)
 
+        sum_of_incentives = 0
+        for miner in miner_weights:
+            sum_of_incentives += miner[1]
+        bt.logging.trace(f"| {current_thread} | 🪲 sum of incentives: {sum_of_incentives}")
+        incentive_for_reduction = 1 - sum_of_incentives
+        bt.logging.trace(f"| {current_thread} | 🪲 incentive for reduction: {incentive_for_reduction}")
+
         # Initialize weights tensor to 0's
         weights: torch.Tensor = torch.tensor([0.0 for _ in range(len(self.metagraph.hotkeys))])
 
@@ -215,6 +230,8 @@ class WeightSetter:
             weights[miner[0]] = miner[1]
 
         list_weights = weights.tolist()
+        REDUCTION_UID = 3
+        list_weights[REDUCTION_UID] = incentive_for_reduction
         bt.logging.info(f"| {current_thread} | ⚖️ Calculated weights: {list_weights}")
 
         try:
