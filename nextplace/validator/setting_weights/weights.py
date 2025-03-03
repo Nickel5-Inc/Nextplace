@@ -220,9 +220,7 @@ class WeightSetter:
         sum_of_incentives = 0
         for miner in miner_weights:
             sum_of_incentives += miner[1]
-        bt.logging.trace(f"| {current_thread} | 🪲 sum of all miner incentives: {sum_of_incentives}")
         incentive_for_reduction = 1 - sum_of_incentives
-        bt.logging.trace(f"| {current_thread} | 🪲 incentive for reduction: {incentive_for_reduction}")
 
         # Initialize weights tensor to 0's
         weights: torch.Tensor = torch.tensor([0.0 for _ in range(len(self.metagraph.hotkeys))])
