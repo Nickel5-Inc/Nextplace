@@ -60,7 +60,7 @@ class PropertiesAPI(ApiBase):
             if len(homes) < self.max_results_per_page:  # Last page
                 break
 
-            bt.logging.trace(f"| {current_thread} | Ingested {len(homes)} homes on page {page} in {market['name']}")
+            bt.logging.info(f"| {current_thread} | Ingested {len(homes)} homes on page {page} in {market['name']}")
             page += 1
 
     def _ingest_properties(self, homes: list, market: str) -> None:

@@ -210,7 +210,7 @@ class TimeGatedScorer:
         # Handle invalid values for days_back
         if days_back < 1 or days_back > size_of_non_consistency_window:
             current_thread = threading.current_thread().name
-            bt.logging.trace(f"| {current_thread} | ❗ days_back '{days_back}' is out of range for size of window {size_of_non_consistency_window}")
+            bt.logging.info(f"| {current_thread} | ❗ days_back '{days_back}' is out of range for size of window {size_of_non_consistency_window}")
             return 0
 
         # Define hyperparameters
