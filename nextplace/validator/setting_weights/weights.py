@@ -8,6 +8,9 @@ from nextplace.validator.utils.contants import build_miner_predictions_table_nam
     get_miner_hotkeys_from_predictions_tables
 from nextplace import __spec_version__
 
+REDUCTION_UID = 3
+
+
 class WeightSetter:
     def __init__(self, metagraph, wallet, subtensor, config, database_manager):
         self.metagraph = metagraph
@@ -229,7 +232,6 @@ class WeightSetter:
             weights[miner[0]] = miner[1]
 
         list_weights = weights.tolist()
-        REDUCTION_UID = 3
         list_weights[REDUCTION_UID] = incentive_for_reduction
         bt.logging.info(f"| {current_thread} | ⚖️ Calculated weights: {list_weights}")
 
