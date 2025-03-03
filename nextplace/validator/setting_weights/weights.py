@@ -8,7 +8,7 @@ from nextplace.validator.utils.contants import build_miner_predictions_table_nam
     get_miner_hotkeys_from_predictions_tables
 from nextplace import __spec_version__
 
-REDUCTION_UID = 3
+REDUCTION_UID = 24
 
 
 class WeightSetter:
