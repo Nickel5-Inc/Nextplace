@@ -228,9 +228,9 @@ class WeightSetter:
         # Update the UID indices of the tensor with the corresponding scores
         for miner in miner_weights:
             weights[miner[0]] = miner[1]
+        weights[REDUCTION_UID] = incentive_for_reduction
 
         list_weights = weights.tolist()
-        list_weights[REDUCTION_UID] = incentive_for_reduction
         bt.logging.info(f"| {current_thread} | ⚖️ Calculated weights: {list_weights}")
 
         try:
