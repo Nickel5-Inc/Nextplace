@@ -43,7 +43,15 @@ class SoldHomesAPI(ApiBase):
         """
         current_thread = threading.current_thread().name
         region_id = market['id']
-        url_sold = "https://redfin-com-data.p.rapidapi.com/properties/search-sold"  # URL for sold houses
+        
+        # Choose the appropriate API endpoint and headers based on market ID
+        if region_id.startswith('33'):
+            url_sold = "https://redfin-canada.p.rapidapi.com/properties/search-sold"  # Canadian URL for sold houses
+            headers = self.canada_headers  # Use Canadian API key
+        else:
+            url_sold = "https://redfin-com-data.p.rapidapi.com/properties/search-sold"  # US URL for sold houses
+            headers = self.headers  # Use US API key
+            
         page = 1  # Page number for api results
 
         invalid_results = {'date': 0, 'price': 0, 'timezone': 0}
@@ -59,7 +67,7 @@ class SoldHomesAPI(ApiBase):
                 "page": page
             }
 
-            response = requests.get(url_sold, headers=self.headers, params=querystring)  # Get API response
+            response = requests.get(url_sold, headers=headers, params=querystring)  # Get API response
 
             # Only proceed with status code is 200
             if response.status_code != 200:
@@ -132,3 +140,4 @@ class SoldHomesAPI(ApiBase):
                 VALUES (?, ?, ?, ?)
             """
             self.database_manager.query_and_commit_many(query_str, result_tuples)
+            

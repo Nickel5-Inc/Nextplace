@@ -630,5 +630,45 @@ real_estate_markets = [
     {
         "name": "Sparks",
         "id": "6_17527"
+    },
+    {
+        "name": "Toronto",
+        "id": "33_2924"
+    },
+    {
+        "name": "Calgary",
+        "id": "33_2379"
+    },
+    {
+        "name": "Edmonton",
+        "id": "33_3352"
+    },
+    {
+        "name": "Mississauga",
+        "id": "33_2775"
+    },
+    {
+        "name": "Brampton",
+        "id": "33_3446"
+    },
+    {
+        "name": "Hamilton",
+        "id": "33_3114"
+    },
+    {
+        "name": "Kitchener",
+        "id": "33_2996"
+    },
+    {
+        "name": "London",
+        "id": "33_3505"
+    },
+    {
+        "name": "Victoria",
+        "id": "33_2620"
+    },
+    {
+        "name": "Markham",
+        "id": "33_2035"
     }
 ]

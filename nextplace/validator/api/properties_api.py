@@ -29,7 +29,15 @@ class PropertiesAPI(ApiBase):
             None
         """
         current_thread = threading.current_thread().name
-        url_for_sale = "https://redfin-com-data.p.rapidapi.com/properties/search-sale"  # Redfin URL
+
+        # Choose the appropriate API endpoint based on market ID
+        if market['id'].startswith('33'):
+            url_for_sale = "https://redfin-canada.p.rapidapi.com/properties/search-sale"  # Canadian Redfin URL
+            headers = self.canada_headers  # Use Canadian API key
+        else:
+            url_for_sale = "https://redfin-com-data.p.rapidapi.com/properties/search-sale"  # US Redfin URL
+            headers = self.headers  # Use US API key
+
         page = 1  # Page number for api results
 
         while True:
@@ -40,7 +48,7 @@ class PropertiesAPI(ApiBase):
                 "limit": self.max_results_per_page,
                 "page": page
             }
-            response = requests.get(url_for_sale, headers=self.headers, params=querystring)  # Hit the API
+            response = requests.get(url_for_sale, headers=headers, params=querystring)
 
             # Only proceed with status code is 200
             if response.status_code != 200:
@@ -145,3 +153,4 @@ class PropertiesAPI(ApiBase):
             'last_sale_date': self._get_nested(home_data, 'lastSaleData', 'lastSoldDate'),
             'hoa_dues': self._get_nested(home_data, 'hoaDues', 'amount'),
         }
+        
