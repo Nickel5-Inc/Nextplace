@@ -73,7 +73,7 @@ class ApiBase(ABC):
         base_url = "https://redfin-canada.p.rapidapi.com/properties/" if market_id.startswith('33') else "https://redfin-com-data.p.rapidapi.com/properties/"
         return f"{base_url}{endpoint}"
     
-    def get_nested(self, data: dict, *args: str) -> dict or None:
+    def _get_nested(self, data: dict, *args: str) -> dict or None:
         """
         Extract nested values from a dictionary
         Args:
