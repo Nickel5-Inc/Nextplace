@@ -8,7 +8,7 @@ from nextplace.validator.utils.contants import build_miner_predictions_table_nam
     get_miner_hotkeys_from_predictions_tables
 from nextplace import __spec_version__
 
-REDUCTION_UID = 24
+REDUCTION_UID = 34
 
 
 class WeightSetter:
@@ -129,13 +129,13 @@ class WeightSetter:
         weights = []
 
         """
-        35% for Dilution Reduction
-        1% to Bottom Tier
-        4% to Middle Tier
-        60% to Top Tier
+        20% for Dilution Reduction
+        2% to Bottom Tier
+        8% to Middle Tier
+        70% to Top Tier
         """
 
-        for tier, weight in [(top_tier, 0.6), (middle_tier, 0.04), (bottom_tier, 0.01)]:
+        for tier, weight in [(top_tier, 0.7), (middle_tier, 0.08), (bottom_tier, 0.02)]:
             tier_scores = self.apply_quadratic_scaling(tier)
             calculated_weights = self.calculate_tier_weights(tier_scores, weight)
             weights.extend(calculated_weights)
